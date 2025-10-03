@@ -1,0 +1,154 @@
+
+                      {/* Fashion Favorites */}
+                      <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-100">
+                        <h4 className="text-xl font-playfair font-semibold mb-6 text-amber-600 border-b border-amber-200 pb-2">
+                          Fashion Favorites
+                        </h4>
+                        <div className="space-y-5">
+                          <div>
+                            <div className="mb-3">
+                              <span className="font-medium text-neutral-700">Preferred Designers</span>
+                            </div>
+                            <div className="w-full overflow-hidden rounded-lg border border-amber-100 mb-4">
+                              <img 
+                                src="/assets/kim-kardashian/fashion-favorites/preferred-designers-new.png" 
+                                alt="Kim Kardashian's preferred designers" 
+                                className="w-full h-auto"
+                              />
+                            </div>
+                            <div className="flex flex-wrap gap-4 mt-3">
+                              <a
+                                href="https://www.balenciaga.com/en-us/collections/women" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex flex-col items-center"
+                              >
+                                <div className="w-32 h-16 bg-white rounded-md overflow-hidden border border-gray-200 flex items-center justify-center p-1">
+                                  <img 
+                                    src="/assets/brands/balenciaga-logo.webp" 
+                                    alt="Balenciaga logo" 
+                                    className="w-full h-auto object-contain"
+                                  />
+                                </div>
+                                <span className="text-amber-600 hover:underline text-sm mt-1 font-medium">Balenciaga</span>
+                              </a>
+                              <a
+                                href="https://www.rickowens.eu/en/US/women/products/new-collection" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex flex-col items-center"
+                              >
+                                <div className="w-32 h-16 bg-black rounded-md overflow-hidden border border-gray-600 flex items-center justify-center p-1">
+                                  <img 
+                                    src="/assets/brands/rick-owens-logo.png" 
+                                    alt="Rick Owens logo" 
+                                    className="w-full h-auto object-contain"
+                                  />
+                                </div>
+                                <span className="text-amber-600 hover:underline text-sm mt-1 font-medium">Rick Owens</span>
+                              </a>
+                              <a
+                                href="https://www.mugler.com/us/en" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="flex flex-col items-center"
+                              >
+                                <div className="w-32 h-16 bg-black rounded-md overflow-hidden border border-gray-600 flex items-center justify-center p-1">
+                                  <img 
+                                    src="/assets/brands/mugler-logo.webp" 
+                                    alt="Mugler logo" 
+                                    className="w-full h-auto object-contain"
+                                  />
+                                </div>
+                                <span className="text-amber-600 hover:underline text-sm mt-1 font-medium">Mugler</span>
+                              </a>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col space-y-4 mt-6">
+                            <div className="w-full h-56 bg-neutral-50 rounded-md overflow-hidden border border-amber-100">
+                              <img 
+                                src="/assets/kim-kardashian/fashion/skims-bodysuit.png" 
+                                alt="Kim wearing SKIMS bodysuit" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div>
+                              <div className="mb-1">
+                                <span className="font-medium text-neutral-700">SKIMS Signature Look</span>
+                              </div>
+                              <a
+                                href="https://skims.com/products/sculpting-bodysuit-above-the-knee-onyx" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-lg font-playfair text-amber-600 hover:underline"
+                              >
+                                SKIMS Sculpting Bodysuit
+                              </a>
+                              <div className="flex items-center mt-1">
+                                <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">$68.00</span>
+                                <span className="ml-2 text-xs text-neutral-500">Nude sculpting bodysuit</span>
+                              </div>
+                              <p className="mt-2 text-sm text-gray-600">
+                                As the founder of SKIMS, Kim regularly showcases her own shapewear line. This sculpting bodysuit is one of her signature pieces, designed to contour and enhance the natural silhouette while providing comfort for everyday wear.
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col space-y-4 mt-6">
+                            <div className="w-full h-48 bg-neutral-50 rounded-md overflow-hidden border border-amber-100">
+                              <img 
+                                src="/assets/kim-kardashian/fashion/manolo-blahnik-heels.png" 
+                                alt="Manolo Blahnik pink suede heels" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div>
+                              <div className="mb-1">
+                                <span className="font-medium text-neutral-700">Luxury Footwear</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <a
+                                  href="https://www.manoloblahnik.com/us/women/shoes/" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-lg font-playfair text-amber-600 hover:underline"
+                                >
+                                  Manolo Blahnik BB Pumps
+                                </a>
+                              </div>
+                              <div className="flex items-center mt-1">
+                                <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">$665.00 - $995.00</span>
+                                <span className="ml-2 text-xs text-neutral-500">Pink suede, 105mm heel</span>
+                              </div>
+                              <p className="mt-2 text-sm text-gray-600">
+                                Kim is frequently spotted wearing Manolo Blahnik's signature BB pumps, often pairing them with sleek outfits for a sophisticated look. The pointed-toe stilettos have become a staple in her wardrobe for red carpet events and formal appearances.
+                              </p>
+                              <div className="mt-3">
+                                <span className="text-sm font-medium text-neutral-700">Also Wears:</span>
+                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                  <a
+                                    href="https://yeezygap.com" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-amber-600 hover:underline font-playfair"
+                                  >
+                                    Yeezy shoes
+                                  </a>
+                                  <span className="text-amber-300 font-light">|</span>
+                                  <a
+                                    href="https://www.balenciaga.com/en-us/women/shoes/pumps" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-amber-600 hover:underline font-playfair"
+                                  >
+                                    Balenciaga pumps
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    

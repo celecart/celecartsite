@@ -1,0 +1,2291 @@
+import type { Celebrity, Brand, CelebrityBrand, Category, Tournament, TournamentOutfit } from "./schema";
+
+// Helper function to add stylingDetails to celebrities to ensure schema compliance
+const addStylingDetailsIfMissing = (celebrity: any): Celebrity => {
+  if (!celebrity.stylingDetails) {
+    celebrity.stylingDetails = null;
+  }
+  return celebrity as Celebrity;
+};
+
+const rawCelebrities = [
+  {
+    id: 70,
+    name: "Kanye West",
+    profession: "Musician, Fashion Designer",
+    imageUrl: "/assets/kanye-west/profile.jpg",
+    description: "Award-winning musician, record producer, and fashion designer known for his influential style and Yeezy brand. His fashion influence extends from streetwear to high fashion collaborations.",
+    category: "Musician Style",
+    managerInfo: null
+  },
+  {
+    id: 71,
+    name: "Beyoncé",
+    profession: "Singer, Performer, Entrepreneur",
+    imageUrl: "/assets/beyonce/profile.jpg",
+    description: "Globally renowned performer and entrepreneur known for her impeccable stage costumes, red carpet appearances, and her athleisure brand Ivy Park.",
+    category: "Stage Fashion",
+    managerInfo: null
+  },
+  {
+    id: 72,
+    name: "Jay-Z",
+    profession: "Rapper, Record Producer, Entrepreneur",
+    imageUrl: "/assets/jay-z/profile.jpg",
+    description: "Legendary rapper and business mogul known for his sophisticated style evolution from streetwear to luxury tailoring and his impact on hip-hop fashion.",
+    category: "Musician Style",
+    managerInfo: null
+  },
+  {
+    id: 73,
+    name: "Drake",
+    profession: "Rapper, Singer, Entrepreneur",
+    imageUrl: "/assets/drake/profile.jpg",
+    description: "Chart-topping artist known for setting trends with his signature style mixing luxury brands, streetwear, and sports-inspired fashion.",
+    category: "Musician Style",
+    managerInfo: null
+  },
+  {
+    id: 18,
+    name: "Kendall Jenner",
+    profession: "Supermodel, Fashion Icon",
+    imageUrl: "/assets/kendall-jenner.png",
+    description: "World-renowned supermodel who has walked for top fashion houses and is known for her high-fashion style both on and off the runway, as well as her 818 Tequila brand.",
+    category: "High Fashion",
+    managerInfo: null
+  },
+  {
+    id: 40,
+    name: "Angelina Jolie",
+    profession: "Actress, Filmmaker, Humanitarian",
+    imageUrl: "/assets/angelina-jolie/profile.png",
+    description: "Award-winning actress, filmmaker, and humanitarian known for her elegant red carpet style, philanthropy work, and powerful screen presence in both mainstream and independent films.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "Geyer Kosinski",
+      agency: "Media Talent Group",
+      email: "contact@mediatalentgroup.com",
+      phone: "+1 310 555 1234",
+      bookingInquiries: "For professional inquiries, please contact Media Talent Group with detailed project information and proposed collaboration terms."
+    }
+  },
+  {
+    id: 33,
+    name: "Blake Lively",
+    profession: "Actress, Producer, Fashion Icon",
+    imageUrl: "/assets/blake-lively/profile.png",
+    description: "Celebrated American actress known for her roles in 'Gossip Girl' and 'A Simple Favor', as well as her exceptional fashion sense and collaborations with luxury brands like Chanel and Louboutin.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "William Morris",
+      agency: "WME Entertainment",
+      email: "contact@wmeentertainment.com",
+      phone: "+1 310 285 9000",
+      bookingInquiries: "For professional inquiries, please contact WME Entertainment with detailed project information and proposed terms."
+    }
+  },
+  {
+    id: 30,
+    name: "Chris Evans",
+    profession: "Actor, Director, Producer",
+    imageUrl: "/assets/chris_evans.png",
+    description: "American actor known worldwide for portraying Captain America in the Marvel Cinematic Universe, who combines classic Hollywood charm with sophisticated style choices from luxury fashion brands.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "Kenneth Slotnick",
+      agency: "Creative Artists Agency",
+      email: "contact@caa.com",
+      phone: "+1 424 288 2000",
+      bookingInquiries: "For professional inquiries, please contact Creative Artists Agency with detailed project information and proposed terms."
+    },
+    stylingDetails: [
+      {
+        occasion: "Academy Awards 2023",
+        outfit: {
+          designer: "Gucci",
+          price: "Custom piece, estimated $8,000",
+          details: "Tailored navy blue tuxedo with satin lapels and custom fit",
+          purchaseLink: "https://www.gucci.com/us/en/ca/men/ready-to-wear-for-men/suits-for-men-c-men-readytowear-suits"
+        },
+        hairStylist: {
+          name: "Jason Schneidman",
+          instagram: "themensgroomer",
+          website: "https://www.themensgroomer.com/",
+          details: "Classic side-parted style with natural texture and lightweight hold"
+        },
+        makeupArtist: null,
+        image: "/assets/chris_evans.png"
+      },
+      {
+        occasion: "Film Premiere - The Gray Man",
+        outfit: {
+          designer: "IWC Schaffhausen & Casual Luxury",
+          price: "Watch: $12,000, Outfit: $3,500",
+          details: "Casual luxury ensemble with fitted light blue shirt, navy trousers and limited edition IWC Portugieser Chronograph",
+          purchaseLink: "https://www.iwc.com/us/en/watch-collections/portugieser.html"
+        },
+        hairStylist: {
+          name: "Johnnie Sapong",
+          instagram: "johnniesapong",
+          website: "https://www.johnniehair.com/",
+          details: "Textured, slightly longer top with clean sides"
+        },
+        makeupArtist: null,
+        image: "/assets/chris_evans.png"
+      }
+    ]
+  },
+  {
+    id: 15,
+    name: "Kim Kardashian",
+    profession: "Entrepreneur, Media Personality",
+    imageUrl: "/assets/kim-kardashian.png",
+    description: "American media personality, entrepreneur, and fashion icon known for her trendsetting style and multiple successful businesses including SKIMS shapewear and KKW Beauty.",
+    category: "Red Carpet",
+    managerInfo: null,
+    stylingDetails: [
+      {
+        occasion: "Met Gala 2022",
+        outfit: {
+          designer: "Marilyn Monroe's Jean Louis dress",
+          price: "Historical piece, estimated $4.8 million",
+          details: "Vintage 1962 crystal-embellished gown originally worn by Marilyn Monroe"
+        },
+        hairStylist: {
+          name: "Chris Appleton",
+          instagram: "chrisappleton1",
+          website: "https://www.chrisappleton.com/",
+          details: "Platinum blonde hair transformation specifically for the event"
+        },
+        makeupArtist: {
+          name: "Mario Dedivanovic",
+          instagram: "makeupbymario",
+          website: "https://www.makeupbymario.com/",
+          details: "Classic glamour makeup with defined eyes and neutral lip"
+        },
+        image: "/assets/kim-kardashian-looks/met-gala-and-jungle-event.png"
+      },
+      {
+        occasion: "Jungle-Themed Event 2023",
+        outfit: {
+          designer: "Dolce & Gabbana",
+          price: "$7,500",
+          details: "Custom fitted black satin dress with signature corseted silhouette"
+        },
+        hairStylist: {
+          name: "Chris Appleton",
+          instagram: "chrisappleton1",
+          website: "https://www.chrisappleton.com/",
+          details: "Sleek high ponytail with dramatic length extensions"
+        },
+        makeupArtist: {
+          name: "Ariel Tejada",
+          instagram: "makeupbyariel",
+          website: "https://www.makeupbyariel.com/",
+          details: "Bronzed contour with smoky eye and glossy nude lip"
+        },
+        image: "/assets/kim-kardashian-looks/met-gala-and-jungle-event.png"
+      }
+    ]
+  },
+  {
+    id: 22,
+    name: "Tom Cruise",
+    profession: "Actor, Producer, Action Star",
+    imageUrl: "/assets/tom-cruise/profile.png",
+    description: "Legendary Hollywood actor known for his iconic roles in action films and red carpet style that combines classic elegance with contemporary trends.",
+    category: "Red Carpet",
+    managerInfo: null
+  },
+
+  {
+    id: 24,
+    name: "Priyanka Chopra",
+    profession: "Actress, Producer, UNICEF Goodwill Ambassador",
+    imageUrl: "/assets/priyanka-chopra/profile.png",
+    description: "Award-winning international actress and former Miss World known for her stunning red carpet looks, innovative style choices, and successful career in both Bollywood and Hollywood.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "Anjula Acharia",
+      agency: "A-Series Management & Productions",
+      email: "contact@aseries.com",
+      phone: "+1 310 555 7890",
+      bookingInquiries: "For endorsement and appearance inquiries, please contact A-Series Management with detailed project information and proposed collaboration terms."
+    }
+  },
+  {
+    id: 27,
+    name: "Shah Rukh Khan",
+    profession: "Actor, Producer, Entrepreneur",
+    imageUrl: "/assets/shahrukh-khan/shahrukh-khan-new.png",
+    description: "Indian film superstar known as 'King Khan', born on November 2, 1965. SRK has appeared in over 80 Hindi films and is one of the most successful actors in world cinema with a career spanning more than 30 years. Known for his elegant style, brand endorsements, and influence on fashion in Bollywood and beyond.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "Pooja Dadlani",
+      agency: "Red Chillies Entertainment",
+      email: "contact@redchillies.com",
+      phone: "+91 22 4971 2000",
+      bookingInquiries: "For film, endorsement, and event bookings, please contact Red Chillies Entertainment with a detailed proposal and budget range."
+    },
+    stylingDetails: [
+      {
+        occasion: "Filmfare Awards 2023",
+        outfit: {
+          designer: "Manish Malhotra",
+          price: "Custom piece, estimated ₹350,000",
+          details: "Custom-tailored black tuxedo with subtle embellishments and signature styling",
+          purchaseLink: "https://www.manishmalhotra.in/"
+        },
+        hairStylist: {
+          name: "Raaj Gupta",
+          instagram: "raajguptahair",
+          website: "https://www.raajgupta.com/",
+          details: "Signature styled hair with classic side part and natural texture"
+        },
+        makeupArtist: null,
+        image: "/assets/shahrukh-khan/shahrukh-khan-new.png"
+      },
+      {
+        occasion: "Pathaan Movie Premiere 2023",
+        outfit: {
+          designer: "Falguni Shane Peacock",
+          price: "₹275,000",
+          details: "Modern silhouette black ensemble with subtle detailing for contemporary red carpet look",
+          purchaseLink: "https://falgunishanepeacock.com/"
+        },
+        hairStylist: {
+          name: "Aalim Hakim",
+          instagram: "aalimhakim",
+          website: "https://www.aalimhakim.com/",
+          details: "Styled long hair with texture and volume"
+        },
+        makeupArtist: null,
+        image: "/assets/shahrukh-khan/shahrukh-khan-new.png"
+      }
+    ]
+  },
+  {
+    id: 13,
+    name: "Hania Amir",
+    profession: "Actress, Model, and Social Media Personality",
+    imageUrl: "/assets/hania-amir.png",
+    description: "Rising Pakistani actress known for her trendsetting fashion choices and collaboration with various clothing and lifestyle brands.",
+    category: "Street Style",
+    managerInfo: null
+  },
+  {
+    id: 6,
+    name: "Floyd Mayweather",
+    profession: "Boxing Champion, Undefeated Professional Record",
+    imageUrl: "/assets/floyd-mayweather/profile.png",
+    description: "American boxing champion known for his lavish lifestyle and luxury fashion choices both in and out of the ring.",
+    category: "Street Style",
+    managerInfo: null
+  },
+  {
+    id: 7,
+    name: "Adele",
+    profession: "Grammy-winning Singer-Songwriter",
+    imageUrl: "/assets/celebrities/adele.png",
+    description: "Iconic British vocalist known for her elegant red carpet style, sophisticated stage wear, and collaborations with luxury fashion houses including Burberry.",
+    category: "Red Carpet",
+    managerInfo: {
+      name: "Jonathan Dickins",
+      agency: "September Management",
+      email: "contact@septembermanagement.com",
+      phone: "+44 20 7221 7171",
+      bookingInquiries: "For booking inquiries, please contact September Management with detailed information about your event and requirements."
+    }
+  },
+  {
+    id: 9,
+    name: "Lionel Messi",
+    profession: "Football Legend, 8-time Ballon d'Or Winner",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg",
+    description: "Argentinian football star known for his understated elegance and association with premium fashion brands in his casual style.",
+    category: "Casual",
+    managerInfo: null
+  },
+  {
+    id: 10,
+    name: "Fawad Khan",
+    profession: "Actor, Model, and Fashion Icon",
+    imageUrl: "/assets/fawad-khan.png",
+    description: "Pakistani actor and model known for his sophisticated style, blending traditional and modern fashion elements with a timeless appeal.",
+    category: "Formal Wear",
+    managerInfo: null
+  },
+
+
+  {
+    id: 14,
+    name: "Imran Khan",
+    profession: "Former Cricket Captain, Politician",
+    imageUrl: "/assets/imran-khan.png",
+    description: "Legendary Pakistani cricket captain turned politician, known for his classic style that evolved from sports attire to formal political wear over the decades.",
+    category: "Formal Wear",
+    managerInfo: null
+  },
+  {
+    id: 16,
+    name: "Kylie Jenner",
+    profession: "Entrepreneur, Beauty Mogul",
+    imageUrl: "/assets/kylie-jenner.png",
+    description: "Billionaire beauty entrepreneur and social media influencer best known for her cosmetics company Kylie Cosmetics and her distinctive fashion sense that sets trends worldwide.",
+    category: "Street Style",
+    managerInfo: null
+  },
+  {
+    id: 17,
+    name: "Mohammed bin Salman",
+    profession: "Saudi Arabian Crown Prince, Chairman of PIF",
+    imageUrl: "/assets/mbs/profile.jpg",
+    description: "Saudi Arabian crown prince and chairman of the Public Investment Fund (PIF), known for his Vision 2030 reform program and investments in global luxury brands and sports.",
+    category: "Political Fashion",
+    managerInfo: null
+  },
+  {
+    id: 18,
+    name: "Kendall Jenner",
+    profession: "Supermodel, Fashion Icon",
+    imageUrl: "/assets/kendall-jenner.png",
+    description: "World-renowned supermodel who has walked for top fashion houses and is known for her high-fashion style both on and off the runway, as well as her 818 Tequila brand.",
+    category: "High Fashion",
+    managerInfo: null
+  },
+  {
+    id: 19,
+    name: "Kourtney Kardashian",
+    profession: "Media Personality, Entrepreneur",
+    imageUrl: "/assets/kourtney-kardashian.png",
+    description: "The eldest Kardashian sister, known for her minimalist style, wellness brand Poosh, and collaborations with sustainable fashion brands.",
+    category: "Sustainable Fashion",
+    managerInfo: null
+  },
+  /* Removed duplicate Drake entry */
+  {
+    id: 1,
+    name: "Roger Federer",
+    profession: "Tennis Champion, 20-time Grand Slam Winner",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7a/Roger_Federer_%2818912657504%29.jpg",
+    description: "Swiss tennis legend known for his elegant playing style and equally sophisticated fashion sense both on and off the court.",
+    category: "On-Court Style",
+    managerInfo: {
+      name: "Tony Godsick",
+      agency: "TEAM8",
+      email: "contact@team8global.com",
+      phone: "+41 44 214 6868",
+      bookingInquiries: "For endorsement and appearance opportunities, please contact TEAM8 with project details and budget information."
+    }
+  },
+  {
+    id: 26,
+    name: "LeBron James",
+    profession: "NBA Superstar, Entrepreneur, Philanthropist",
+    imageUrl: "/assets/lebron-james.png",
+    description: "Legendary NBA player known for his athletic prowess, fashion influence, and business ventures including media production and various brand partnerships.",
+    category: "Sports Fashion",
+    managerInfo: {
+      name: "Rich Paul",
+      agency: "Klutch Sports Group",
+      email: "contact@klutchsports.com",
+      phone: "+1 310 558 3667",
+      bookingInquiries: "For endorsement and appearance opportunities, please contact Klutch Sports Group with detailed project information and proposed terms."
+    },
+    stylingDetails: [
+      {
+        occasion: "NBA All-Star Game 2023",
+        outfit: {
+          designer: "Nike LeBron Signature Collection",
+          price: "$200-250",
+          details: "Custom Nike LeBron 20 shoes in exclusive colorway with matching performance apparel",
+          purchaseLink: "https://www.nike.com/basketball/lebron-james"
+        },
+        hairStylist: {
+          name: "Nick Castellanos",
+          instagram: "nickthebarber",
+          website: "https://www.nickthebarber.com/",
+          details: "Precision fade with detailed line work and shaped beard"
+        },
+        makeupArtist: null,
+        image: "/assets/lebron-james.png"
+      },
+      {
+        occasion: "Lakers Game Day Equipment",
+        outfit: {
+          designer: "Nike Basketball",
+          price: "$185-225",
+          details: "Official Lakers Nike Dri-FIT uniform with custom LeBron James Nike basketball shoes",
+          purchaseLink: "https://www.nike.com/basketball"
+        },
+        hairStylist: null,
+        makeupArtist: null,
+        image: "/assets/lebron-james.png"
+      }
+    ]
+  }
+];
+
+// Apply the helper function to ensure all celebrities have stylingDetails property
+export const mockCelebrities: Celebrity[] = rawCelebrities.map(addStylingDetailsIfMissing);
+
+export const mockBrands: Brand[] = [
+  {
+    id: 34,
+    name: "Chanel",
+    description: "Iconic French luxury fashion house known for timeless designs, the little black dress, and the No.5 perfume, representing unparalleled elegance and sophistication.",
+    imageUrl: "https://images.unsplash.com/photo-1512646605205-78422b7c7896?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Blake"]
+  },
+  {
+    id: 35,
+    name: "Christian Louboutin",
+    description: "French luxury footwear and fashion designer renowned for his signature red-soled shoes and exceptional craftsmanship in high-end accessories.",
+    imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Blake"]
+  },
+  {
+    id: 32,
+    name: "Gucci",
+    description: "Italian luxury fashion house known for innovative designs, exquisite craftsmanship, and iconic accessories that define modern luxury.",
+    imageUrl: "https://images.unsplash.com/photo-1619946794135-5bc917a27793?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Chris", "Blake"]
+  },
+  {
+    id: 33,
+    name: "IWC Schaffhausen",
+    description: "Swiss luxury watch manufacturer known for precision timepieces with sophisticated design and innovative complications.",
+    imageUrl: "https://images.unsplash.com/photo-1548171632-c19010beba5d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Chris"]
+  },
+  {
+    id: 1,
+    name: "Wilson",
+    description: "Leading tennis equipment manufacturer providing racquets for many top players, known for their quality and performance technology.",
+    imageUrl: "https://images.unsplash.com/photo-1617080890991-aedcc6ac2bd2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "S"]
+  },
+  {
+    id: 2,
+    name: "Nike",
+    description: "Global sportswear giant that sponsors many elite tennis players with cutting-edge performance apparel and footwear.",
+    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "S", "C"]
+  },
+  {
+    id: 3,
+    name: "Rolex",
+    description: "Prestigious Swiss luxury watch manufacturer with a long history of sponsoring tennis tournaments and brand ambassadors.",
+    imageUrl: "https://images.unsplash.com/photo-1526045612212-70caf35c14df?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "M", "C"]
+  },
+  {
+    id: 4,
+    name: "Adidas",
+    description: "German sportswear company providing performance tennis apparel and footwear with advanced technology.",
+    imageUrl: "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["A", "M", "S"]
+  },
+  {
+    id: 5,
+    name: "Uniqlo",
+    description: "Japanese casual wear designer and manufacturer known for simple, high-quality basics and performance sportswear.",
+    imageUrl: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "K"]
+  },
+  {
+    id: 6,
+    name: "Babolat",
+    description: "French tennis equipment company specializing in racquets, strings, and accessories used by many top professionals.",
+    imageUrl: "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "D", "T"]
+  },
+  {
+    id: 7,
+    name: "Lacoste",
+    description: "French clothing company founded by tennis player René Lacoste, known for their iconic crocodile logo and tennis heritage.",
+    imageUrl: "https://images.unsplash.com/photo-1565115021788-6d3f1ade4980?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["V", "T"]
+  },
+  {
+    id: 8,
+    name: "Yonex",
+    description: "Japanese sports equipment manufacturer specializing in tennis, badminton and golf products with innovative technology.",
+    imageUrl: "https://images.unsplash.com/photo-1625911731261-e2398b20716f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["A", "D"]
+  },
+  {
+    id: 9,
+    name: "Louis Vuitton",
+    description: "French luxury fashion house and company that tennis stars often choose for their off-court formal appearances.",
+    imageUrl: "https://images.unsplash.com/photo-1598532163257-ae3c6b2524b6?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["R", "S", "M", "C"]
+  },
+  {
+    id: 10,
+    name: "Atelier Jolie",
+    description: "Angelina Jolie's sustainable fashion collective focused on ethical production, creating employment opportunities for refugees, and emphasizing environmentally conscious design.",
+    imageUrl: "https://images.unsplash.com/photo-1524749292158-7540c2494485?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["A"]
+  },
+  {
+    id: 11,
+    name: "Jacob & Co.",
+    description: "Luxury watch and jewelry brand known for its extraordinary timepieces and exceptional diamonds, popular among athletes and celebrities.",
+    imageUrl: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["C", "F"]
+  },
+  {
+    id: 12,
+    name: "Khaadi",
+    description: "Leading Pakistani fashion brand known for its ethnic wear, fusion collections and textile excellence with a contemporary design philosophy.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Khaadi_logo.jpg/220px-Khaadi_logo.jpg",
+    celebWearers: ["F", "H"]
+  },
+  {
+    id: 13,
+    name: "HSY",
+    description: "Luxury Pakistani fashion house founded by Hassan Sheheryar Yasin, specializing in couture, bridal wear, and formal menswear.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/PFDC_Sunsilk_Fashion_Week_2011_HSY_Lawn.jpg/1024px-PFDC_Sunsilk_Fashion_Week_2011_HSY_Lawn.jpg",
+    celebWearers: ["F", "H", "I"]
+  },
+  {
+    id: 14,
+    name: "Adidas Cricket",
+    description: "Cricket equipment line from the global sportswear giant, providing professional cricket gear including bats, pads, gloves and apparel.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
+    celebWearers: ["S", "I"]
+  },
+  {
+    id: 15,
+    name: "Amir Khan Boxing Academy",
+    description: "Boxing equipment and training gear associated with Amir Khan's boxing academy, promoting boxing through quality equipment and apparel.",
+    imageUrl: "https://i2-prod.mirror.co.uk/incoming/article27116290.ece/ALTERNATES/s615/0_FBL-PAK-AKA.jpg",
+    celebWearers: ["A"]
+  },
+  {
+    id: 16,
+    name: "Sapphire",
+    description: "Pakistani ready-to-wear fashion brand known for its seasonal collections combining traditional aesthetics with modern design sensibilities.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/c/c8/Sapphire_%28clothing_brand%29_Logo.jpg/800px-Sapphire_%28clothing_brand%29_Logo.jpg",
+    celebWearers: ["H"]
+  },
+  {
+    id: 17,
+    name: "CA Sports",
+    description: "Leading cricket equipment manufacturer from Pakistan providing professional cricket gear to international players and teams.",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Cricket_bat.jpg/800px-Cricket_bat.jpg",
+    celebWearers: ["S", "I"]
+  },
+  {
+    id: 18,
+    name: "SKIMS",
+    description: "Kim Kardashian's shapewear and loungewear brand known for inclusive sizing and innovative fabrics designed to enhance silhouettes.",
+    imageUrl: "https://images.unsplash.com/photo-1609748507255-66516aa6a9c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kim"]
+  },
+  {
+    id: 19,
+    name: "Kylie Cosmetics",
+    description: "Kylie Jenner's beauty empire featuring lip kits, eyeshadows, and skincare with a focus on bold colors and luxury packaging.",
+    imageUrl: "https://images.unsplash.com/photo-1599305090951-836474229666?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kylie"]
+  },
+  {
+    id: 20,
+    name: "Good American",
+    description: "Khloe Kardashian's inclusive denim and apparel brand offering sizes 00-24 with designs that celebrate all body types.",
+    imageUrl: "https://images.unsplash.com/photo-1605518216938-7c31b7b14ad0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Khloe"]
+  },
+  {
+    id: 21,
+    name: "818 Tequila",
+    description: "Kendall Jenner's premium tequila brand crafted from 100% Weber Blue agaves and featuring multiple award-winning varieties.",
+    imageUrl: "https://images.unsplash.com/photo-1592485287707-5edd3f6765de?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kendall"]
+  },
+  {
+    id: 22,
+    name: "OVO (October's Very Own)",
+    description: "Drake's lifestyle brand featuring high-quality streetwear, collaborations with luxury brands, and signature owl logo merchandise.",
+    imageUrl: "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Drake"]
+  },
+  {
+    id: 23,
+    name: "Nike x Nocta",
+    description: "Drake's sub-label collaboration with Nike featuring premium streetwear and performance apparel inspired by nighttime creative process.",
+    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Drake"]
+  },
+  {
+    id: 24,
+    name: "Giorgio Armani",
+    description: "Luxury Italian fashion house known for elegant, tailored menswear and red carpet attire favored by Hollywood's elite.",
+    imageUrl: "https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Tom"]
+  },
+  {
+    id: 25,
+    name: "Ray-Ban",
+    description: "Iconic eyewear brand known for timeless designs like the Aviator and Wayfarer, popular among celebrities for both function and style.",
+    imageUrl: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Tom"]
+  },
+  {
+    id: 26,
+    name: "Burberry",
+    description: "Luxury British fashion house known for its signature check pattern and timeless designs combining heritage with modern creativity.",
+    imageUrl: "https://images.unsplash.com/photo-1554412933-514a83d2f3c8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Adele"]
+  },
+  {
+    id: 27,
+    name: "Being Human",
+    description: "Fashion and lifestyle brand founded by Salman Khan that combines style with philanthropy, donating profits to charitable causes.",
+    imageUrl: "https://images.unsplash.com/photo-1589310243389-96a5483213a8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Salman"]
+  },
+  {
+    id: 28,
+    name: "KKW Fragrance",
+    description: "Kim Kardashian West's fragrance line featuring luxury scents in unique crystal-inspired packaging.",
+    imageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kim"]
+  },
+  {
+    id: 29,
+    name: "Rolls-Royce",
+    description: "British ultra-luxury automobile manufacturer known for handcrafted vehicles offering the pinnacle of refinement and status.",
+    imageUrl: "https://images.unsplash.com/photo-1632548260498-b7246fa466ea?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kim", "Drake"]
+  },
+  {
+    id: 30,
+    name: "Balenciaga",
+    description: "Luxury fashion house known for its avant-garde designs, architectural shapes, and innovative approach to haute couture.",
+    imageUrl: "https://images.unsplash.com/photo-1609505848912-b7c3b8b4beda?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kim", "Kendall"]
+  },
+  {
+    id: 31,
+    name: "SKKN BY KIM",
+    description: "Kim Kardashian's premium skincare line featuring clean, sustainable products with minimalist packaging and high-quality formulations.",
+    imageUrl: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["Kim"]
+  },
+  {
+    id: 36,
+    name: "Tag Heuer",
+    description: "Swiss luxury watchmaker known for its high-precision timepieces, sports chronographs, and long-standing association with motorsports and elite athletes.",
+    imageUrl: "https://images.unsplash.com/photo-1524592094857-b06aef4717da?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    celebWearers: ["SRK"]
+  }
+];
+
+export const mockCelebrityBrands: CelebrityBrand[] = [
+  {
+    id: 200,
+    celebrityId: 17, // Mohammed bin Salman
+    brandId: 29, // Rolls-Royce
+    description: "The Saudi crown prince is known for his extensive luxury car collection including multiple Rolls-Royce vehicles.",
+    itemType: "Luxury Vehicle",
+    categoryId: 1,
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Premium Leather and Wood",
+      color: "Custom Black",
+      releaseYear: 2023,
+      price: "$450,000+",
+      purchaseLink: "https://www.rolls-roycemotorcars.com",
+      stockStatus: "Made to Order",
+      weight: "2,700 kg"
+    },
+    occasionPricing: {
+      formalEvents: "$450,000+",
+      casualEvents: "Not Applicable",
+      sportingEvents: "Not Applicable" 
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 201,
+    celebrityId: 17, // Mohammed bin Salman
+    brandId: 9, // Louis Vuitton
+    description: "The crown prince is known to appreciate luxury fashion brands including Louis Vuitton for formal diplomatic events.",
+    itemType: "Formal Attire",
+    categoryId: 3,
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Premium Wool and Silk",
+      color: "Navy Blue",
+      releaseYear: 2023,
+      price: "$8,000+",
+      purchaseLink: "https://www.louisvuitton.com",
+      stockStatus: "Available",
+      weight: "N/A"
+    },
+    occasionPricing: {
+      formalEvents: "$8,000+",
+      casualEvents: "Not Applicable",
+      sportingEvents: "Not Applicable" 
+    },
+    relationshipStartYear: 2017,
+    grandSlamAppearances: []
+  },
+  {
+    id: 124,
+    celebrityId: 33, // Blake Lively
+    brandId: 34, // Chanel
+    description: "Chanel Haute Couture Gown",
+    itemType: "Formal Wear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Silk, Chiffon, Hand-sewn embellishments",
+      color: "Champagne Gold, Rose Gold",
+      releaseYear: 2023,
+      price: "$25,000.00",
+      purchaseLink: "https://www.chanel.com/us/haute-couture/",
+      stockStatus: "Made to Order",
+      size: "Custom Tailored"
+    },
+    occasionPricing: {
+      "red carpet": {
+        price: "$25,000.00",
+        availableColors: ["Champagne Gold", "Rose Gold", "Silver"],
+        customOptions: ["Custom fitting", "Hand-embroidered details"]
+      },
+      "gala": {
+        price: "$30,000.00",
+        availableColors: ["Platinum", "Diamond White"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2017,
+    grandSlamAppearances: []
+  },
+  {
+    id: 125,
+    celebrityId: 33, // Blake Lively
+    brandId: 35, // Christian Louboutin
+    description: "Christian Louboutin Stiletto Pumps",
+    itemType: "Footwear",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Italian Leather, Signature red sole",
+      color: "Nude, Black, Red",
+      releaseYear: 2023,
+      price: "$795.00",
+      purchaseLink: "https://us.christianlouboutin.com/us_en/shop/women/kate-patent.html",
+      stockStatus: "Available",
+      size: "34-42 EU"
+    },
+    occasionPricing: {
+      "casual": {
+        price: "$795.00",
+        availableColors: ["Nude", "Black", "Red"]
+      },
+      "custom": {
+        price: "$1,500.00",
+        customOptions: ["Crystal embellishments", "Custom height"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2016,
+    grandSlamAppearances: []
+  },
+  {
+    id: 126,
+    celebrityId: 33, // Blake Lively
+    brandId: 32, // Gucci
+    description: "Gucci Bamboo Handle Handbag",
+    itemType: "Accessories",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Premium leather, Bamboo handle",
+      color: "Cream, Forest Green, Burgundy",
+      releaseYear: 2022,
+      price: "$2,490.00",
+      purchaseLink: "https://www.gucci.com/us/en/pr/women/handbags/top-handles-boston-bags-for-women",
+      stockStatus: "Limited Stock",
+      size: "Medium"
+    },
+    occasionPricing: {
+      "everyday": {
+        price: "$2,490.00",
+        availableColors: ["Cream", "Forest Green", "Burgundy"]
+      },
+      "special edition": {
+        price: "$3,200.00",
+        availableColors: ["Limited Edition Gold"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 122,
+    celebrityId: 30, // Chris Evans
+    brandId: 32, // Gucci
+    description: "Gucci Made to Measure Suit",
+    itemType: "Formal Wear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Premium wool with silk lining",
+      color: "Navy Blue, Charcoal Grey",
+      releaseYear: 2023,
+      price: "$4,200.00",
+      purchaseLink: "https://www.gucci.com/us/en/pr/men/ready-to-wear-for-men/suits-for-men",
+      stockStatus: "Made to Order",
+      size: "Custom Tailored"
+    },
+    occasionPricing: {
+      "red carpet": {
+        price: "$4,200.00",
+        availableColors: ["Navy Blue", "Charcoal Grey", "Black"],
+        customOptions: ["Monogrammed lining", "Custom buttons"]
+      },
+      "premiere": {
+        price: "$5,500.00",
+        availableColors: ["Black", "Midnight Blue"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2019,
+    grandSlamAppearances: []
+  },
+  {
+    id: 123,
+    celebrityId: 30, // Chris Evans
+    brandId: 33, // IWC Schaffhausen
+    description: "IWC Portugieser Chronograph",
+    itemType: "Luxury Watch",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Stainless steel case, alligator leather strap",
+      color: "Blue dial, Silver case",
+      releaseYear: 2022,
+      price: "$7,950.00",
+      purchaseLink: "https://www.iwc.com/us/en/watch-collections/portugieser/iw371606-portugieser-chronograph.html",
+      stockStatus: "Available",
+      size: "41mm"
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$7,950.00",
+        availableColors: ["Blue dial", "Silver dial", "Black dial"]
+      },
+      "limited": {
+        price: "$12,000.00",
+        customOptions: ["Engraved case back", "Custom strap"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 121,
+    celebrityId: 7, // Adele
+    brandId: 26, // Burberry
+    description: "Burberry signature evening gown",
+    itemType: "Formal Wear",
+    categoryId: 1, // Apparel
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Silk, Wool",
+      color: "Black, Navy",
+      releaseYear: 2022,
+      price: "$3,500.00",
+      purchaseLink: "https://www.burberry.com/evening-gowns/",
+      stockStatus: "Limited Edition",
+      size: "UK 8-16"
+    },
+    occasionPricing: {
+      "red carpet": {
+        price: "$3,500.00",
+        availableColors: ["Black", "Navy", "Burgundy"],
+        customOptions: ["Custom Fitting", "Embellishments"]
+      },
+      "concert": {
+        price: "$4,200.00",
+        availableColors: ["Black", "Gold"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2016,
+    grandSlamAppearances: []
+  },
+  {
+    id: 45,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 18, // SKIMS
+    description: "SKIMS Sculpting Bodysuit",
+    itemType: "Shapewear",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "79% Nylon, 21% Spandex",
+      color: "Sienna, Cocoa, Onyx",
+      releaseYear: 2022,
+      price: "$68.00",
+      purchaseLink: "https://skims.com/products/sculpting-bodysuit-w-snaps-sienna",
+      stockStatus: "In Stock",
+      size: "XXS-4X"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$68.00",
+        availableColors: ["Sienna", "Cocoa", "Onyx", "Clay", "Bone"]
+      }
+    },
+    relationshipStartYear: 2019,
+    grandSlamAppearances: []
+  },
+  {
+    id: 46,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 28, // Introducing a new brand: KKW Fragrance
+    description: "KKW Fragrance Crystal Gardenia",
+    itemType: "Perfume",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "40%", left: "60%" },
+    equipmentSpecs: {
+      material: "Crystal-inspired bottle",
+      color: "Clear",
+      releaseYear: 2021,
+      price: "$60.00",
+      purchaseLink: "https://kkwfragrance.com/products/crystal-gardenia",
+      stockStatus: "Limited Stock",
+      size: "75ml"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$60.00",
+        availableColors: ["Crystal Gardenia", "Crystal Gardenia Citrus", "Crystal Gardenia Oud"]
+      },
+      "gift": {
+        price: "$120.00",
+        discount: "Buy the set and save 20%",
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2017,
+    grandSlamAppearances: []
+  },
+  {
+    id: 47,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 29, // Introducing a new brand: Rolls-Royce
+    description: "Rolls-Royce Ghost",
+    itemType: "Luxury Vehicle",
+    categoryId: 9, // Luxury Lifestyle
+    imagePosition: { top: "60%", left: "40%" },
+    equipmentSpecs: {
+      material: "Premium leather interior, aluminum chassis",
+      color: "Custom Light Gray",
+      releaseYear: 2021,
+      price: "$350,000+",
+      purchaseLink: "https://www.rolls-roycemotorcars.com/en_US/showroom/ghost.html",
+      stockStatus: "Custom Order",
+      size: "Full-Size Luxury Sedan"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$350,000+",
+        availableColors: ["Custom options available"]
+      }
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 48,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 30, // Introducing a new brand: Balenciaga
+    description: "Balenciaga Hourglass Bag",
+    itemType: "Luxury Handbag",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "45%", left: "55%" },
+    equipmentSpecs: {
+      material: "Calfskin leather",
+      color: "Black",
+      releaseYear: 2022,
+      price: "$2,700.00",
+      purchaseLink: "https://www.balenciaga.com/en-us/hourglass-small-top-handle-bag-black-638524DLQ4N1000.html",
+      stockStatus: "In Stock",
+      size: "Small"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$2,700.00",
+        availableColors: ["Black", "White", "Red"]
+      }
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 49,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 31, // Introducing a new brand: SKKN BY KIM
+    description: "SKKN BY KIM 9-Step Skincare Ritual",
+    itemType: "Skincare",
+    categoryId: 10, // Beauty
+    imagePosition: { top: "35%", left: "65%" },
+    equipmentSpecs: {
+      material: "Clean formulations, environmentally friendly packaging",
+      color: "Minimalist Beige",
+      releaseYear: 2022,
+      price: "$575.00",
+      purchaseLink: "https://skknbykim.com/products/complete-collection",
+      stockStatus: "In Stock",
+      size: "Full Set"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$575.00",
+        availableColors: ["Signature Packaging"]
+      },
+      "individual": {
+        price: "$43.00 - $95.00",
+        customOptions: ["Cleanser", "Toner", "Exfoliator", "Hyaluronic Acid Serum", "Vitamin C8 Serum", "Face Cream", "Eye Cream", "Oil Drops", "Night Oil"]
+      }
+    },
+    relationshipStartYear: 2022,
+    grandSlamAppearances: []
+  },
+  {
+    id: 1,
+    celebrityId: 1, // Roger Federer
+    brandId: 1, // Wilson
+    description: "Pro Staff RF97 Autograph Tennis Racquet",
+    itemType: "Racquet",
+    categoryId: 7, // Sports Equipment
+    imagePosition: { top: "35%", left: "70%" },
+    equipmentSpecs: {
+      weight: "340g",
+      material: "Graphite",
+      stringTension: "50-60 pounds",
+      size: "97 sq. inches",
+      color: "Black/Red",
+      releaseYear: 2018,
+      ratings: {
+        quality: 4.9,
+        comfort: 4.5,
+        style: 4.8,
+        value: 4.2
+      }
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$249.99",
+        availableColors: ["Black/Red", "White/Black"]
+      },
+      "limited": {
+        price: "$299.99",
+        discount: "10% for ATP members",
+        availableColors: ["Custom Gold/Black", "Wimbledon Special Edition"],
+        limitedEdition: true
+      },
+      "professional": {
+        price: "Custom pricing",
+        customOptions: ["Custom string pattern", "Custom weight balance", "Personal grip size"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 1997,
+    grandSlamAppearances: ["Australian Open", "Wimbledon", "US Open", "Roland Garros"]
+  },
+  {
+    id: 2,
+    celebrityId: 1, // Roger Federer
+    brandId: 5, // Uniqlo
+    description: "Performance tennis apparel from exclusive collection",
+    itemType: "On-Court Outfit",
+    categoryId: 1, // On-Court Style
+    imagePosition: { top: "45%", left: "30%" },
+    equipmentSpecs: {
+      material: "Advanced fabric with moisture management",
+      color: "Navy/White",
+      releaseYear: 2021,
+      price: "$89.99",
+      stockStatus: "In Stock",
+      ratings: {
+        quality: 4.6,
+        comfort: 4.8,
+        style: 4.7,
+        value: 4.5
+      }
+    },
+    occasionPricing: {
+      "tournament": {
+        price: "$89.99",
+        availableColors: ["Navy/White", "White/Red", "Black/Gold"]
+      },
+      "practice": {
+        price: "$69.99",
+        discount: "Buy 2 get 1 free",
+        availableColors: ["Navy/White", "Grey/White"]
+      },
+      "fan": {
+        price: "$129.99",
+        customOptions: ["Custom name printing", "Autograph replica"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: ["Australian Open", "Wimbledon", "US Open"]
+  },
+  {
+    id: 3,
+    celebrityId: 1, // Roger Federer
+    brandId: 3, // Rolex
+    description: "Datejust 41 stainless steel watch",
+    itemType: "Luxury Watch",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "25%", left: "25%" },
+    equipmentSpecs: {
+      material: "Stainless steel and white gold",
+      color: "Silver/Blue",
+      releaseYear: 2020
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$12,000",
+        availableColors: ["Silver/Blue", "Gold/Champagne"]
+      }
+    },
+    relationshipStartYear: 2006,
+    grandSlamAppearances: ["All trophy ceremonies"]
+  },
+
+
+
+  {
+    id: 11,
+    celebrityId: 6, // Floyd Mayweather
+    brandId: 9, // Louis Vuitton
+    description: "Custom monogram leather travel collection",
+    itemType: "Luxury Fashion",
+    categoryId: 5, // Event Fashion
+    imagePosition: { top: "40%", left: "30%" },
+    equipmentSpecs: {
+      material: "Premium leather with monogram canvas",
+      color: "Brown/Gold",
+      releaseYear: 2021
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$15,000",
+        availableColors: ["Brown/Gold", "Black/Silver"]
+      },
+      "limited": {
+        price: "$25,000",
+        discount: "Custom pricing for boxing champions",
+        availableColors: ["Fight Night Special Edition"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2015,
+    grandSlamAppearances: []
+  },
+  {
+    id: 12,
+    celebrityId: 6, // Floyd Mayweather
+    brandId: 3, // Rolex
+    description: "Day-Date 40 President in 18k gold",
+    itemType: "Luxury Watch",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "25%", left: "25%" },
+    equipmentSpecs: {
+      material: "18k gold with diamond markers",
+      color: "Gold/Diamond",
+      releaseYear: 2019
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$35,000",
+        availableColors: ["Gold/Diamond", "Platinum/Diamond"]
+      },
+      "custom": {
+        price: "$75,000+",
+        availableColors: ["Custom diamond bezel options"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2012,
+    grandSlamAppearances: []
+  },
+  {
+    id: 127,
+    celebrityId: 27, // Shah Rukh Khan
+    brandId: 36, // Tag Heuer
+    description: "Tag Heuer Monaco Calibre Heuer 02 Watch",
+    itemType: "Luxury Watch",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "50%", left: "50%" },
+    equipmentSpecs: {
+      material: "Stainless steel case, leather strap",
+      color: "Blue dial, Silver case",
+      releaseYear: 2023,
+      price: "$7,200.00",
+      purchaseLink: "https://www.tagheuer.com/us/en/timepieces/collections/tag-heuer-monaco/",
+      stockStatus: "Available",
+      size: "39mm"
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$7,200.00",
+        availableColors: ["Blue dial", "Black dial"]
+      },
+      "limited": {
+        price: "$10,500.00",
+        customOptions: ["Special SRK Edition", "Custom engraving"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2016,
+    grandSlamAppearances: []
+  },
+  {
+    id: 13,
+    celebrityId: 7, // Adele
+    brandId: 26, // Burberry
+    description: "Red carpet gown collection",
+    itemType: "Formal Wear",
+    categoryId: 5, // Red Carpet
+    imagePosition: { top: "40%", left: "35%" },
+    equipmentSpecs: {
+      material: "Premium silk and custom embroidery",
+      color: "Black/Gold",
+      releaseYear: 2023,
+      price: "Custom pricing",
+      purchaseLink: "https://www.burberry.com/",
+      stockStatus: "Custom Order"
+    },
+    occasionPricing: {
+      "award-ceremony": {
+        price: "Custom pricing",
+        availableColors: ["Black/Gold", "Royal Blue", "Emerald"],
+        limitedEdition: true
+      },
+      "concert": {
+        price: "Custom pricing",
+        availableColors: ["Stage Collection"]
+      }
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 14,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 2, // Nike
+    description: "Custom-designed Nike training shoes for film preparation",
+    itemType: "Athletic Footwear",
+    categoryId: 7, // Sports Equipment
+    imagePosition: { top: "85%", left: "45%" },
+    equipmentSpecs: {
+      material: "Flyknit with carbon fiber sole plate",
+      color: "Black/Gold/Red",
+      releaseYear: 2022,
+      price: "$275",
+      purchaseLink: "https://www.nike.com/soccer/mercurial",
+      stockStatus: "Available",
+      size: "EU 41",
+      ratings: {
+        quality: 4.8,
+        comfort: 4.7,
+        style: 5.0,
+        value: 4.3
+      }
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$275",
+        availableColors: ["Black/Gold/Red", "Blue/Silver", "White/Gold"]
+      },
+      "limited": {
+        price: "$350",
+        discount: "15% for Nike members",
+        availableColors: ["Atelier Jolie Safari Edition", "Atelier Jolie Signature Collection"],
+        limitedEdition: true
+      },
+      "match": {
+        price: "$275",
+        availableColors: ["Team Colors"],
+        customOptions: ["Personalized name", "Number customization"]
+      },
+      "custom": {
+        price: "$325",
+        customOptions: ["Custom color combinations", "Personalized insole", "NikeID options"],
+        limitedEdition: false
+      }
+    },
+    relationshipStartYear: 2003,
+    grandSlamAppearances: []
+  },
+  {
+    id: 15,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 9, // Louis Vuitton
+    description: "Custom Louis Vuitton red carpet gowns",
+    itemType: "Formal Wear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "40%", left: "30%" },
+    equipmentSpecs: {
+      material: "Premium wool blend with silk lining",
+      color: "Navy/Black",
+      releaseYear: 2020,
+      price: "$3,500",
+      purchaseLink: "https://www.louisvuitton.com/eng-us/men/ready-to-wear/suits-and-blazers/_/N-t1ajnxh",
+      stockStatus: "Custom Order",
+      size: "Tailored"
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$3,500",
+        availableColors: ["Navy/Black", "Black", "Charcoal"]
+      },
+      "custom": {
+        price: "$5,000+",
+        customOptions: ["Monogrammed lining", "Custom fit"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 18,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 3, // Rolex (using existing brand ID)
+    description: "Rolex Day-Date Presidential in Rose Gold",
+    itemType: "Luxury Watch",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "25%", left: "25%" },
+    equipmentSpecs: {
+      material: "White gold with ceramic bezel",
+      color: "Blue/Red bezel with silver dial",
+      releaseYear: 2021,
+      price: "$45,800",
+      purchaseLink: "https://www.rolex.com/watches/gmt-master-ii",
+      stockStatus: "Limited Availability",
+      serialNumber: "Custom Edition"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$45,800",
+        availableColors: ["Blue/Red 'Pepsi'", "Black/Blue 'Batman'"]
+      },
+      "custom": {
+        price: "$60,000+",
+        customOptions: ["Diamond-set bezel", "Custom dial options"],
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2017,
+    grandSlamAppearances: []
+  },
+  {
+    id: 19,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 2, // Nike
+    description: "Exclusive Fitness Collection for Red Carpet Preparation",
+    itemType: "Active Wear",
+    categoryId: 2, // Training Gear
+    imagePosition: { top: "50%", left: "40%" },
+    equipmentSpecs: {
+      material: "Dry-FIT technology with 4-way stretch",
+      color: "Black/Gold",
+      releaseYear: 2023,
+      price: "$85",
+      purchaseLink: "https://www.nike.com/atelier-jolie",
+      stockStatus: "In Stock",
+      size: "S-XXL"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$85",
+        availableColors: ["Black/Gold", "White/Gold", "Navy/Silver"]
+      },
+      "bundle": {
+        price: "$225",
+        discount: "15% off full set",
+        availableColors: ["Black/Gold", "White/Gold"],
+        customOptions: ["Shorts", "Jacket", "T-shirt"]
+      }
+    },
+    relationshipStartYear: 2003,
+    grandSlamAppearances: []
+  },
+  {
+    id: 20,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 9, // Louis Vuitton
+    description: "Exclusive Louis Vuitton Travel Collection",
+    itemType: "Travel Accessories",
+    categoryId: 6, // Accessories
+    imagePosition: { top: "60%", left: "50%" },
+    equipmentSpecs: {
+      material: "Monogram canvas with sustainable materials",
+      color: "Brown/Gold",
+      releaseYear: 2022,
+      price: "$3,200",
+      purchaseLink: "https://www.louisvuitton.com/eng-us/magazine/articles/horizon-soft-luggage.html",
+      stockStatus: "Limited Edition",
+      size: "Carry-on"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$3,200",
+        availableColors: ["Brown/Gold"]
+      },
+      "limited": {
+        price: "$4,500",
+        discount: "Atelier Jolie Signature Edition",
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 21,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 24, // Guerlain
+    description: "Guerlain Signature Fragrance Collection",
+    itemType: "Perfume",
+    categoryId: 5, // Street Style
+    imagePosition: { top: "70%", left: "35%" },
+    equipmentSpecs: {
+      material: "Premium cotton and elastane blend",
+      color: "Black/White with signature accents",
+      releaseYear: 2023,
+      price: "$34.99",
+      purchaseLink: "https://www.atelierjolie.com/",
+      stockStatus: "In Stock",
+      size: "S-XL"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$34.99",
+        availableColors: ["Black", "White", "Blue", "Red"]
+      },
+      "pack": {
+        price: "$89.99",
+        discount: "Buy 3 get 1 free",
+        availableColors: ["Mixed Pack"]
+      }
+    },
+    relationshipStartYear: 2013,
+    grandSlamAppearances: []
+  },
+  {
+    id: 22,
+    celebrityId: 40, // Angelina Jolie
+    brandId: 25, // Atelier Jolie
+    description: "Atelier Jolie Exclusive Fashion Collection",
+    itemType: "Designer Clothing",
+    categoryId: 4, // High Fashion
+    imagePosition: { top: "25%", left: "35%" },
+    equipmentSpecs: {
+      material: "Rose gold with black ceramic and sapphire crystal",
+      color: "Black/Rose Gold with Atelier Jolie signature",
+      releaseYear: 2023,
+      price: "$28,000",
+      purchaseLink: "https://jacobandco.com/",
+      stockStatus: "Limited Edition - 87 pieces only",
+      serialNumber: "Special Atelier Jolie Collection"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$28,000",
+        availableColors: ["Black/Rose Gold"]
+      },
+      "limited": {
+        price: "$32,000",
+        discount: "Includes signed certificate by Angelina Jolie",
+        limitedEdition: true
+      }
+    },
+    relationshipStartYear: 2019,
+    grandSlamAppearances: []
+  },
+  {
+    id: 16,
+    celebrityId: 9, // Lionel Messi
+    brandId: 4, // Adidas
+    description: "X Speedflow Messi.1 signature cleats",
+    itemType: "Football Boots",
+    categoryId: 4, // Sports Equipment
+    imagePosition: { top: "85%", left: "45%" },
+    equipmentSpecs: {
+      material: "PRIMEKNIT with SPEEDFRAME technology",
+      color: "Blue/Pink/White",
+      releaseYear: 2022
+    },
+    occasionPricing: {
+      "Standard": {
+        price: "$275",
+        availableColors: ["Blue/Pink", "Black/Gold", "White/Blue"]
+      }
+    },
+    relationshipStartYear: 2006,
+    grandSlamAppearances: []
+  },
+  {
+    id: 17,
+    celebrityId: 9, // Lionel Messi
+    brandId: 9, // Louis Vuitton
+    description: "Horizon Soft luggage collection",
+    itemType: "Travel Accessories",
+    categoryId: 5, // Lifestyle
+    imagePosition: { top: "50%", left: "30%" },
+    equipmentSpecs: {
+      material: "Monogram Eclipse canvas",
+      color: "Black/Gray",
+      releaseYear: 2020
+    },
+    occasionPricing: {
+      "Standard": {
+        price: "$3,200",
+        availableColors: ["Monogram Eclipse", "Damier Graphite"]
+      }
+    },
+    relationshipStartYear: 2020,
+    grandSlamAppearances: []
+  },
+  {
+    id: 23,
+    celebrityId: 10, // Fawad Khan
+    brandId: 12, // Khaadi
+    description: "Exclusive Formal Collection",
+    itemType: "Traditional Wear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "40%", left: "30%" },
+    equipmentSpecs: {
+      material: "Premium cotton with embroidery",
+      color: "Blue/White",
+      releaseYear: 2023,
+      price: "$250",
+      purchaseLink: "https://www.khaadi.com/",
+      stockStatus: "Available",
+      size: "M-XL"
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$250",
+        availableColors: ["Blue/White", "Black/Gold", "Maroon"]
+      },
+      "wedding": {
+        price: "$350",
+        discount: "Custom embroidery included",
+        availableColors: ["Gold", "Royal Blue"]
+      }
+    },
+    relationshipStartYear: 2020,
+    grandSlamAppearances: []
+  },
+  {
+    id: 24,
+    celebrityId: 10, // Fawad Khan
+    brandId: 13, // HSY
+    description: "Signature Men's Collection",
+    itemType: "Formal Wear",
+    categoryId: 4, // High Fashion
+    imagePosition: { top: "45%", left: "35%" },
+    equipmentSpecs: {
+      material: "Wool blend with custom stitching",
+      color: "Charcoal Gray",
+      releaseYear: 2023,
+      price: "$550",
+      purchaseLink: "https://hsystudio.com/",
+      stockStatus: "Made to Order",
+      size: "Custom Tailored"
+    },
+    occasionPricing: {
+      "formal": {
+        price: "$550",
+        availableColors: ["Charcoal Gray", "Navy Blue", "Black"]
+      },
+      "wedding": {
+        price: "$750",
+        discount: "Complete outfit with accessories",
+        availableColors: ["Signature HSY Designs"]
+      }
+    },
+    relationshipStartYear: 2018,
+    grandSlamAppearances: []
+  },
+  {
+    id: 25,
+    celebrityId: 11, // Shoaib Akhtar
+    brandId: 14, // Adidas Cricket
+    description: "Professional Cricket Bowling Shoes",
+    itemType: "Cricket Footwear",
+    categoryId: 1, // On-Court Style
+    imagePosition: { top: "85%", left: "40%" },
+    equipmentSpecs: {
+      material: "Synthetic with rubber studs",
+      color: "White/Green",
+      releaseYear: 2022,
+      price: "$120",
+      purchaseLink: "https://www.adidas.com/cricket",
+      stockStatus: "Available",
+      size: "UK 10"
+    },
+    occasionPricing: {
+      "match": {
+        price: "$120",
+        availableColors: ["White/Green", "White/Blue", "Black/Red"]
+      },
+      "training": {
+        price: "$95",
+        discount: "Practice variant with similar technology",
+        availableColors: ["All colors"]
+      }
+    },
+    relationshipStartYear: 2000,
+    grandSlamAppearances: []
+  },
+  {
+    id: 26,
+    celebrityId: 11, // Shoaib Akhtar
+    brandId: 17, // CA Sports
+    description: "Professional Cricket Ball",
+    itemType: "Cricket Equipment",
+    imagePosition: { top: "60%", left: "70%" },
+    equipmentSpecs: {
+      material: "Premium leather with hand stitching",
+      color: "Red",
+      releaseYear: 2023,
+      price: "$30",
+      purchaseLink: "https://ca-sports.com.pk/",
+      stockStatus: "In Stock",
+      weight: "5.5 oz"
+    },
+    relationshipStartYear: 1999,
+    grandSlamAppearances: []
+  },
+  {
+    id: 27,
+    celebrityId: 12, // Amir Khan
+    brandId: 15, // Amir Khan Boxing Academy
+    description: "Pro Boxing Gloves",
+    itemType: "Fighting Gear",
+    imagePosition: { top: "50%", left: "60%" },
+    equipmentSpecs: {
+      material: "Premium leather with multi-layer padding",
+      color: "Red/Black with UK flag",
+      releaseYear: 2022,
+      price: "$150",
+      purchaseLink: "https://amirkhanboxing.com/",
+      stockStatus: "Available",
+      weight: "10oz, 12oz, 14oz, 16oz"
+    },
+    relationshipStartYear: 2016,
+    grandSlamAppearances: []
+  },
+  {
+    id: 28,
+    celebrityId: 12, // Amir Khan
+    brandId: 4, // Adidas
+    description: "Training Collection",
+    itemType: "Training Apparel",
+    imagePosition: { top: "45%", left: "30%" },
+    equipmentSpecs: {
+      material: "Performance fabric with moisture-wicking",
+      color: "Black with silver accents",
+      releaseYear: 2022,
+      price: "$65",
+      purchaseLink: "https://www.adidas.com/boxing",
+      stockStatus: "Available",
+      size: "S-XXL"
+    },
+    relationshipStartYear: 2010,
+    grandSlamAppearances: []
+  },
+  {
+    id: 29,
+    celebrityId: 13, // Hania Amir
+    brandId: 16, // Sapphire
+    description: "Summer Collection",
+    itemType: "Casual Wear",
+    imagePosition: { top: "50%", left: "35%" },
+    equipmentSpecs: {
+      material: "Light cotton with printed designs",
+      color: "Pastel collection",
+      releaseYear: 2023,
+      price: "$85",
+      purchaseLink: "https://pk.sapphireonline.pk/",
+      stockStatus: "Seasonal Collection",
+      size: "XS-L"
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 30,
+    celebrityId: 13, // Hania Amir
+    brandId: 12, // Khaadi
+    description: "Signature Collection",
+    itemType: "Traditional Wear",
+    imagePosition: { top: "45%", left: "40%" },
+    equipmentSpecs: {
+      material: "Embroidered fabric with handcrafted details",
+      color: "Turquoise with gold accents",
+      releaseYear: 2023,
+      price: "$120",
+      purchaseLink: "https://www.khaadi.com/",
+      stockStatus: "Limited Edition",
+      size: "XS-L"
+    },
+    relationshipStartYear: 2020,
+    grandSlamAppearances: []
+  },
+  {
+    id: 31,
+    celebrityId: 14, // Imran Khan
+    brandId: 17, // CA Sports
+    description: "Vintage Cricket Bat",
+    itemType: "Cricket Equipment",
+    imagePosition: { top: "60%", left: "65%" },
+    equipmentSpecs: {
+      material: "English willow with traditional crafting",
+      color: "Natural wood with green grip",
+      releaseYear: 2021,
+      price: "$200",
+      purchaseLink: "https://ca-sports.com.pk/",
+      stockStatus: "Collector's Edition",
+      weight: "2lb 10oz"
+    },
+    relationshipStartYear: 1990,
+    grandSlamAppearances: []
+  },
+  {
+    id: 32,
+    celebrityId: 14, // Imran Khan
+    brandId: 13, // HSY
+    description: "Formal Traditional Suit",
+    itemType: "Formal Wear",
+    imagePosition: { top: "40%", left: "30%" },
+    equipmentSpecs: {
+      material: "Premium wool with handmade embroidery",
+      color: "Dark blue with white stitching",
+      releaseYear: 2022,
+      price: "$450",
+      purchaseLink: "https://hsystudio.com/",
+      stockStatus: "Made to Order",
+      size: "Custom Tailored"
+    },
+    relationshipStartYear: 2015,
+    grandSlamAppearances: []
+  },
+  {
+    id: 45,
+    celebrityId: 15, // Kim Kardashian
+    brandId: 18, // SKIMS
+    description: "SKIMS Sculpting Bodysuit",
+    itemType: "Shapewear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "40%", left: "50%" },
+    equipmentSpecs: {
+      material: "Nylon and spandex blend",
+      color: "Onyx",
+      releaseYear: 2023,
+      price: "$68",
+      purchaseLink: "https://skims.com/products/sculpting-bodysuit-onyx",
+      stockStatus: "In Stock",
+      size: "XXS-4X"
+    },
+    occasionPricing: {
+      "everyday": {
+        price: "$68",
+        availableColors: ["Onyx", "Cocoa", "Sienna", "Bone"]
+      },
+      "special": {
+        price: "$68",
+        discount: "15% with newsletter signup",
+        availableColors: ["Onyx", "Cocoa", "Sienna", "Bone"]
+      }
+    },
+    relationshipStartYear: 2019,
+    grandSlamAppearances: []
+  },
+  {
+    id: 46,
+    celebrityId: 16, // Kylie Jenner
+    brandId: 19, // Kylie Cosmetics
+    description: "Kylie Lip Kit Matte Liquid Lipstick & Liner",
+    itemType: "Makeup",
+    categoryId: 5, // Street Style
+    imagePosition: { top: "35%", left: "40%" },
+    equipmentSpecs: {
+      material: "Long-wearing formula",
+      color: "Mary Jo K",
+      releaseYear: 2023,
+      price: "$29",
+      purchaseLink: "https://kyliecosmetics.com",
+      stockStatus: "In Stock",
+      size: "Standard"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$29",
+        availableColors: ["Mary Jo K", "Dolce K", "Candy K", "Posie K"]
+      },
+      "bundle": {
+        price: "$75",
+        discount: "Save 15% on trio bundle",
+        availableColors: ["Bestseller Collection"]
+      }
+    },
+    relationshipStartYear: 2015,
+    grandSlamAppearances: []
+  },
+  {
+    id: 47,
+    celebrityId: 17, // Khloe Kardashian
+    brandId: 20, // Good American
+    description: "Good American Good Legs Jeans",
+    itemType: "Denim",
+    categoryId: 6, // Athleisure
+    imagePosition: { top: "60%", left: "40%" },
+    equipmentSpecs: {
+      material: "Premium stretch denim",
+      color: "Blue001",
+      releaseYear: 2023,
+      price: "$159",
+      purchaseLink: "https://www.goodamerican.com/products/good-legs-blue001",
+      stockStatus: "In Stock",
+      size: "00-24"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$159",
+        availableColors: ["Blue001", "Blue155", "Black", "White"]
+      },
+      "sale": {
+        price: "$99",
+        discount: "Select styles on sale",
+        availableColors: ["Last season styles"]
+      }
+    },
+    relationshipStartYear: 2016,
+    grandSlamAppearances: []
+  },
+  {
+    id: 48,
+    celebrityId: 18, // Kendall Jenner
+    brandId: 21, // 818 Tequila
+    description: "818 Tequila Añejo",
+    itemType: "Spirits",
+    categoryId: 4, // High Fashion
+    imagePosition: { top: "40%", left: "50%" },
+    equipmentSpecs: {
+      material: "100% Weber Blue Agave",
+      color: "Amber",
+      releaseYear: 2021,
+      price: "$69.99",
+      purchaseLink: "https://www.drink818.com",
+      stockStatus: "In Stock",
+      size: "750ml"
+    },
+    occasionPricing: {
+      "standard": {
+        price: "$69.99",
+        availableColors: ["Añejo"]
+      },
+      "bundle": {
+        price: "$179.99",
+        discount: "Trio bundle with Blanco and Reposado",
+        availableColors: ["Gift Set"]
+      }
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 49,
+    celebrityId: 24, // Priyanka Chopra
+    brandId: 9, // Louis Vuitton
+    description: "Red Carpet Collection",
+    itemType: "Formal Wear",
+    categoryId: 3, // Red Carpet
+    imagePosition: { top: "40%", left: "40%" },
+    equipmentSpecs: {
+      material: "Premium silk with custom embellishments",
+      color: "Gold/White",
+      releaseYear: 2023,
+      price: "Custom pricing",
+      purchaseLink: "https://www.louisvuitton.com/",
+      stockStatus: "Custom Order",
+      size: "Custom Fitted"
+    },
+    occasionPricing: {
+      "award-ceremony": {
+        price: "Custom pricing",
+        availableColors: ["Gold/White", "Silver", "Emerald"]
+      },
+      "premiere": {
+        price: "Custom pricing",
+        availableColors: ["Premiere Collection"]
+      }
+    },
+    relationshipStartYear: 2021,
+    grandSlamAppearances: []
+  },
+  {
+    id: 50,
+    celebrityId: 25, // Salman Khan
+    brandId: 27, // Being Human
+    description: "Being Human Signature Collection",
+    itemType: "Casual Wear",
+    categoryId: 4, // Street Style
+    imagePosition: { top: "50%", left: "35%" },
+    equipmentSpecs: {
+      material: "Premium cotton with signature logo",
+      color: "Black/White",
+      releaseYear: 2023,
+      price: "$45-$125",
+      purchaseLink: "https://www.beinghumanclothing.com/",
+      stockStatus: "In Stock",
+      size: "S-XXL"
+    },
+    occasionPricing: {
+      "casual": {
+        price: "$45",
+        availableColors: ["Black", "White", "Grey", "Blue"]
+      },
+      "limited": {
+        price: "$125",
+        discount: "20% donated to Being Human Foundation",
+        availableColors: ["Special Edition"]
+      }
+    },
+    relationshipStartYear: 2012,
+    grandSlamAppearances: []
+  }
+];
+
+export const mockTournaments: Tournament[] = [
+  {
+    id: 1,
+    name: "Wimbledon",
+    location: "London, UK",
+    surfaceType: "Grass",
+    startDate: "June 27, 2023",
+    endDate: "July 10, 2023",
+    description: "The oldest and most prestigious tennis tournament in the world, featuring strict all-white dress code for players.",
+    imageUrl: "https://images.unsplash.com/photo-1622279488999-f0096dc58c7b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Grand Slam"
+  },
+  {
+    id: 2,
+    name: "US Open",
+    location: "New York, USA",
+    surfaceType: "Hard",
+    startDate: "August 28, 2023",
+    endDate: "September 10, 2023",
+    description: "Known for its electric atmosphere and night sessions, players often wear bold colors and urban-inspired designs.",
+    imageUrl: "https://images.unsplash.com/photo-1555739041-6838f1d0e1c3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Grand Slam"
+  },
+  {
+    id: 3,
+    name: "Australian Open",
+    location: "Melbourne, Australia",
+    surfaceType: "Hard",
+    startDate: "January 14, 2024",
+    endDate: "January 28, 2024",
+    description: "The first Grand Slam of the year, featuring heat-optimized lightweight outfits due to the summer temperatures.",
+    imageUrl: "https://images.unsplash.com/photo-1530915658866-a2d9c505bbfe?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Grand Slam"
+  },
+  {
+    id: 4,
+    name: "Roland Garros",
+    location: "Paris, France",
+    surfaceType: "Clay",
+    startDate: "May 22, 2023",
+    endDate: "June 5, 2023",
+    description: "Famous for its distinctive red clay courts, players often wear terra-cotta inspired colors that complement the surface.",
+    imageUrl: "https://images.unsplash.com/photo-1622211885269-18dde7e80ca3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Grand Slam"
+  },
+  {
+    id: 5,
+    name: "Money in the Bank",
+    location: "Las Vegas, USA",
+    surfaceType: "Ring",
+    startDate: "May 10, 2023",
+    endDate: "May 10, 2023",
+    description: "One of boxing's most prestigious events featuring the biggest paydays in the sport with elaborate entrance gear.",
+    imageUrl: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Championship"
+  },
+  {
+    id: 6,
+    name: "Fight of the Century",
+    location: "MGM Grand, Las Vegas",
+    surfaceType: "Ring",
+    startDate: "March 8, 2023",
+    endDate: "March 8, 2023",
+    description: "Historic boxing match between global superstars with custom-designed fight gear representing their personal brands.",
+    imageUrl: "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Championship"
+  },
+  {
+    id: 7,
+    name: "FIFA World Cup",
+    location: "Qatar",
+    surfaceType: "Grass",
+    startDate: "November 20, 2022",
+    endDate: "December 18, 2022",
+    description: "The biggest international football tournament featuring national team kits with cultural design elements.",
+    imageUrl: "https://images.unsplash.com/photo-1616514197671-15d99ce7a6f8?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "International"
+  },
+  {
+    id: 8,
+    name: "UEFA Champions League",
+    location: "Multiple European Venues",
+    surfaceType: "Grass",
+    startDate: "September 19, 2023",
+    endDate: "June 1, 2024",
+    description: "Europe's premier club football competition where players showcase the latest football boot technology and kit designs.",
+    imageUrl: "https://images.unsplash.com/photo-1590552515252-3a5a1bce7bed?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
+    tier: "Club"
+  }
+];
+
+export const mockTournamentOutfits: TournamentOutfit[] = [
+  {
+    id: 1,
+    celebrityId: 1, // Roger Federer
+    tournamentId: 1, // Wimbledon
+    year: 2019,
+    description: "Classic all-white ensemble with gold accents for his 20th anniversary at Wimbledon",
+    imageUrl: "https://images.unsplash.com/photo-1531315396756-905d68d21b56?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    result: "Finalist",
+    outfitDetails: {
+      mainColor: "White",
+      accentColor: "Gold",
+      specialFeatures: "RF logo on jacket and sneakers",
+      designInspiration: "Tennis heritage and tradition"
+    },
+    associatedBrands: [5, 3] // Uniqlo, Rolex
+  },
+
+  {
+    id: 6,
+    celebrityId: 6, // Floyd Mayweather
+    tournamentId: 5, // Money in the Bank
+    year: 2023,
+    description: "Luxurious boxing robe with gold threading and custom embroidery",
+    imageUrl: "https://images.unsplash.com/photo-1583473848482-7631f0e6993c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    result: "Winner",
+    outfitDetails: {
+      mainColor: "Black",
+      accentColor: "Gold",
+      specialFeatures: "Python skin trim and diamond-encrusted logo",
+      designInspiration: "Luxury fashion and boxing heritage"
+    },
+    associatedBrands: [9, 3] // Louis Vuitton, Rolex
+  },
+  {
+    id: 7,
+    celebrityId: 7, // Adele
+    tournamentId: 6, // Grammy Awards
+    year: 2022,
+    description: "Custom haute couture gown in elegant black and gold",
+    imageUrl: "https://images.unsplash.com/photo-1594381898411-846e7d193883?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    result: "Winner - Album of the Year",
+    outfitDetails: {
+      mainColor: "Black",
+      accentColor: "Gold",
+      specialFeatures: "Hand-embroidered sequins and crystal embellishments",
+      designInspiration: "Old Hollywood glamour and timeless elegance"
+    },
+    associatedBrands: [26] // Burberry
+  },
+  {
+    id: 8,
+    celebrityId: 40, // Angelina Jolie
+    tournamentId: 12, // Academy Awards
+    year: 2022,
+    description: "Iconic red carpet gown with custom designer elements",
+    imageUrl: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    result: "Best Actress Nominee",
+    outfitDetails: {
+      mainColor: "Black",
+      accentColor: "Gold",
+      specialFeatures: "Hand-embroidered details with sustainable materials",
+      designInspiration: "Classic Hollywood glamour with ethical fashion focus"
+    },
+    associatedBrands: [25, 9] // Atelier Jolie, Louis Vuitton
+  },
+  {
+    id: 9,
+    celebrityId: 9, // Lionel Messi
+    tournamentId: 7, // FIFA World Cup
+    year: 2022,
+    description: "Argentina national team kit that became iconic after World Cup victory",
+    imageUrl: "https://images.unsplash.com/photo-1634458173270-d1a38eda344f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+    result: "Winner",
+    outfitDetails: {
+      mainColor: "White",
+      accentColor: "Sky Blue",
+      specialFeatures: "Lightweight performance fabric with national team crest",
+      designInspiration: "Argentina's flag and football legacy"
+    },
+    associatedBrands: [4] // Adidas
+  },
+  {
+    id: 10,
+    celebrityId: 11, // Shoaib Akhtar
+    tournamentId: 8, // Using Champions League as stand-in for Cricket World Cup
+    year: 2003,
+    description: "Pakistan national cricket team kit during his fastest bowling period",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Flag_of_Pakistan.svg/800px-Flag_of_Pakistan.svg.png",
+    result: "Semi-finalist",
+    outfitDetails: {
+      mainColor: "Green",
+      accentColor: "White",
+      specialFeatures: "Breathable performance fabric with national emblem",
+      designInspiration: "Pakistani heritage and cricket tradition"
+    },
+    associatedBrands: [14, 17] // Adidas Cricket, CA Sports
+  },
+  {
+    id: 11,
+    celebrityId: 12, // Amir Khan
+    tournamentId: 6, // Fight of the Century
+    year: 2019,
+    description: "Special edition boxing gear with British-Pakistani influences",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Amir_Khan_2015.jpg",
+    result: "Winner",
+    outfitDetails: {
+      mainColor: "Red",
+      accentColor: "Gold",
+      specialFeatures: "Lightweight material with Union Jack and Pakistani flag elements",
+      designInspiration: "Dual heritage celebration and boxing tradition"
+    },
+    associatedBrands: [15, 4] // Amir Khan Boxing Academy, Adidas
+  },
+  {
+    id: 12,
+    celebrityId: 14, // Imran Khan
+    tournamentId: 8, // Using Champions League as stand-in for Cricket World Cup
+    year: 1992,
+    description: "Historic Pakistan cricket captain outfit during World Cup victory",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/f/ff/Imran_Khan_at_US_Institute_of_Peace_2018_%2842404052844%29_%28cropped%29.jpg",
+    result: "Winner",
+    outfitDetails: {
+      mainColor: "Green",
+      accentColor: "White",
+      specialFeatures: "Classic cricket whites with green national accents",
+      designInspiration: "Traditional cricket attire with national pride elements"
+    },
+    associatedBrands: [17] // CA Sports
+  },
+  {
+    id: 13,
+    celebrityId: 24, // Priyanka Chopra
+    tournamentId: 5, // Using Money in the Bank as stand-in for Award Show
+    year: 2023,
+    description: "Exquisite haute couture gown for Hollywood premiere",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Priyanka_Chopra_Met_Gala_2019.png/800px-Priyanka_Chopra_Met_Gala_2019.png",
+    result: "Best Dressed",
+    outfitDetails: {
+      mainColor: "Gold",
+      accentColor: "Silver",
+      specialFeatures: "Hand-embroidered details with crystal embellishments",
+      designInspiration: "Classic Hollywood glamour with modern innovation"
+    },
+    associatedBrands: [9] // Louis Vuitton
+  },
+  {
+    id: 14,
+    celebrityId: 25, // Salman Khan
+    tournamentId: 6, // Using Fight of the Century as stand-in for Bollywood Award Show
+    year: 2023,
+    description: "Exclusive Being Human formal collection for industry gala",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Shah_Rukh_Khan_Salman_Khan_%28cropped%29.jpg/800px-Shah_Rukh_Khan_Salman_Khan_%28cropped%29.jpg",
+    result: "Lifetime Achievement Award",
+    outfitDetails: {
+      mainColor: "Black",
+      accentColor: "White",
+      specialFeatures: "Custom-tailored Being Human formal attire with signature elements",
+      designInspiration: "Classic Bollywood elegance with contemporary style"
+    },
+    associatedBrands: [27] // Being Human
+  }
+];
+
+export const mockCategories: Category[] = [
+  {
+    id: 1,
+    name: "On-Court Style",
+    description: "Performance apparel for matches and competitions",
+    imageUrl: "https://images.unsplash.com/photo-1595435934850-5ec630bb4758?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 2,
+    name: "Court Fashion",
+    description: "Signature outfits and stylish performance gear",
+    imageUrl: "https://images.unsplash.com/photo-1583846783214-7229a91b20ed?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 3,
+    name: "Red Carpet",
+    description: "Formal attire for award ceremonies and galas",
+    imageUrl: "https://images.unsplash.com/photo-1517456793572-1d8efd6dc135?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 4,
+    name: "Street Style",
+    description: "Casual fashion for everyday appearances",
+    imageUrl: "https://images.unsplash.com/photo-1533000759938-aa0ba70beceb?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 5,
+    name: "Event Fashion",
+    description: "Styled looks for sponsorship events and appearances",
+    imageUrl: "https://images.unsplash.com/photo-1519011985187-444d62641929?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 6,
+    name: "Casual",
+    description: "Relaxed off-duty styles and leisure wear",
+    imageUrl: "https://images.unsplash.com/photo-1550639525-c97d455acf70?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 7,
+    name: "Sports Equipment",
+    description: "Professional sporting equipment and gear",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Cricket_bat.jpg/800px-Cricket_bat.jpg"
+  },
+  {
+    id: 8,
+    name: "Fighting Gear",
+    description: "Professional boxing and fighting equipment",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Boxing_gloves.jpg/800px-Boxing_gloves.jpg"
+  },
+  {
+    id: 9,
+    name: "Traditional Wear",
+    description: "Cultural and traditional clothing and fashion",
+    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/PFDC_Sunsilk_Fashion_Week_2011_HSY_Lawn.jpg/800px-PFDC_Sunsilk_Fashion_Week_2011_HSY_Lawn.jpg"
+  }
+];

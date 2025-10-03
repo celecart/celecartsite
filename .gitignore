@@ -1,41 +1,21 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+node_modules
+dist
 .DS_Store
-*.pem
+server/public
+vite.config.ts.*
+*.tar.gz
+attached_assets
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Replit and agent state files
+.local/
+.config/
+.agent_state_*
+*.bin
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Large image files
+*.jpg
+*.png
+*.jpeg
+client/public/assets/**/*.jpg
+client/public/assets/**/*.png
+client/public/assets/**/*.jpeg
