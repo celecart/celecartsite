@@ -1,0 +1,131 @@
+                    
+                    {/* Beauty & Wellness Section */}
+                    <div className="mt-8">
+                      <h4 className="text-xl font-playfair font-semibold mb-6 text-amber-600 border-b border-amber-200 pb-2">
+                        Beauty & Wellness
+                      </h4>
+                      
+                      <div className="w-full overflow-hidden rounded-lg border border-amber-100 mb-6">
+                        <img 
+                          src="/assets/kim-kardashian/beauty-wellness/beauty-wellness-grid.png" 
+                          alt="Kim Kardashian's beauty and wellness products" 
+                          className="w-full h-auto"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
+                          <div className="flex flex-col h-full">
+                            <div className="w-full h-48 mb-4 rounded overflow-hidden bg-neutral-50 border border-amber-100">
+                              <img 
+                                src="https://skknbykim.com/cdn/shop/files/SKKN-9-Piece-Bundle-Site-2.png" 
+                                alt="SKKN BY KIM" 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <div className="mb-1">
+                                <span className="font-medium text-neutral-700">Skincare</span>
+                              </div>
+                              <a
+                                href="https://skknbykim.com/collections/all-products/products/the-complete-collection" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-lg font-playfair text-amber-600 hover:underline"
+                              >
+                                SKKN BY KIM nine-step routine
+                              </a>
+                              <div className="flex items-center mt-1">
+                                <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">$575.00</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
+                          <div className="flex flex-col h-full">
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                              <div className="rounded overflow-hidden bg-neutral-50 border border-amber-100 h-24">
+                                <img 
+                                  src="/assets/kim-kardashian/beauty-wellness/skkn-exfoliator.png" 
+                                  alt="SKKN Exfoliator" 
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <div className="rounded overflow-hidden bg-neutral-50 border border-amber-100 h-24">
+                                <img 
+                                  src="/assets/kim-kardashian/beauty-wellness/skkn-vitamin-c-serum.png" 
+                                  alt="SKKN Vitamin C Serum" 
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <div className="rounded overflow-hidden bg-neutral-50 border border-amber-100 h-24 col-span-2">
+                                <img 
+                                  src="/assets/kim-kardashian/beauty-wellness/skkn-hyaluronic-acid-serum.png" 
+                                  alt="SKKN Hyaluronic Acid Serum" 
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="mb-1">
+                                <span className="font-medium text-neutral-700">SKKN Core Products</span>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <a
+                                  href="https://skknbykim.com/collections/all-products/products/exfoliator" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-amber-600 hover:underline text-sm font-medium"
+                                >
+                                  Exfoliator <span className="text-xs text-amber-700 bg-amber-50 px-1 rounded">$45</span>
+                                </a>
+                                <a
+                                  href="https://skknbykim.com/collections/all-products/products/hyaluronic-acid-serum" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-amber-600 hover:underline text-sm font-medium"
+                                >
+                                  Hyaluronic Acid Serum <span className="text-xs text-amber-700 bg-amber-50 px-1 rounded">$90</span>
+                                </a>
+                                <a
+                                  href="https://skknbykim.com/collections/all-products/products/vitamin-c8-serum" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-amber-600 hover:underline text-sm font-medium"
+                                >
+                                  Vitamin C8 Serum <span className="text-xs text-amber-700 bg-amber-50 px-1 rounded">$90</span>
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
+                          <div className="flex flex-col h-full">
+                            <div className="w-full h-48 mb-4 rounded overflow-hidden bg-neutral-50 border border-amber-100">
+                              <img 
+                                src="https://cdn.shopify.com/s/files/1/0019/6436/0396/products/product-contour-contour-kit-900x900_900x.jpg" 
+                                alt="KKW Beauty contour kit" 
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div>
+                              <div className="mb-1">
+                                <span className="font-medium text-neutral-700">Makeup</span>
+                              </div>
+                              <a
+                                href="https://kkwbeauty.com/collections/face/products/classic-contour-kit" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-lg font-playfair text-amber-600 hover:underline"
+                              >
+                                KKW Beauty contour kits
+                              </a>
+                              <div className="flex items-center mt-1">
+                                <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">$32.00</span>
+                                <span className="ml-2 text-xs text-neutral-500">And neutral lip colors</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        

@@ -1,0 +1,28 @@
+{
+  "pakistaniCelebrities": [
+    {
+      "id": 10,
+      "name": "Fawad Khan",
+      "profession": "Actor, Model, and Fashion Icon",
+      "imageUrl": "/assets/fawad-khan.png",
+      "description": "Pakistani actor and model known for his sophisticated style, blending traditional and modern fashion elements with a timeless appeal.",
+      "category": "Formal Wear"
+    },
+    {
+      "id": 12,
+      "name": "Amir Khan",
+      "profession": "Professional Boxer, Olympic Silver Medalist",
+      "imageUrl": "/assets/amir-khan.png",
+      "description": "British-Pakistani boxer known for his flashy ring attire and high-profile brand endorsements both in and out of the boxing ring.",
+      "category": "Fighting Gear"
+    },
+    {
+      "id": 13,
+      "name": "Hania Amir",
+      "profession": "Actress, Model, and Social Media Personality",
+      "imageUrl": "/assets/hania-amir.png",
+      "description": "Rising Pakistani actress known for her trendsetting fashion choices and collaboration with various clothing and lifestyle brands.",
+      "category": "Street Style"
+    }
+  ]
+}

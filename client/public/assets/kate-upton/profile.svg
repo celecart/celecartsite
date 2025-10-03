@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <!-- Luxurious background gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8a5d55;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#523a37;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e6c67a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b8a06a;stop-opacity:1" />
+    </linearGradient>
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" />
+      <feOffset dx="0" dy="4" result="offsetblur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.7" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bg-gradient)" />
+  
+  <!-- Decorative elements -->
+  <rect x="20" y="20" width="560" height="760" fill="none" stroke="url(#gold-gradient)" stroke-width="3" rx="10" ry="10" />
+  
+  <!-- Silhouette placeholder -->
+  <rect x="150" y="180" width="300" height="380" fill="#724743" rx="20" ry="20" />
+  <circle cx="300" cy="280" r="100" fill="#976861" />
+  <rect x="200" y="400" width="200" height="140" rx="70" ry="70" fill="#976861" />
+  
+  <!-- Gold badge -->
+  <circle cx="480" cy="110" r="60" fill="url(#gold-gradient)" filter="url(#drop-shadow)" />
+  <text x="480" y="114" font-family="'Playfair Display', serif" font-size="16" text-anchor="middle" fill="#523a37" font-weight="bold">FEATURED</text>
+  <text x="480" y="134" font-family="'Playfair Display', serif" font-size="16" text-anchor="middle" fill="#523a37" font-weight="bold">MODEL</text>
+  
+  <!-- Name and title -->
+  <text x="300" y="620" font-family="'Playfair Display', serif" font-size="40" text-anchor="middle" fill="white" font-weight="bold">KATE UPTON</text>
+  <rect x="180" y="640" width="240" height="2" fill="url(#gold-gradient)" />
+  <text x="300" y="670" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#e6c67a">Supermodel, Actress</text>
+  
+  <!-- Brand logos placeholder -->
+  <text x="300" y="720" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="white">GUESS • VICTORIA'S SECRET</text>
+  
+  <!-- Lumous branding -->
+  <text x="300" y="760" font-family="'Playfair Display', serif" font-size="12" text-anchor="middle" fill="#c5b2ad">LUMOUS • CELEBRITY STYLE COLLECTION</text>
+</svg>
