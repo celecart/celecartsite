@@ -1,32 +1,38 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import crypto from "node:crypto";
+import passport from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import dotenv from 'dotenv';
+import { storage } from "./storage";
+
+// Load environment variables
+dotenv.config();
 import { addRandolphBrandToDB } from "./addRandolphBrand";
 import { addPakistaniCelebritiesToDB } from "./addPakistaniCelebrities";
 import { addShoaibAkhtar } from "./addShoaibAkhtar";
 import { addMorePakistaniCelebritiesToDB } from "./addMorePakistaniCelebrities";
 import { addFrazayAkbarProfileToDB } from "./addFarazayProfile";
 import { markEliteCelebrities } from "./markEliteCelebrities";
-import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware for authentication
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "cele-session-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // set true if behind https
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-  })
-);
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Serve static assets from public directory
 app.use('/assets', express.static('public/assets'));
@@ -80,22 +86,33 @@ app.use((req, res, next) => {
   // Mark elite celebrities with premium status badges
   await markEliteCelebrities();
 
-  // Seed a demo user for authentication testing
-  const salt = process.env.PASSWORD_SALT || "cele-salt";
-  const demoPasswordHash = crypto
-    .createHash("sha256")
-    .update(salt + "demo1234")
-    .digest("hex");
-  await storage.createUser({ username: "demo@cele.com", password: demoPasswordHash });
-
-  // Seed an admin user for admin panel access
-  const adminPasswordHash = crypto
-    .createHash("sha256")
-    .update(salt + "admin1234")
-    .digest("hex");
-  const adminUser = await storage.createUser({ username: "admin@cele.com", password: adminPasswordHash });
-  await storage.updateUserRole(adminUser.id, 'admin');
-
+  // Ensure admin user exists and set password
+  try {
+    const adminEmail = 'admin@cele.com';
+    const desiredPassword = '123456789';
+    const existingAdmin = await storage.getUserByEmail(adminEmail);
+    if (existingAdmin) {
+      await storage.updateUserPasswordByEmail(adminEmail, desiredPassword);
+      log('Admin password updated');
+    } else {
+      await storage.createUser({
+        username: 'admin',
+        password: desiredPassword,
+        email: adminEmail,
+        displayName: 'Administrator',
+        profilePicture: '',
+        firstName: 'Admin',
+        lastName: '',
+        phone: '',
+        accountStatus: 'Active',
+      });
+      log('Admin user created with password');
+    }
+  } catch (e) {
+    log('Failed to ensure admin user/password');
+    console.error(e);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

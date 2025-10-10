@@ -6,24 +6,35 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import CelebrityProfile from "@/pages/CelebrityProfile";
 import ContentCreator from "@/pages/ContentCreator";
+import Login from "@/pages/Login";
 import ViewportSimulator from "./components/ViewportSimulator";
-import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
-import AdminPanel from "@/pages/AdminPanel";
-import AdminUserProfile from "@/pages/AdminUserProfile";
-import UserProfile from "@/pages/UserProfile";
+import AdminRoles from "@/pages/AdminRoles";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminCategories from "@/pages/AdminCategories";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import Profile from "@/pages/Profile";
+import AdminPlans from "@/pages/AdminPlans";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/signin" component={Login} />
+      <Route path="/signup" component={SignUp} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/profile" component={Profile} />
       <Route path="/celebrity/:id" component={CelebrityProfile} />
       <Route path="/content-creator" component={ContentCreator} />
-      <Route path="/signin" component={SignIn} />
-      <Route path="/signup" component={SignUp} />
-      <Route path="/admin" component={AdminPanel} />
-      <Route path="/admin/users/:id" component={AdminUserProfile} />
-      <Route path="/profile" component={UserProfile} />
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/roles" component={AdminRoles} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/admin/plans" component={AdminPlans} />
       <Route component={NotFound} />
     </Switch>
   );

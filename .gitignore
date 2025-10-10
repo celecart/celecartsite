@@ -1,3 +1,6 @@
+# Environment files
+.env
+
 node_modules
 dist
 .DS_Store
@@ -12,10 +15,9 @@ attached_assets
 .agent_state_*
 *.bin
 
-# Large image files
-*.jpg
-*.png
-*.jpeg
-client/public/assets/**/*.jpg
-client/public/assets/**/*.png
-client/public/assets/**/*.jpeg
+# Large image files (optional - uncomment if you want to exclude them)
+# *.jpg
+# *.png
+# *.jpeg.env
+.env
+.env
