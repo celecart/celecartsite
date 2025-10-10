@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Menu, X, Filter, Award, Trophy, Dumbbell, Activity, FileText, LogIn, LogOut } from "lucide-react";
+import { Search, Menu, X, Filter, Award, Trophy, Dumbbell, Activity, FileText, User, LogOut } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Celebrity } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+// removed GoogleSignIn import
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Header() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -23,27 +24,39 @@ export default function Header() {
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSportFilter, setActiveSportFilter] = useState<string | null>(null);
-  
-  // auth state
-  const [user, setUser] = useState<{ id: number; username: string; role?: string; imageUrl?: string } | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   useEffect(() => {
-    (async () => {
+    const checkAuthStatus = async () => {
       try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-        setUser(data.user);
-      } catch {}
-    })();
-  }, []);
-  
-  async function handleLogout() {
-    try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) {
+        const response = await fetch('/auth/user', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
         setUser(null);
+      } finally {
+        setAuthLoading(false);
       }
-    } catch {}
-  }
+    };
+    checkAuthStatus();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+      if (response.ok) {
+        setUser(null);
+        window.location.reload();
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
   
   // Fetch all celebrities for search functionality
   const { data: celebrities } = useQuery<Celebrity[]>({
@@ -165,7 +178,7 @@ export default function Header() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="flex items-center gap-2 bg白/10 hover:bg白/20 border border白/20 rounded-full px-4 py-2 text白/90 hover:text-amber-400 transition-all duration-300 backdrop-blur-sm"
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-4 py-2 text-white/90 hover:text-amber-400 transition-all duration-300 backdrop-blur-sm"
                   >
                     <Filter className="h-4 w-4" />
                     <span className="text-xs uppercase font-medium tracking-wide">
@@ -232,7 +245,7 @@ export default function Header() {
                 <Input
                   type="text"
                   placeholder="Search celebrities..."
-                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-45 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
+                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
                   value={searchQuery}
                   onChange={handleSearchChange}
                 />
@@ -274,50 +287,65 @@ export default function Header() {
               </AnimatePresence>
             </div>
             
-
-            {/* Sign In Button (Desktop) */}
-             <div className="hidden lg:flex items-center gap-3">
-               {user ? (
-                 <>
-                   <Avatar className="h-8 w-8 border border-white/20">
-                     {user.imageUrl ? (
-                       <AvatarImage src={user.imageUrl} alt={user.username} />
-                     ) : (
-                       <AvatarFallback className="text-xs bg-white/10 text-white/80">
-                         {user.username?.[0]?.toUpperCase() || 'U'}
-                       </AvatarFallback>
-                     )}
-                   </Avatar>
-                   <Button 
-                     variant="outline"
-                     size="sm"
-                     className="flex items-center gap-2 border-white/20 text-white hover:bg-white/10 rounded-full px-4 py-2"
-                     onClick={handleLogout}
-                   >
-                     <LogOut className="h-4 w-4" />
-                     <span className="text-xs uppercase font-medium tracking-wide">Sign Out</span>
-                   </Button>
-                 </>
-               ) : (
-                 <Link href="/signin">
-                   <Button 
-                     variant="default"
-                     size="sm"
-                     className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full px-4 py-2 hover:from-amber-600 hover:to-orange-600 shadow-lg"
-                   >
-                     <LogIn className="h-4 w-4" />
-                     <span className="text-xs uppercase font-medium tracking-wide">Sign In</span>
-                   </Button>
-                 </Link>
-               )}
-             </div>
-
-             {/* Premium Mobile Menu Button */}
-             <button 
-               className="lg:hidden relative p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-white/90 hover:text-amber-400 transition-all duration-300 backdrop-blur-sm" 
-               onClick={toggleMobileMenu}
-               aria-label="Toggle mobile menu"
-             >
+            {/* Sign In / Profile */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="p-0 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.imageUrl || user.picture || user.avatarUrl} alt={user.name || user.email} />
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.imageUrl || user.picture || user.avatarUrl} alt={user.name || user.email} />
+                        <AvatarFallback>
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="text-sm font-medium">{user.name || user.email}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <span className="flex items-center">
+                        <User className="mr-2 h-4 w-4" /> Profile
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="bg-amber-500 hover:bg-amber-600 text-black rounded-full px-4 py-2"
+                >
+                  Sign In
+                </Button>
+              </Link>
+            )}
+            
+            {/* Premium Mobile Menu Button */}
+            <button 
+              className="lg:hidden relative p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-white/90 hover:text-amber-400 transition-all duration-300 backdrop-blur-sm" 
+              onClick={toggleMobileMenu}
+              aria-label="Toggle mobile menu"
+            >
               <div className="relative">
                 {showMobileMenu ? (
                   <X className="h-5 w-5 transition-transform duration-300 rotate-90" />
@@ -499,24 +527,41 @@ export default function Header() {
                   >
                     Brands
                   </a>
-                  {user ? (
-                    <button 
-                      onClick={async () => { await handleLogout(); setShowMobileMenu(false); }}
-                      className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-white/10 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </button>
-                  ) : (
-                    <Link 
-                      href="/signin"
-                      className="flex items-center px-4 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white border border-amber-500/50 hover:from-amber-600 hover:to-orange-600 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
-                      onClick={() => setShowMobileMenu(false)}
-                    >
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
-                    </Link>
-                  )}
+                  
+                  {/* Mobile Sign In / Profile */}
+                  <div className="w-full flex items-center justify-between gap-4">
+                    {user ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.imageUrl || user.picture || user.avatarUrl} alt={user.name || user.email} />
+                            <AvatarFallback>
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm text-white/90">{user.name || user.email}</div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 hover:text-amber-400 rounded-full"
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="mr-2 h-4 w-4" /> Sign out
+                        </Button>
+                      </>
+                    ) : (
+                      <Link href="/login" className="w-full">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 hover:text-amber-400 rounded-full"
+                        >
+                          Sign In
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

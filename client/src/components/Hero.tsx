@@ -251,16 +251,16 @@ export default function Hero() {
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <Link href="#trending" className="group relative overflow-hidden block">
+                  <Link href="/content-creator" className="group relative overflow-hidden block">
                     <div className="absolute inset-0 bg-gradient-to-r from-gold via-gold to-gold/90 rounded-2xl"></div>
                     <div className="relative flex items-center justify-center gap-3 px-8 py-6 text-dark font-bold rounded-2xl transition-all text-base md:text-lg">
                       <motion.div
                         animate={{ rotate: [0, 360] }}
                         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                       >
-                        <Camera className="w-6 h-6" />
+                        <Sparkles className="w-6 h-6" />
                       </motion.div>
-                      <span>CELEBRITY SPOTLIGHT</span>
+                      <span>PERSONALIZE MY STYLE</span>
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </Link>
@@ -280,7 +280,7 @@ export default function Hero() {
                     <div className="absolute inset-0 bg-gradient-to-r from-dark/80 to-dark/60 rounded-2xl border-2 border-gold/30"></div>
                     <div className="relative flex items-center justify-center gap-3 px-8 py-6 text-light font-bold rounded-2xl transition-all text-base md:text-lg group-hover:text-gold">
                       <TrendingUp className="w-6 h-6" />
-                      <span>TRENDING PRODUCTS</span>
+                      <span>BROWSE TRENDING PRODUCTS</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </Link>
@@ -305,9 +305,9 @@ export default function Hero() {
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <Link href="#celebrities" className="group flex items-center justify-center gap-3 px-6 py-4 bg-dark/40 text-light/90 border border-gold/20 font-semibold rounded-xl hover:bg-gold/10 hover:border-gold/40 hover:text-gold transition-all text-sm md:text-base backdrop-blur-sm">
-                    <Users className="w-5 h-5" />
-                    <span>BROWSE CELEBRITIES</span>
+                  <Link href="#brands" className="group flex items-center justify-center gap-3 px-6 py-4 bg-dark/40 text-light/90 border border-gold/20 font-semibold rounded-xl hover:bg-gold/10 hover:border-gold/40 hover:text-gold transition-all text-sm md:text-base backdrop-blur-sm">
+                    <ShoppingBag className="w-5 h-5" />
+                    <span>EXPLORE BRANDS</span>
                   </Link>
                 </motion.div>
               </div>

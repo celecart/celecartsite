@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import passport from "./auth";
 import { storage } from "./storage";
 import { 
   insertCelebritySchema, 
@@ -7,7 +8,11 @@ import {
   insertCelebrityBrandSchema, 
   insertCategorySchema,
   insertTournamentSchema,
-  insertTournamentOutfitSchema
+  insertTournamentOutfitSchema,
+  insertRoleSchema,
+  insertPermissionSchema,
+  insertUserSchema,
+  insertPlanSchema
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -20,68 +25,484 @@ import {
   getAIFashionChatResponse,
   findMatchingCelebrityStyles
 } from "./services/anthropic";
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
+import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // AUTH ROUTES
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body as Record<string, string>;
-      if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = await storage.getUserByUsername(normalizedEmail);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
-      const salt = process.env.PASSWORD_SALT || "cele-salt";
-      const hash = crypto.createHash("sha256").update(salt + password).digest("hex");
-      if (hash !== user.password) return res.status(401).json({ message: "Invalid credentials" });
-      (req.session as any).userId = user.id;
-      (req.session as any).username = user.username;
-      (req.session as any).role = user.role;
-      (req.session as any).permissions = user.permissions;
-      return res.json({ id: user.id, username: user.username, role: user.role, permissions: user.permissions, imageUrl: (user as any).imageUrl });
-    } catch (error) {
-      console.error("Login error:", error);
-      return res.status(500).json({ message: "Failed to login" });
+  // Authentication routes
+  
+  // Google OAuth login
+  app.get('/auth/google', (req, res, next) => {
+    const isPopup = req.query.popup === 'true';
+    const options: any = { scope: ['profile', 'email'] };
+    if (isPopup) {
+      options.state = 'popup';
     }
+    return passport.authenticate('google', options)(req, res, next);
   });
-
-  app.get("/api/auth/me", async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any)?.userId;
-      if (!userId) {
-        return res.status(200).json({ user: null });
-      }
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(200).json({ user: null });
-      }
-      return res.json({ user: { id: user.id, username: user.username, role: user.role, permissions: user.permissions, imageUrl: (user as any).imageUrl } });
-    } catch (error) {
-      console.error("Me error:", error);
-      return res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
-
-  app.post("/api/auth/logout", async (req: Request, res: Response) => {
-    try {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Logout error:", err);
-          return res.status(500).json({ message: "Failed to logout" });
+  
+  // Google OAuth callback
+  app.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req: Request, res: Response) => {
+      const isPopup = (req.query.state === 'popup') || (req.query.popup === 'true');
+      if (isPopup) {
+        const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5000';
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(`
+<!doctype html>
+<html>
+  <body>
+    <script>
+      try {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'google-auth-success' }, '${origin}');
         }
-        res.json({ success: true });
+      } catch (e) {}
+      window.close();
+    </script>
+    <p>Login successful. You can close this window.</p>
+  </body>
+</html>
+        `);
+      } else {
+        // Successful authentication, redirect to dashboard or home
+        res.redirect('/');
+      }
+    }
+  );
+  
+  // Logout route
+  app.post('/auth/logout', (req: Request, res: Response) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Logout failed' });
+      }
+      res.json({ message: 'Logged out successfully' });
+    });
+  });
+
+  // Email/password login
+  app.post('/auth/login', (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate('local', (err: any, user: any, info: any) => {
+      if (err) { return next(err); }
+      if (!user) { return res.status(401).json({ message: info?.message || 'Login failed' }); }
+      req.logIn(user, (err) => {
+        if (err) { return next(err); }
+        const role = user?.email === 'admin@cele.com' ? 'admin' : 'user';
+        return res.json({ user: { ...user, role } });
+      });
+    })(req, res, next);
+  });
+  
+  // Get current user
+  app.get('/auth/user', (req: Request, res: Response) => {
+    if (req.isAuthenticated()) {
+      const u = req.user as any;
+      const role = u?.email === 'admin@cele.com' ? 'admin' : 'user';
+      res.json({ user: { ...u, role } });
+    } else {
+      res.status(401).json({ message: 'Not authenticated' });
+    }
+  });
+
+  // Dev-only endpoint: Update admin password (and create admin user if missing)
+  app.post('/auth/admin-password', async (_req: Request, res: Response) => {
+    try {
+      const email = 'admin@cele.com';
+      const newPassword = '123456789';
+      const updated = await storage.updateUserPasswordByEmail(email, newPassword);
+      if (!updated) {
+        await storage.createUser({
+          username: 'admin',
+          password: newPassword,
+          email,
+          displayName: 'Administrator',
+          profilePicture: '',
+          firstName: 'Admin',
+          lastName: '',
+          phone: '',
+          accountStatus: 'Active',
+          source: 'local',
+        });
+        return res.status(201).json({ message: 'Admin user created and password set' });
+      }
+      return res.json({ message: 'Admin password updated' });
+    } catch (error) {
+      return res.status(500).json({ message: 'Failed to update admin password' });
+    }
+  });
+
+  // Signup route
+  const signupUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }
+  });
+
+  app.post('/auth/signup', signupUpload.single('profilePicture'), async (req: Request, res: Response) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        email,
+        phone,
+        username,
+        displayName,
+        password,
+        accountStatus
+      } = req.body as Record<string, string>;
+
+      // Basic validation
+      const errors: Record<string, string> = {};
+      if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        errors.email = 'Valid email is required';
+      }
+      if (!password || password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+
+      const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
+      const normalizedStatus = accountStatus && allowedStatuses.includes(accountStatus) ? accountStatus : 'Active';
+
+      let finalUsername = username?.trim();
+      if (!finalUsername) {
+        finalUsername = displayName?.trim() || email.split('@')[0];
+      }
+      if (!finalUsername) {
+        errors.username = 'Username or display name is required';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        return res.status(400).json({ message: 'Invalid signup data', errors });
+      }
+
+      // Check duplicates
+      const existingByEmail = email ? await storage.getUserByEmail(email) : undefined;
+      if (existingByEmail) {
+        return res.status(409).json({ message: 'Email already in use' });
+      }
+      const existingByUsername = await storage.getUserByUsername(finalUsername!);
+      if (existingByUsername) {
+        return res.status(409).json({ message: 'Username already taken' });
+      }
+
+      // Handle profile picture (optional)
+      let profilePicture: string | undefined;
+      if (req.file && req.file.buffer) {
+        const mime = req.file.mimetype || 'image/png';
+        const base64 = req.file.buffer.toString('base64');
+        profilePicture = `data:${mime};base64,${base64}`;
+      }
+
+      const newUser = await storage.createUser({
+        username: finalUsername!,
+        password, // NOTE: For production, hash the password before storing
+        email,
+        displayName: displayName || finalUsername!,
+        profilePicture,
+        firstName,
+        lastName,
+        phone,
+        accountStatus: normalizedStatus,
+        source: 'local',
+      });
+
+      // Return sanitized user
+      const { id } = newUser;
+      return res.status(201).json({
+        user: {
+          id,
+          username: newUser.username,
+          email: newUser.email,
+          displayName: newUser.displayName,
+          profilePicture: newUser.profilePicture,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          phone: newUser.phone,
+          accountStatus: newUser.accountStatus,
+        }
       });
     } catch (error) {
-      console.error("Logout error:", error);
-      return res.status(500).json({ message: "Failed to logout" });
+      console.error('Signup error:', error);
+      return res.status(500).json({ message: 'Failed to sign up' });
     }
   });
   
   // API routes - prefix with /api
-  
+
+  // Helper: ensure admin for protected operations
+  const isAdminUser = (req: Request) => {
+    const u = req.user as any;
+    return !!u && (u.email === 'admin@cele.com');
+  };
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    if (!isAdminUser(req)) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    return next();
+  };
+
+  // Users list (for assignments)
+  app.get('/api/users', async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      const safe = users.map(u => ({
+        id: u.id,
+        username: (u as any).username,
+        email: (u as any).email,
+        displayName: (u as any).displayName,
+        profilePicture: (u as any).profilePicture,
+        firstName: (u as any).firstName,
+        lastName: (u as any).lastName,
+        phone: (u as any).phone,
+        accountStatus: (u as any).accountStatus,
+        source: (u as any).source,
+      }));
+      res.json(safe);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  });
+
+  // Get single user by id
+  app.get('/api/users/:id', async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid user ID' });
+    const u = await storage.getUser(id);
+    if (!u) return res.status(404).json({ message: 'User not found' });
+    const safe = {
+      id: u.id,
+      username: (u as any).username,
+      email: (u as any).email,
+      displayName: (u as any).displayName,
+      profilePicture: (u as any).profilePicture,
+      firstName: (u as any).firstName,
+      lastName: (u as any).lastName,
+      phone: (u as any).phone,
+      accountStatus: (u as any).accountStatus,
+      source: (u as any).source,
+    };
+    res.json(safe);
+  });
+
+  // Create user (admin only)
+  app.post('/api/users', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid user data', errors: parsed.error.flatten() });
+      }
+      const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
+      const normalizedStatus = parsed.data.accountStatus && allowedStatuses.includes(parsed.data.accountStatus) ? parsed.data.accountStatus : 'Active';
+      const created = await storage.createUser({ ...parsed.data, accountStatus: normalizedStatus, source: parsed.data.source ?? 'local' });
+      const safe = {
+        id: created.id,
+        username: (created as any).username,
+        email: (created as any).email,
+        displayName: (created as any).displayName,
+        profilePicture: (created as any).profilePicture,
+        firstName: (created as any).firstName,
+        lastName: (created as any).lastName,
+        phone: (created as any).phone,
+        accountStatus: (created as any).accountStatus,
+        source: (created as any).source,
+      };
+      res.status(201).json(safe);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to create user' });
+    }
+  });
+
+  // Update user (admin only)
+  app.put('/api/users/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid user ID' });
+    const parsed = insertUserSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid user data', errors: parsed.error.flatten() });
+    }
+    const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
+    const normalizedStatus = parsed.data.accountStatus && allowedStatuses.includes(parsed.data.accountStatus) ? parsed.data.accountStatus : undefined;
+    const updated = await storage.updateUser(id, { ...parsed.data, accountStatus: normalizedStatus ?? parsed.data.accountStatus });
+    if (!updated) return res.status(404).json({ message: 'User not found' });
+    const safe = {
+      id: updated.id,
+      username: (updated as any).username,
+      email: (updated as any).email,
+      displayName: (updated as any).displayName,
+      profilePicture: (updated as any).profilePicture,
+      firstName: (updated as any).firstName,
+      lastName: (updated as any).lastName,
+      phone: (updated as any).phone,
+      accountStatus: (updated as any).accountStatus,
+      source: (updated as any).source,
+    };
+    res.json(safe);
+  });
+
+  // Delete user (admin only)
+  app.delete('/api/users/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid user ID' });
+    const ok = await storage.deleteUser(id);
+    if (!ok) return res.status(404).json({ message: 'User not found' });
+    res.json({ success: true });
+  });
+
+  // Roles CRUD
+  app.get('/api/roles', async (_req: Request, res: Response) => {
+    try {
+      const roles = await storage.getRoles();
+      res.json(roles);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch roles' });
+    }
+  });
+
+  app.get('/api/roles/:id', async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
+    const role = await storage.getRoleById(id);
+    if (!role) return res.status(404).json({ message: 'Role not found' });
+    res.json(role);
+  });
+
+  app.post('/api/roles', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertRoleSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
+      }
+      const role = await storage.createRole(parsed.data);
+      res.status(201).json(role);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to create role' });
+    }
+  });
+
+  app.put('/api/roles/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
+    const parsed = insertRoleSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
+    }
+    const updated = await storage.updateRole(id, parsed.data);
+    if (!updated) return res.status(404).json({ message: 'Role not found' });
+    res.json(updated);
+  });
+
+  app.delete('/api/roles/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
+    const ok = await storage.deleteRole(id);
+    if (!ok) return res.status(404).json({ message: 'Role not found' });
+    res.json({ success: true });
+  });
+
+  // Permissions CRUD
+  app.get('/api/permissions', async (_req: Request, res: Response) => {
+    try {
+      const permissions = await storage.getPermissions();
+      res.json(permissions);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch permissions' });
+    }
+  });
+
+  app.get('/api/permissions/:id', async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
+    const permission = await storage.getPermissionById(id);
+    if (!permission) return res.status(404).json({ message: 'Permission not found' });
+    res.json(permission);
+  });
+
+  app.post('/api/permissions', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertPermissionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
+      }
+      const permission = await storage.createPermission(parsed.data);
+      res.status(201).json(permission);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to create permission' });
+    }
+  });
+
+  app.put('/api/permissions/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
+    const parsed = insertPermissionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
+    }
+    const updated = await storage.updatePermission(id, parsed.data);
+    if (!updated) return res.status(404).json({ message: 'Permission not found' });
+    res.json(updated);
+  });
+
+  app.delete('/api/permissions/:id', requireAdmin, async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
+    const ok = await storage.deletePermission(id);
+    if (!ok) return res.status(404).json({ message: 'Permission not found' });
+    res.json({ success: true });
+  });
+
+  // Role-Permissions mapping
+  app.get('/api/roles/:roleId/permissions', async (req: Request, res: Response) => {
+    const roleId = parseInt(req.params.roleId);
+    if (isNaN(roleId)) return res.status(400).json({ message: 'Invalid role ID' });
+    const list = await storage.getRolePermissions(roleId);
+    res.json(list);
+  });
+
+  app.post('/api/roles/:roleId/permissions/:permissionId', requireAdmin, async (req: Request, res: Response) => {
+    const roleId = parseInt(req.params.roleId);
+    const permissionId = parseInt(req.params.permissionId);
+    if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
+    const rp = await storage.addPermissionToRole(roleId, permissionId);
+    res.status(201).json(rp);
+  });
+
+  app.delete('/api/roles/:roleId/permissions/:permissionId', requireAdmin, async (req: Request, res: Response) => {
+    const roleId = parseInt(req.params.roleId);
+    const permissionId = parseInt(req.params.permissionId);
+    if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
+    const ok = await storage.removePermissionFromRole(roleId, permissionId);
+    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+    res.json({ success: true });
+  });
+
+  // User-Roles mapping
+  app.get('/api/users/:userId/roles', async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
+    const list = await storage.getUserRoles(userId);
+    res.json(list);
+  });
+
+  app.post('/api/users/:userId/roles/:roleId', requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const roleId = parseInt(req.params.roleId);
+    if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
+    const ur = await storage.assignRoleToUser(userId, roleId);
+    res.status(201).json(ur);
+  });
+
+  app.delete('/api/users/:userId/roles/:roleId', requireAdmin, async (req: Request, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const roleId = parseInt(req.params.roleId);
+    if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
+    const ok = await storage.removeRoleFromUser(userId, roleId);
+    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+    res.json({ success: true });
+  });
+
   // Get all celebrities
   app.get("/api/celebrities", async (req: Request, res: Response) => {
     try {
@@ -269,6 +690,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid category data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+  
+  // Update category
+  app.put("/api/categories/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      // Allow partial updates
+      const partial = req.body as Partial<z.infer<typeof insertCategorySchema>>;
+      const existing = await storage.getCategoryById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      // Validate merged payload
+      const merged = { ...existing, ...partial };
+      const validated = insertCategorySchema.parse({ name: merged.name, description: merged.description, imageUrl: merged.imageUrl });
+      const updated = await storage.updateCategory(id, validated);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+  
+  // Delete category
+  app.delete("/api/categories/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      const existing = await storage.getCategoryById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      const ok = await storage.deleteCategory(id);
+      if (!ok) {
+        return res.status(500).json({ message: "Failed to delete category" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete category" });
     }
   });
   
@@ -598,287 +1066,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin middleware
-  const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  // Forgot password: generate reset token and expiry
+  app.post('/auth/forgot-password', async (req: Request, res: Response) => {
     try {
-      const userId = (req.session as any)?.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
-      next();
-    } catch (err) {
-      console.error("Admin check error:", err);
-      return res.status(500).json({ message: "Internal error" });
+      const email = (req.body?.email || '').trim().toLowerCase();
+      if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({ message: 'Valid email is required' });
+      }
+  
+      const user = await storage.getUserByEmail(email);
+      // Always respond with success-like message to avoid enumeration
+      const genericResponse = { message: 'If an account exists for that email, a reset link has been sent.' };
+  
+      if (!user) {
+        return res.json(genericResponse);
+      }
+  
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+      await storage.updateUser(user.id, { resetToken: token, resetTokenExpires: Math.floor(expires) });
+  
+      // Dev: return reset URL directly (in real app, send via email)
+      const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5000';
+      const resetUrl = `${origin}/reset-password?token=${token}`;
+      return res.json({ ...genericResponse, resetUrl });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return res.status(500).json({ message: 'Failed to process forgot password request' });
     }
-  };
-
-  // Admin routes
-  app.get("/api/admin/users", requireAdmin, async (_req: Request, res: Response) => {
+  });
+  
+  // Reset password: validate token and update password
+  app.post('/auth/reset-password', async (req: Request, res: Response) => {
     try {
+      const { token, password } = req.body as { token?: string; password?: string };
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: 'Reset token is required' });
+      }
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      }
+  
       const users = await storage.getUsers();
-      const payload = users.map(u => ({ id: u.id, username: u.username, role: u.role, permissions: u.permissions, imageUrl: (u as any).imageUrl }));
-      return res.json({ users: payload });
+      const user = users.find(u => u.resetToken === token);
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired token' });
+      }
+      if (!user.resetTokenExpires || Date.now() > user.resetTokenExpires) {
+        return res.status(400).json({ message: 'Token has expired' });
+      }
+  
+      await storage.updateUser(user.id, { password, resetToken: undefined as any, resetTokenExpires: undefined as any });
+      return res.json({ message: 'Password has been reset successfully' });
     } catch (error) {
-      console.error("List users error:", error);
-      return res.status(500).json({ message: "Failed to list users" });
+      console.error('Reset password error:', error);
+      return res.status(500).json({ message: 'Failed to reset password' });
     }
   });
 
-  app.post("/api/admin/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
+  // Plans endpoints
+  // Get all plans
+  app.get("/api/plans", async (_req: Request, res: Response) => {
+    try {
+      const plans = await storage.getPlans();
+      res.json(plans);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch plans" });
+    }
+  });
+
+  // Get plan by ID
+  app.get("/api/plans/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const { role } = req.body as { role?: string };
-      if (!id || (role !== "admin" && role !== "user")) {
-        return res.status(400).json({ message: "Invalid request" });
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid plan ID" });
       }
-      const updated = await storage.updateUserRole(id, role as 'admin' | 'user');
-      if (!updated) return res.status(404).json({ message: "User not found" });
-      return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions });
+      const plan = await storage.getPlanById(id);
+      if (!plan) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+      res.json(plan);
     } catch (error) {
-      console.error("Update role error:", error);
-      return res.status(500).json({ message: "Failed to update role" });
+      res.status(500).json({ message: "Failed to fetch plan" });
     }
   });
 
-  app.post("/api/admin/users/:id/permissions", requireAdmin, async (req: Request, res: Response) => {
+  // Create plan
+  app.post("/api/plans", async (req: Request, res: Response) => {
+    try {
+      const validated = insertPlanSchema.parse(req.body);
+      const created = await storage.createPlan(validated);
+      res.status(201).json(created);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid plan data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create plan" });
+    }
+  });
+
+  // Update plan
+  app.put("/api/plans/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const { permissions } = req.body as { permissions?: string[] };
-      if (!id || !Array.isArray(permissions)) {
-        return res.status(400).json({ message: "Invalid request" });
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid plan ID" });
       }
-      const sanitized = permissions.filter(p => typeof p === 'string');
-      const updated = await storage.updateUserPermissions(id, sanitized);
-      if (!updated) return res.status(404).json({ message: "User not found" });
-      return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions });
+      const existing = await storage.getPlanById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+      const partial = req.body as Partial<z.infer<typeof insertPlanSchema>>;
+      const merged = { ...existing, ...partial };
+      const validated = insertPlanSchema.parse({ imageUrl: merged.imageUrl, price: merged.price, discount: merged.discount });
+      const updated = await storage.updatePlan(id, validated);
+      res.json(updated);
     } catch (error) {
-      console.error("Update permissions error:", error);
-      return res.status(500).json({ message: "Failed to update permissions" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid plan data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update plan" });
     }
   });
 
-  // Enhance signup response
-  app.post("/api/auth/signup", async (req: Request, res: Response) => {
-    try {
-      const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single("profileImage");
-      upload(req, res, async (err: any) => {
-        if (err) return res.status(400).json({ message: "File upload error" });
-        const { firstName, lastName, email, password, confirmPassword } = req.body as Record<string, string>;
-        if (!firstName || !lastName || !email || !password || !confirmPassword) {
-          return res.status(400).json({ message: "All fields are required" });
-        }
-        if (password !== confirmPassword) {
-          return res.status(400).json({ message: "Passwords do not match" });
-        }
-        const normalizedEmail = email.trim().toLowerCase();
-        const existing = await storage.getUserByUsername(normalizedEmail);
-        if (existing) return res.status(409).json({ message: "User already exists" });
-        const salt = process.env.PASSWORD_SALT || "cele-salt";
-        const hash = crypto.createHash("sha256").update(salt + password).digest("hex");
-
-        let imageUrl: string | undefined = undefined;
-        try {
-          const file = (req as any).file as Express.Multer.File | undefined;
-          if (file && file.buffer && file.originalname) {
-            const profilesDir = path.join(process.cwd(), "public", "assets", "profiles");
-            fs.mkdirSync(profilesDir, { recursive: true });
-            const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
-            const fullPath = path.join(profilesDir, safeName);
-            fs.writeFileSync(fullPath, file.buffer);
-            imageUrl = `/assets/profiles/${safeName}`;
-          }
-        } catch (e) {
-          console.error("Failed to persist profile image:", e);
-        }
-
-        const newUser = await storage.createUser({ username: normalizedEmail, password: hash, imageUrl } as any);
-        (req.session as any).userId = newUser.id;
-        (req.session as any).username = newUser.username;
-        (req.session as any).role = newUser.role;
-        (req.session as any).permissions = newUser.permissions;
-        return res.status(201).json({ id: newUser.id, username: newUser.username, role: newUser.role, permissions: newUser.permissions, imageUrl: (newUser as any).imageUrl });
-      });
-    } catch (error) {
-      console.error("Signup error:", error);
-      return res.status(500).json({ message: "Failed to sign up" });
-    }
-  });
-
-  // Debug route: list users without passwords (development only)
-  if (app.get("env") === "development") {
-    app.get("/api/debug/users", async (_req: Request, res: Response) => {
-      try {
-        const users = await storage.getUsers();
-        res.json(users.map(u => ({ id: u.id, username: u.username, role: u.role, permissions: u.permissions })));
-      } catch (error) {
-        console.error("Debug users error:", error);
-        res.status(500).json({ message: "Failed to fetch users" });
-      }
-    });
-  }
-
-  app.post("/api/admin/users/:id/profile", requireAdmin, async (req: Request, res: Response) => {
+  // Delete plan
+  app.delete("/api/plans/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      if (!id) return res.status(400).json({ message: "Invalid user id" });
-
-      const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single("profileImage");
-      upload(req, res, async (err: any) => {
-        if (err) return res.status(400).json({ message: "File upload error" });
-
-        const { username } = req.body as Record<string, string>;
-        let imageUrl: string | undefined = undefined;
-        try {
-          const file = (req as any).file as Express.Multer.File | undefined;
-          if (file && file.buffer && file.originalname) {
-            const profilesDir = path.join(process.cwd(), "public", "assets", "profiles");
-            fs.mkdirSync(profilesDir, { recursive: true });
-            const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
-            const fullPath = path.join(profilesDir, safeName);
-            fs.writeFileSync(fullPath, file.buffer);
-            imageUrl = `/assets/profiles/${safeName}`;
-          }
-        } catch (e) {
-          console.error("Failed to persist profile image:", e);
-        }
-
-        const updated = await storage.updateUserProfile(id, { username, imageUrl });
-        if (!updated) return res.status(404).json({ message: "User not found" });
-
-        return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions, imageUrl: (updated as any).imageUrl });
-      });
-    } catch (error) {
-      console.error("Update profile error:", error);
-      return res.status(500).json({ message: "Failed to update user profile" });
-    }
-  });
-
-  app.post("/api/admin/users/:id/role", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { role } = req.body as { role?: string };
-      if (!id || (role !== "admin" && role !== "user")) {
-        return res.status(400).json({ message: "Invalid request" });
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid plan ID" });
       }
-      const updated = await storage.updateUserRole(id, role as 'admin' | 'user');
-      if (!updated) return res.status(404).json({ message: "User not found" });
-      return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions });
-    } catch (error) {
-      console.error("Update role error:", error);
-      return res.status(500).json({ message: "Failed to update role" });
-    }
-  });
-
-  app.post("/api/admin/users/:id/permissions", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { permissions } = req.body as { permissions?: string[] };
-      if (!id || !Array.isArray(permissions)) {
-        return res.status(400).json({ message: "Invalid request" });
+      const existing = await storage.getPlanById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Plan not found" });
       }
-      const sanitized = permissions.filter(p => typeof p === 'string');
-      const updated = await storage.updateUserPermissions(id, sanitized);
-      if (!updated) return res.status(404).json({ message: "User not found" });
-      return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions });
-    } catch (error) {
-      console.error("Update permissions error:", error);
-      return res.status(500).json({ message: "Failed to update permissions" });
-    }
-  });
-
-  // Enhance signup response
-  app.post("/api/auth/signup", async (req: Request, res: Response) => {
-    try {
-      const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single("profileImage");
-      upload(req, res, async (err: any) => {
-        if (err) return res.status(400).json({ message: "File upload error" });
-        const { firstName, lastName, email, password, confirmPassword } = req.body as Record<string, string>;
-        if (!firstName || !lastName || !email || !password || !confirmPassword) {
-          return res.status(400).json({ message: "All fields are required" });
-        }
-        if (password !== confirmPassword) {
-          return res.status(400).json({ message: "Passwords do not match" });
-        }
-        const normalizedEmail = email.trim().toLowerCase();
-        const existing = await storage.getUserByUsername(normalizedEmail);
-        if (existing) return res.status(409).json({ message: "User already exists" });
-        const salt = process.env.PASSWORD_SALT || "cele-salt";
-        const hash = crypto.createHash("sha256").update(salt + password).digest("hex");
-
-        let imageUrl: string | undefined = undefined;
-        try {
-          const file = (req as any).file as Express.Multer.File | undefined;
-          if (file && file.buffer && file.originalname) {
-            const profilesDir = path.join(process.cwd(), "public", "assets", "profiles");
-            fs.mkdirSync(profilesDir, { recursive: true });
-            const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
-            const fullPath = path.join(profilesDir, safeName);
-            fs.writeFileSync(fullPath, file.buffer);
-            imageUrl = `/assets/profiles/${safeName}`;
-          }
-        } catch (e) {
-          console.error("Failed to persist profile image:", e);
-        }
-
-        const newUser = await storage.createUser({ username: normalizedEmail, password: hash, imageUrl } as any);
-        (req.session as any).userId = newUser.id;
-        (req.session as any).username = newUser.username;
-        (req.session as any).role = newUser.role;
-        (req.session as any).permissions = newUser.permissions;
-        return res.status(201).json({ id: newUser.id, username: newUser.username, role: newUser.role, permissions: newUser.permissions, imageUrl: (newUser as any).imageUrl });
-      });
-    } catch (error) {
-      console.error("Signup error:", error);
-      return res.status(500).json({ message: "Failed to sign up" });
-    }
-  });
-
-  // Debug route: list users without passwords (development only)
-  if (app.get("env") === "development") {
-    app.get("/api/debug/users", async (_req: Request, res: Response) => {
-      try {
-        const users = await storage.getUsers();
-        res.json(users.map(u => ({ id: u.id, username: u.username, role: u.role, permissions: u.permissions })));
-      } catch (error) {
-        console.error("Debug users error:", error);
-        res.status(500).json({ message: "Failed to fetch users" });
+      const ok = await storage.deletePlan(id);
+      if (!ok) {
+        return res.status(500).json({ message: "Failed to delete plan" });
       }
-    });
-  }
-
-  // Signed-in user profile update (self)
-  app.post("/api/auth/profile", async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any)?.userId;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-      const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }).single("profileImage");
-      upload(req, res, async (err: any) => {
-        if (err) return res.status(400).json({ message: "File upload error" });
-
-        const { username } = req.body as Record<string, string>;
-        let imageUrl: string | undefined = undefined;
-        try {
-          const file = (req as any).file as Express.Multer.File | undefined;
-          if (file && file.buffer && file.originalname) {
-            const profilesDir = path.join(process.cwd(), "public", "assets", "profiles");
-            fs.mkdirSync(profilesDir, { recursive: true });
-            const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.originalname.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
-            const fullPath = path.join(profilesDir, safeName);
-            fs.writeFileSync(fullPath, file.buffer);
-            imageUrl = `/assets/profiles/${safeName}`;
-          }
-        } catch (e) {
-          console.error("Failed to persist profile image:", e);
-        }
-
-        const updated = await storage.updateUserProfile(userId, { username, imageUrl });
-        if (!updated) return res.status(404).json({ message: "User not found" });
-        return res.json({ id: updated.id, username: updated.username, role: updated.role, permissions: updated.permissions, imageUrl: (updated as any).imageUrl });
-      });
+      res.json({ success: true });
     } catch (error) {
-      console.error("Self update profile error:", error);
-      return res.status(500).json({ message: "Failed to update profile" });
+      res.status(500).json({ message: "Failed to delete plan" });
     }
   });
 

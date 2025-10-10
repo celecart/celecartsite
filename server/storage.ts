@@ -19,7 +19,10 @@ import {
   type InsertTournament,
   tournamentOutfits,
   type TournamentOutfit,
-  type InsertTournamentOutfit
+  type InsertTournamentOutfit,
+  plans,
+  type Plan,
+  type InsertPlan
 } from "@shared/schema";
 import { 
   mockCelebrities, 
@@ -29,18 +32,17 @@ import {
   mockTournaments, 
   mockTournamentOutfits 
 } from "@shared/data";
+import { type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole } from "@shared/schema";
 
 // Interface for all storage operations
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  getUsers(): Promise<User[]>;
-  updateUserRole(id: number, role: 'user' | 'admin'): Promise<User | undefined>;
-  updateUserPermissions(id: number, permissions: string[]): Promise<User | undefined>;
-  // Add profile update method
-  updateUserProfile(id: number, data: { username?: string; imageUrl?: string }): Promise<User | undefined>;
+  updateUserPasswordByEmail(email: string, password: string): Promise<boolean>;
   
   // Celebrity operations
   getCelebrities(): Promise<Celebrity[]>;
@@ -64,6 +66,15 @@ export interface IStorage {
   getCategories(): Promise<Category[]>;
   getCategoryById(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: number): Promise<boolean>;
+  
+  // Plan operations
+  getPlans(): Promise<Plan[]>;
+  getPlanById(id: number): Promise<Plan | undefined>;
+  createPlan(plan: InsertPlan): Promise<Plan>;
+  updatePlan(id: number, plan: Partial<InsertPlan>): Promise<Plan | undefined>;
+  deletePlan(id: number): Promise<boolean>;
   
   // Tournament operations
   getTournaments(): Promise<Tournament[]>;
@@ -76,6 +87,36 @@ export interface IStorage {
   getTournamentOutfitsByCelebrity(celebrityId: number): Promise<TournamentOutfit[]>;
   getTournamentOutfitsByTournament(tournamentId: number): Promise<TournamentOutfit[]>;
   createTournamentOutfit(tournamentOutfit: InsertTournamentOutfit): Promise<TournamentOutfit>;
+  
+  // Users list
+  getUsers(): Promise<User[]>;
+  // Add missing user update/delete operations for CRUD
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  
+  // Roles CRUD
+  getRoles(): Promise<Role[]>;
+  getRoleById(id: number): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(id: number, role: InsertRole): Promise<Role | undefined>;
+  deleteRole(id: number): Promise<boolean>;
+  
+  // Permissions CRUD
+  getPermissions(): Promise<Permission[]>;
+  getPermissionById(id: number): Promise<Permission | undefined>;
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  updatePermission(id: number, permission: InsertPermission): Promise<Permission | undefined>;
+  deletePermission(id: number): Promise<boolean>;
+  
+  // Role-Permissions mapping
+  getRolePermissions(roleId: number): Promise<RolePermission[]>;
+  addPermissionToRole(roleId: number, permissionId: number): Promise<RolePermission>;
+  removePermissionFromRole(roleId: number, permissionId: number): Promise<boolean>;
+  
+  // User-Roles mapping
+  getUserRoles(userId: number): Promise<UserRole[]>;
+  assignRoleToUser(userId: number, roleId: number): Promise<UserRole>;
+  removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -86,6 +127,12 @@ export class MemStorage implements IStorage {
   private categories: Map<number, Category>;
   private tournaments: Map<number, Tournament>;
   private tournamentOutfits: Map<number, TournamentOutfit>;
+  private plans: Map<number, Plan>;
+  // Roles & Permissions storage
+  private roles: Map<number, Role>;
+  private permissions: Map<number, Permission>;
+  private rolePermissions: Map<number, RolePermission>;
+  private userRoles: Map<number, UserRole>;
   
   private userId: number = 1;
   private celebrityId: number = 1;
@@ -94,6 +141,12 @@ export class MemStorage implements IStorage {
   private categoryId: number = 1;
   private tournamentId: number = 1;
   private tournamentOutfitId: number = 1;
+  private planId: number = 1;
+  // Counters for roles & permissions
+  private roleId: number = 1;
+  private permissionId: number = 1;
+  private rolePermissionId: number = 1;
+  private userRoleId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -103,6 +156,13 @@ export class MemStorage implements IStorage {
     this.categories = new Map();
     this.tournaments = new Map();
     this.tournamentOutfits = new Map();
+    this.plans = new Map();
+    
+    // Initialize maps for roles & permissions
+    this.roles = new Map();
+    this.permissions = new Map();
+    this.rolePermissions = new Map();
+    this.userRoles = new Map();
     
     // Initialize with mock data
     this.initializeMockData();
@@ -158,6 +218,8 @@ export class MemStorage implements IStorage {
       }
     }
     
+    // Initialize with no plans by default
+    this.planId = 1;
     // Load tournament outfits
     for (const outfit of mockTournamentOutfits) {
       this.tournamentOutfits.set(outfit.id, outfit);
@@ -178,53 +240,46 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.googleId === googleId,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
-    const user: User = { 
-      id, 
-      username: insertUser.username, 
-      password: insertUser.password, 
-      role: 'user', 
-      permissions: [],
-      imageUrl: (insertUser as any).imageUrl ?? undefined
-    };
+    const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
   }
 
-  async getUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
-  }
-
-  async updateUserRole(id: number, role: 'user' | 'admin'): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated: User = { ...user, role };
+  async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
+    const existing = this.users.get(id);
+    if (!existing) return undefined;
+    // Merge existing user with provided partial updates
+    const updated: User = { ...existing, ...user, id: existing.id };
     this.users.set(id, updated);
     return updated;
   }
 
-  async updateUserPermissions(id: number, permissions: string[]): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated: User = { ...user, permissions };
-    this.users.set(id, updated);
-    return updated;
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
   }
-  
-  // New: updateUserProfile (username, imageUrl)
-  async updateUserProfile(id: number, data: { username?: string; imageUrl?: string }): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated: User = { 
-      ...user, 
-      username: data.username ?? user.username, 
-      imageUrl: data.imageUrl ?? (user as any).imageUrl 
-    };
-    this.users.set(id, updated);
-    return updated;
+
+  async updateUserPasswordByEmail(email: string, password: string): Promise<boolean> {
+    const user = await this.getUserByEmail(email);
+    if (!user) return false;
+    const updated: User = { ...user, password };
+    this.users.set(user.id, updated);
+    return true;
   }
-  
+
   // Celebrity operations
   async getCelebrities(): Promise<Celebrity[]> {
     return Array.from(this.celebrities.values());
@@ -487,6 +542,55 @@ export class MemStorage implements IStorage {
     return category;
   }
   
+  async updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category | undefined> {
+    const existing = this.categories.get(id);
+    if (!existing) return undefined;
+    const updated: Category = { ...existing, ...category, id: existing.id };
+    this.categories.set(id, updated);
+    return updated;
+  }
+  
+  async deleteCategory(id: number): Promise<boolean> {
+    return this.categories.delete(id);
+  }
+  
+  // Plans CRUD
+  async getPlans(): Promise<Plan[]> {
+    return Array.from(this.plans.values());
+  }
+  
+  async getPlanById(id: number): Promise<Plan | undefined> {
+    return this.plans.get(id);
+  }
+  
+  async createPlan(insertPlan: InsertPlan): Promise<Plan> {
+    const plan: Plan = {
+      id: this.planId++,
+      imageUrl: insertPlan.imageUrl,
+      price: insertPlan.price,
+      discount: insertPlan.discount ?? null,
+    } as unknown as Plan;
+    this.plans.set(plan.id, plan);
+    return plan;
+  }
+  
+  async updatePlan(id: number, plan: Partial<InsertPlan>): Promise<Plan | undefined> {
+    const existing = this.plans.get(id);
+    if (!existing) return undefined;
+    const updated: Plan = {
+      ...existing,
+      imageUrl: plan.imageUrl ?? existing.imageUrl,
+      price: plan.price ?? existing.price,
+      discount: plan.discount ?? existing.discount,
+    } as unknown as Plan;
+    this.plans.set(id, updated);
+    return updated;
+  }
+  
+  async deletePlan(id: number): Promise<boolean> {
+    return this.plans.delete(id);
+  }
+  
   // Tournament operations
   async getTournaments(): Promise<Tournament[]> {
     return Array.from(this.tournaments.values());
@@ -570,6 +674,106 @@ export class MemStorage implements IStorage {
     
     this.tournamentOutfits.set(id, tournamentOutfit);
     return tournamentOutfit;
+  }
+
+  // Users list
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  // Roles CRUD
+  async getRoles(): Promise<Role[]> {
+    return Array.from(this.roles.values());
+  }
+  async getRoleById(id: number): Promise<Role | undefined> {
+    return this.roles.get(id);
+  }
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const id = this.roleId++;
+    const role: Role = { id, name: insertRole.name, description: (insertRole as any).description ?? null } as any;
+    this.roles.set(id, role);
+    return role;
+  }
+  async updateRole(id: number, insertRole: InsertRole): Promise<Role | undefined> {
+    const existing = this.roles.get(id);
+    if (!existing) return undefined;
+    const updated: Role = { ...existing, name: insertRole.name ?? existing.name, description: (insertRole as any).description ?? existing.description } as any;
+    this.roles.set(id, updated);
+    return updated;
+  }
+  async deleteRole(id: number): Promise<boolean> {
+    for (const [rpId, rp] of Array.from(this.rolePermissions.entries())) {
+      if (rp.roleId === id) this.rolePermissions.delete(rpId);
+    }
+    for (const [urId, ur] of Array.from(this.userRoles.entries())) {
+      if (ur.roleId === id) this.userRoles.delete(urId);
+    }
+    return this.roles.delete(id);
+  }
+
+  // Permissions CRUD
+  async getPermissions(): Promise<Permission[]> {
+    return Array.from(this.permissions.values());
+  }
+  async getPermissionById(id: number): Promise<Permission | undefined> {
+    return this.permissions.get(id);
+  }
+  async createPermission(insertPermission: InsertPermission): Promise<Permission> {
+    const id = this.permissionId++;
+    const permission: Permission = { id, name: insertPermission.name, description: (insertPermission as any).description ?? null } as any;
+    this.permissions.set(id, permission);
+    return permission;
+  }
+  async updatePermission(id: number, insertPermission: InsertPermission): Promise<Permission | undefined> {
+    const existing = this.permissions.get(id);
+    if (!existing) return undefined;
+    const updated: Permission = { ...existing, name: insertPermission.name ?? existing.name, description: (insertPermission as any).description ?? existing.description } as any;
+    this.permissions.set(id, updated);
+    return updated;
+  }
+  async deletePermission(id: number): Promise<boolean> {
+    for (const [rpId, rp] of Array.from(this.rolePermissions.entries())) {
+      if (rp.permissionId === id) this.rolePermissions.delete(rpId);
+    }
+    return this.permissions.delete(id);
+  }
+
+  // Role-Permissions mapping
+  async getRolePermissions(roleId: number): Promise<RolePermission[]> {
+    return Array.from(this.rolePermissions.values()).filter(rp => rp.roleId === roleId);
+  }
+  async addPermissionToRole(roleId: number, permissionId: number): Promise<RolePermission> {
+    const existing = Array.from(this.rolePermissions.values()).find(rp => rp.roleId === roleId && rp.permissionId === permissionId);
+    if (existing) return existing;
+    const id = this.rolePermissionId++;
+    const rp: RolePermission = { id, roleId, permissionId } as any;
+    this.rolePermissions.set(id, rp);
+    return rp;
+  }
+  async removePermissionFromRole(roleId: number, permissionId: number): Promise<boolean> {
+    const found = Array.from(this.rolePermissions.entries()).find(([rid, rp]) => rp.roleId === roleId && rp.permissionId === permissionId);
+    if (!found) return false;
+    const [id] = found;
+    return this.rolePermissions.delete(id);
+  }
+
+  // User-Roles mapping
+  async getUserRoles(userId: number): Promise<UserRole[]> {
+    return Array.from(this.userRoles.values()).filter(ur => ur.userId === userId);
+  }
+  async assignRoleToUser(userId: number, roleId: number): Promise<UserRole> {
+    const existing = Array.from(this.userRoles.values()).find(ur => ur.userId === userId && ur.roleId === roleId);
+    if (existing) return existing;
+    const id = this.userRoleId++;
+    const ur: UserRole = { id, userId, roleId } as any;
+    this.userRoles.set(id, ur);
+    return ur;
+  }
+  async removeRoleFromUser(userId: number, roleId: number): Promise<boolean> {
+    const found = Array.from(this.userRoles.entries()).find(([rid, ur]) => ur.userId === userId && ur.roleId === roleId);
+    if (!found) return false;
+    const [id] = found;
+    return this.userRoles.delete(id);
   }
 }
 
