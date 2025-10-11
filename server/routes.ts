@@ -26,6 +26,8 @@ import {
   findMatchingCelebrityStyles
 } from "./services/anthropic";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import { emailService } from "./services/email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -129,6 +131,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ message: 'Admin password updated' });
     } catch (error) {
       return res.status(500).json({ message: 'Failed to update admin password' });
+    }
+  });
+
+  // Forgot password route
+  app.post('/auth/forgot-password', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({ message: 'Valid email is required' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        return res.json({ message: 'If the email exists, a password reset link has been sent' });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Store reset token in database (you'll need to add this to your storage)
+      await storage.storePasswordResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // Create JWT token for additional security
+      const jwtToken = jwt.sign(
+        { userId: user.id, resetToken },
+        process.env.JWT_SECRET || 'fallback-secret',
+        { expiresIn: '1h' }
+      );
+
+      // Create reset URL
+      const resetUrl = `${process.env.RESET_PASSWORD_URL || 'http://localhost:5000/reset-password'}?token=${jwtToken}`;
+
+      // Send email
+      await emailService.sendPasswordResetEmail(email, resetToken, resetUrl);
+
+      res.json({ message: 'If the email exists, a password reset link has been sent' });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Failed to process password reset request' });
+    }
+  });
+
+  // Reset password route
+  app.post('/auth/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token and new password are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      }
+
+      // Verify JWT token
+      let decoded: any;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+      } catch (error) {
+        return res.status(400).json({ message: 'Invalid or expired token' });
+      }
+
+      const { userId, resetToken } = decoded;
+
+      // Verify reset token in database
+      const isValidToken = await storage.verifyPasswordResetToken(userId, resetToken);
+      if (!isValidToken) {
+        return res.status(400).json({ message: 'Invalid or expired token' });
+      }
+
+      // Update password
+      const updated = await storage.updateUserPassword(userId, newPassword);
+      if (!updated) {
+        return res.status(500).json({ message: 'Failed to update password' });
+      }
+
+      // Clear reset token
+      await storage.clearPasswordResetToken(userId);
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Failed to reset password' });
+    }
+  });
+
+  // Test email endpoint (for development/testing purposes)
+  app.post('/auth/test-email', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        return res.status(400).json({ message: 'Valid email is required' });
+      }
+
+      // Test email connection first
+      const connectionTest = await emailService.testConnection();
+      if (!connectionTest) {
+        return res.status(500).json({ 
+          message: 'Email service connection failed. Please check your email credentials in .env file.' 
+        });
+      }
+
+      // Send a test email
+      const testEmailSent = await emailService.sendEmail({
+        to: email,
+        subject: 'CeleCart Email Test',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Email Test Successful! 🎉</h2>
+            <p>This is a test email from your CeleCart application.</p>
+            <p>If you received this email, your email configuration is working correctly.</p>
+            <p><strong>Test Details:</strong></p>
+            <ul>
+              <li>Sent at: ${new Date().toLocaleString()}</li>
+              <li>To: ${email}</li>
+              <li>Service: Nodemailer</li>
+            </ul>
+            <p>You can now use the forgot password feature with confidence!</p>
+          </div>
+        `,
+        text: `Email Test Successful! This is a test email from your CeleCart application. If you received this email, your email configuration is working correctly. Sent at: ${new Date().toLocaleString()}`
+      });
+
+      if (testEmailSent) {
+        res.json({ 
+          message: 'Test email sent successfully! Check your inbox.',
+          details: {
+            recipient: email,
+            timestamp: new Date().toISOString(),
+            connectionStatus: 'OK'
+          }
+        });
+      } else {
+        res.status(500).json({ 
+          message: 'Failed to send test email. Please check your email credentials.' 
+        });
+      }
+    } catch (error) {
+      console.error('Test email error:', error);
+      res.status(500).json({ 
+        message: 'Email test failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
