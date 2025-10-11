@@ -117,6 +117,12 @@ export interface IStorage {
   getUserRoles(userId: number): Promise<UserRole[]>;
   assignRoleToUser(userId: number, roleId: number): Promise<UserRole>;
   removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
+  
+  // Password reset token operations
+  storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void>;
+  verifyPasswordResetToken(userId: number, token: string): Promise<boolean>;
+  clearPasswordResetToken(userId: number): Promise<void>;
+  updateUserPassword(userId: number, newPassword: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -133,6 +139,8 @@ export class MemStorage implements IStorage {
   private permissions: Map<number, Permission>;
   private rolePermissions: Map<number, RolePermission>;
   private userRoles: Map<number, UserRole>;
+  // Password reset tokens storage
+  private passwordResetTokens: Map<number, { token: string; expiry: Date }>;
   
   private userId: number = 1;
   private celebrityId: number = 1;
@@ -163,6 +171,7 @@ export class MemStorage implements IStorage {
     this.permissions = new Map();
     this.rolePermissions = new Map();
     this.userRoles = new Map();
+    this.passwordResetTokens = new Map();
     
     // Initialize with mock data
     this.initializeMockData();
@@ -774,6 +783,39 @@ export class MemStorage implements IStorage {
     if (!found) return false;
     const [id] = found;
     return this.userRoles.delete(id);
+  }
+
+  // Password reset token operations
+  async storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void> {
+    this.passwordResetTokens.set(userId, { token, expiry });
+  }
+
+  async verifyPasswordResetToken(userId: number, token: string): Promise<boolean> {
+    const stored = this.passwordResetTokens.get(userId);
+    if (!stored) return false;
+    
+    // Check if token matches and hasn't expired
+    if (stored.token !== token || stored.expiry < new Date()) {
+      // Clean up expired token
+      this.passwordResetTokens.delete(userId);
+      return false;
+    }
+    
+    return true;
+  }
+
+  async clearPasswordResetToken(userId: number): Promise<void> {
+    this.passwordResetTokens.delete(userId);
+  }
+
+  async updateUserPassword(userId: number, newPassword: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    // Update the user's password
+    const updatedUser: User = { ...user, password: newPassword };
+    this.users.set(userId, updatedUser);
+    return true;
   }
 }
 
