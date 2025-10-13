@@ -21,12 +21,13 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, Activity, ExternalLink, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import UserActivityFeed from "@/components/UserActivityFeed";
 
 function fetchUsers(): Promise<Array<{
   id: number;
@@ -61,6 +62,7 @@ export default function AdminUsers() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<any | null>(null);
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -262,6 +264,12 @@ export default function AdminUsers() {
                  </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                  <CreditCard />
+                  <span>Plans</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
                   <Settings />
                   <span>Settings</span>
@@ -322,10 +330,10 @@ export default function AdminUsers() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Username</TableHead>
                       <TableHead>Display Name</TableHead>
                       <TableHead>Source</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Recent Activity</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -334,7 +342,6 @@ export default function AdminUsers() {
                       <TableRow key={u.id}>
                         <TableCell>{u.id}</TableCell>
                         <TableCell>{u.email}</TableCell>
-                        <TableCell>{u.username}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -369,9 +376,29 @@ export default function AdminUsers() {
                             {u.accountStatus}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => setLocation(`/admin/users/${u.id}/activities`)}
+                            className="gap-1"
+                          >
+                            <Activity className="h-3 w-3" />
+                            Recent Activity
+                          </Button>
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => openEditDialog(u)}>Edit</Button>
-                          <Button size="sm" className="ml-2" disabled title="Coming soon">Delete</Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => setSelectedUserForDetails(u)}
+                            >
+                              View Details
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openEditDialog(u)}>Edit</Button>
+                            <Button size="sm" className="ml-2" disabled title="Coming soon">Delete</Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -496,6 +523,101 @@ export default function AdminUsers() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
                 <Button onClick={handleEditSubmit}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* User Details Modal */}
+          <Dialog open={!!selectedUserForDetails} onOpenChange={() => setSelectedUserForDetails(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>User Details</DialogTitle>
+              </DialogHeader>
+              {selectedUserForDetails && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      {selectedUserForDetails.profilePicture ? (
+                        <AvatarImage src={selectedUserForDetails.profilePicture} alt={selectedUserForDetails.displayName || selectedUserForDetails.username || "User"} />
+                      ) : (
+                        <AvatarFallback className="text-lg">
+                          {(selectedUserForDetails.displayName || selectedUserForDetails.username || "?").slice(0, 1).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div>
+                      <h3 className="text-lg font-semibold">{selectedUserForDetails.displayName || selectedUserForDetails.username}</h3>
+                      <p className="text-sm text-muted-foreground">{selectedUserForDetails.email}</p>
+                      <Badge variant={selectedUserForDetails.accountStatus === 'Active' ? 'default' : 'secondary'}>
+                        {selectedUserForDetails.accountStatus}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="font-medium">User ID:</span>
+                        <span className="ml-2">{selectedUserForDetails.id}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Username:</span>
+                        <span className="ml-2">{selectedUserForDetails.username || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Email:</span>
+                        <span className="ml-2">{selectedUserForDetails.email || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Display Name:</span>
+                        <span className="ml-2">{selectedUserForDetails.displayName || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">First Name:</span>
+                        <span className="ml-2">{selectedUserForDetails.firstName || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Last Name:</span>
+                        <span className="ml-2">{selectedUserForDetails.lastName || 'N/A'}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <span className="font-medium">Phone:</span>
+                        <span className="ml-2">{selectedUserForDetails.phone || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Account Source:</span>
+                        <span className="ml-2">{selectedUserForDetails.source || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Account Status:</span>
+                        <span className="ml-2">{selectedUserForDetails.accountStatus || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">IP Address:</span>
+                        <span className="ml-2">{selectedUserForDetails.ipAddress || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Registration Date:</span>
+                        <span className="ml-2">
+                          {selectedUserForDetails.registrationDate 
+                            ? new Date(selectedUserForDetails.registrationDate).toLocaleString()
+                            : 'N/A'
+                          }
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Google ID:</span>
+                        <span className="ml-2">{selectedUserForDetails.googleId || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedUserForDetails(null)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

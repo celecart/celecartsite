@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -160,6 +160,8 @@ export const users = pgTable("users", {
   source: text("source").notNull().default("local"),
   resetToken: text("reset_token"),
   resetTokenExpires: integer("reset_token_expires"),
+  ipAddress: text("ip_address"),
+  registrationDate: timestamp("registration_date").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -176,6 +178,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   source: true,
   resetToken: true,
   resetTokenExpires: true,
+  ipAddress: true,
+  registrationDate: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -288,6 +292,38 @@ export const insertUserRoleSchema = createInsertSchema(userRoles).pick({
 });
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect;
+
+// User Activity Tracking
+export const userActivities = pgTable("user_activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  activityType: text("activity_type").notNull(), // 'login', 'profile_view', 'search', 'favorite', 'share', etc.
+  entityType: text("entity_type"), // 'celebrity', 'brand', 'category', etc.
+  entityId: integer("entity_id"), // ID of the entity being interacted with
+  entityName: text("entity_name"), // Name of the entity for quick reference
+  metadata: jsonb("metadata").$type<{
+    ip?: string;
+    userAgent?: string;
+    searchQuery?: string;
+    referrer?: string;
+    duration?: number;
+    additionalData?: Record<string, any>;
+  } | null>(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivities).pick({
+  userId: true,
+  activityType: true,
+  entityType: true,
+  entityId: true,
+  entityName: true,
+  metadata: true,
+  timestamp: true,
+});
+
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type UserActivity = typeof userActivities.$inferSelect;
 
 // Plans
 export const plans = pgTable("plans", {

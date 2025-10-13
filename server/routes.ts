@@ -46,7 +46,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google OAuth callback
   app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login' }),
-    (req: Request, res: Response) => {
+    async (req: Request, res: Response) => {
+      // Log user activity for Google login
+      if (req.user) {
+        try {
+          const user = req.user as any;
+          await storage.logUserActivity({
+            userId: user.id,
+            activityType: 'login',
+            entityType: 'auth',
+            entityId: null,
+            entityName: 'Google OAuth Login',
+            metadata: JSON.stringify({ 
+              loginMethod: 'google',
+              timestamp: new Date().toISOString(),
+              userAgent: req.get('User-Agent') || null
+            })
+          });
+        } catch (activityError) {
+          console.error('Failed to log Google login activity:', activityError);
+        }
+      }
+
       const isPopup = (req.query.state === 'popup') || (req.query.popup === 'true');
       if (isPopup) {
         const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5000';
@@ -88,8 +109,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     passport.authenticate('local', (err: any, user: any, info: any) => {
       if (err) { return next(err); }
       if (!user) { return res.status(401).json({ message: info?.message || 'Login failed' }); }
-      req.logIn(user, (err) => {
+      req.logIn(user, async (err) => {
         if (err) { return next(err); }
+        
+        // Log user activity for login
+        try {
+          await storage.logUserActivity({
+            userId: user.id,
+            activityType: 'login',
+            entityType: 'auth',
+            entityId: null,
+            entityName: 'Email/Password Login',
+            metadata: JSON.stringify({ 
+              loginMethod: 'local',
+              timestamp: new Date().toISOString(),
+              userAgent: req.get('User-Agent') || null
+            })
+          });
+        } catch (activityError) {
+          console.error('Failed to log login activity:', activityError);
+        }
+        
         const role = user?.email === 'admin@cele.com' ? 'admin' : 'user';
         return res.json({ user: { ...user, role } });
       });
@@ -344,6 +384,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profilePicture = `data:${mime};base64,${base64}`;
       }
 
+      // Capture user's IP address
+      const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 
+                       (req.connection as any)?.socket?.remoteAddress || 'unknown';
+
       const newUser = await storage.createUser({
         username: finalUsername!,
         password, // NOTE: For production, hash the password before storing
@@ -355,7 +399,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone,
         accountStatus: normalizedStatus,
         source: 'local',
+        ipAddress: ipAddress,
+        registrationDate: new Date(),
       });
+
+      // Log user activity for signup
+      try {
+        await storage.logUserActivity({
+          userId: newUser.id,
+          activityType: 'signup',
+          entityType: 'auth',
+          entityId: null,
+          entityName: 'User Registration',
+          metadata: JSON.stringify({ 
+            registrationMethod: 'local',
+            timestamp: new Date().toISOString(),
+            userAgent: req.get('User-Agent') || null,
+            hasProfilePicture: !!profilePicture
+          })
+        });
+      } catch (activityError) {
+        console.error('Failed to log signup activity:', activityError);
+      }
 
       // Return sanitized user
       const { id } = newUser;
@@ -410,6 +475,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: (u as any).phone,
         accountStatus: (u as any).accountStatus,
         source: (u as any).source,
+        ipAddress: (u as any).ipAddress,
+        registrationDate: (u as any).registrationDate,
+        googleId: (u as any).googleId,
       }));
       res.json(safe);
     } catch (error) {
@@ -434,6 +502,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       phone: (u as any).phone,
       accountStatus: (u as any).accountStatus,
       source: (u as any).source,
+      ipAddress: (u as any).ipAddress,
+      registrationDate: (u as any).registrationDate,
+      googleId: (u as any).googleId,
     };
     res.json(safe);
   });
@@ -447,7 +518,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
       const normalizedStatus = parsed.data.accountStatus && allowedStatuses.includes(parsed.data.accountStatus) ? parsed.data.accountStatus : 'Active';
-      const created = await storage.createUser({ ...parsed.data, accountStatus: normalizedStatus, source: parsed.data.source ?? 'local' });
+      
+      // Capture IP address and registration date
+      const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+      const registrationDate = new Date();
+      
+      const created = await storage.createUser({ 
+        ...parsed.data, 
+        accountStatus: normalizedStatus, 
+        source: parsed.data.source ?? 'local',
+        ipAddress,
+        registrationDate
+      });
       const safe = {
         id: created.id,
         username: (created as any).username,
@@ -654,6 +736,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
 
+  // User Activity endpoints
+  app.get('/api/users/:userId/activities', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const activityType = req.query.type as string;
+      
+      let activities;
+      if (activityType) {
+        activities = await storage.getUserActivitiesByType(userId, activityType, limit);
+      } else {
+        activities = await storage.getUserActivities(userId, limit);
+      }
+      
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching user activities:', error);
+      res.status(500).json({ message: 'Failed to fetch user activities' });
+    }
+  });
+
+  app.post('/api/users/:userId/activities', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
+      
+      const { activityType, entityType, entityId, entityName, metadata } = req.body;
+      
+      if (!activityType) {
+        return res.status(400).json({ message: 'Activity type is required' });
+      }
+      
+      const activity = await storage.logUserActivity({
+        userId,
+        activityType,
+        entityType: entityType || null,
+        entityId: entityId || null,
+        entityName: entityName || null,
+        metadata: metadata || null
+      });
+      
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error('Error logging user activity:', error);
+      res.status(500).json({ message: 'Failed to log user activity' });
+    }
+  });
+
+  app.get('/api/activities/recent', async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const activities = await storage.getRecentActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      res.status(500).json({ message: 'Failed to fetch recent activities' });
+    }
+  });
+
+  app.delete('/api/users/:userId/activities', requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
+      
+      const success = await storage.deleteUserActivities(userId);
+      if (!success) {
+        return res.status(404).json({ message: 'User activities not found' });
+      }
+      
+      res.json({ success: true, message: 'User activities deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting user activities:', error);
+      res.status(500).json({ message: 'Failed to delete user activities' });
+    }
+  });
+
   // Get all celebrities
   app.get("/api/celebrities", async (req: Request, res: Response) => {
     try {
@@ -675,6 +835,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const celebrity = await storage.getCelebrityById(id);
       if (!celebrity) {
         return res.status(404).json({ message: "Celebrity not found" });
+      }
+
+      // Log user activity for celebrity profile view (if user is authenticated)
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        try {
+          const user = req.user as any;
+          await storage.logUserActivity({
+            userId: user.id,
+            activityType: 'view',
+            entityType: 'celebrity',
+            entityId: id,
+            entityName: celebrity.name,
+            metadata: JSON.stringify({ 
+              timestamp: new Date().toISOString(),
+              userAgent: req.get('User-Agent') || null
+            })
+          });
+        } catch (activityError) {
+          console.error('Failed to log celebrity view activity:', activityError);
+        }
       }
       
       res.json(celebrity);
