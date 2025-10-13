@@ -22,10 +22,7 @@ import {
   type InsertTournamentOutfit,
   plans,
   type Plan,
-  type InsertPlan,
-  userActivities,
-  type UserActivity,
-  type InsertUserActivity
+  type InsertPlan
 } from "@shared/schema";
 import { 
   mockCelebrities, 
@@ -120,19 +117,6 @@ export interface IStorage {
   getUserRoles(userId: number): Promise<UserRole[]>;
   assignRoleToUser(userId: number, roleId: number): Promise<UserRole>;
   removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
-  
-  // Password reset token operations
-  storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void>;
-  verifyPasswordResetToken(userId: number, token: string): Promise<boolean>;
-  clearPasswordResetToken(userId: number): Promise<void>;
-  updateUserPassword(userId: number, newPassword: string): Promise<boolean>;
-  
-  // User Activity operations
-  logUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
-  getUserActivities(userId: number, limit?: number): Promise<UserActivity[]>;
-  getUserActivitiesByType(userId: number, activityType: string, limit?: number): Promise<UserActivity[]>;
-  getRecentActivities(limit?: number): Promise<UserActivity[]>;
-  deleteUserActivities(userId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -149,10 +133,6 @@ export class MemStorage implements IStorage {
   private permissions: Map<number, Permission>;
   private rolePermissions: Map<number, RolePermission>;
   private userRoles: Map<number, UserRole>;
-  // Password reset tokens storage
-  private passwordResetTokens: Map<number, { token: string; expiry: Date }>;
-  // User activities storage
-  private userActivities: Map<number, UserActivity>;
   
   private userId: number = 1;
   private celebrityId: number = 1;
@@ -167,8 +147,6 @@ export class MemStorage implements IStorage {
   private permissionId: number = 1;
   private rolePermissionId: number = 1;
   private userRoleId: number = 1;
-  // Counter for user activities
-  private userActivityId: number = 1;
 
   constructor() {
     this.users = new Map();
@@ -185,8 +163,6 @@ export class MemStorage implements IStorage {
     this.permissions = new Map();
     this.rolePermissions = new Map();
     this.userRoles = new Map();
-    this.passwordResetTokens = new Map();
-    this.userActivities = new Map();
     
     // Initialize with mock data
     this.initializeMockData();
@@ -702,7 +678,7 @@ export class MemStorage implements IStorage {
 
   // Users list
   async getUsers(): Promise<User[]> {
-    return Array.from(this.users.values()).sort((a, b) => b.id - a.id);
+    return Array.from(this.users.values());
   }
 
   // Roles CRUD
@@ -798,93 +774,6 @@ export class MemStorage implements IStorage {
     if (!found) return false;
     const [id] = found;
     return this.userRoles.delete(id);
-  }
-
-  // Password reset token operations
-  async storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void> {
-    this.passwordResetTokens.set(userId, { token, expiry });
-  }
-
-  async verifyPasswordResetToken(userId: number, token: string): Promise<boolean> {
-    const stored = this.passwordResetTokens.get(userId);
-    if (!stored) return false;
-    
-    // Check if token matches and hasn't expired
-    if (stored.token !== token || stored.expiry < new Date()) {
-      // Clean up expired token
-      this.passwordResetTokens.delete(userId);
-      return false;
-    }
-    
-    return true;
-  }
-
-  async clearPasswordResetToken(userId: number): Promise<void> {
-    this.passwordResetTokens.delete(userId);
-  }
-
-  async updateUserPassword(userId: number, newPassword: string): Promise<boolean> {
-    const user = this.users.get(userId);
-    if (!user) return false;
-    
-    // Update the user's password
-    const updatedUser: User = { ...user, password: newPassword };
-    this.users.set(userId, updatedUser);
-    return true;
-  }
-
-  // User Activity operations
-  async logUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
-    const newActivity: UserActivity = {
-      id: this.userActivityId++,
-      userId: activity.userId,
-      activityType: activity.activityType,
-      entityType: activity.entityType || null,
-      entityId: activity.entityId || null,
-      entityName: activity.entityName || null,
-      metadata: activity.metadata || null,
-      timestamp: new Date()
-    };
-    
-    this.userActivities.set(newActivity.id, newActivity);
-    return newActivity;
-  }
-
-  async getUserActivities(userId: number, limit: number = 50): Promise<UserActivity[]> {
-    const activities = Array.from(this.userActivities.values())
-      .filter(activity => activity.userId === userId)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, limit);
-    
-    return activities;
-  }
-
-  async getUserActivitiesByType(userId: number, activityType: string, limit: number = 50): Promise<UserActivity[]> {
-    const activities = Array.from(this.userActivities.values())
-      .filter(activity => activity.userId === userId && activity.activityType === activityType)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, limit);
-    
-    return activities;
-  }
-
-  async getRecentActivities(limit: number = 100): Promise<UserActivity[]> {
-    const activities = Array.from(this.userActivities.values())
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, limit);
-    
-    return activities;
-  }
-
-  async deleteUserActivities(userId: number): Promise<boolean> {
-    const activitiesToDelete = Array.from(this.userActivities.entries())
-      .filter(([_, activity]) => activity.userId === userId);
-    
-    for (const [id, _] of activitiesToDelete) {
-      this.userActivities.delete(id);
-    }
-    
-    return true;
   }
 }
 

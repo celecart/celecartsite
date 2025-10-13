@@ -9,14 +9,9 @@ dotenv.config();
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/auth/google/callback",
-  passReqToCallback: true
-}, async (req, accessToken, refreshToken, profile, done) => {
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/auth/google/callback"
+}, async (accessToken, refreshToken, profile, done) => {
   try {
-    // Capture user's IP address
-    const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 
-                     (req.connection as any)?.socket?.remoteAddress || 'unknown';
-
     // Check if user already exists with this Google ID
     let user = await storage.getUserByGoogleId(profile.id);
     
@@ -42,38 +37,13 @@ passport.use(new GoogleStrategy({
     
     // Create new user
     const newUser = await storage.createUser({
-      username: profile.displayName || profile.emails?.[0]?.value?.split('@')[0] || 'user',
-      email: profile.emails?.[0]?.value || '',
-      displayName: profile.displayName || '',
-      profilePicture: profile.photos?.[0]?.value || null,
-      firstName: profile.name?.givenName || '',
-      lastName: profile.name?.familyName || '',
+      username: profile.displayName || profile.emails?.[0]?.value || `user_${profile.id}`,
+      email: email || '',
       googleId: profile.id,
-      accountStatus: 'Active',
-      source: 'google',
-      ipAddress: ipAddress,
-      registrationDate: new Date(),
+      displayName: profile.displayName || '',
+      profilePicture: profile.photos?.[0]?.value || '',
+      source: 'google'
     });
-    
-    // Log signup activity for new Google user
-    try {
-      await storage.logUserActivity({
-        userId: newUser.id,
-        activityType: 'signup',
-        entityType: 'auth',
-        entityId: null,
-        entityName: 'Google OAuth Registration',
-        metadata: JSON.stringify({ 
-          registrationMethod: 'google',
-          timestamp: new Date().toISOString(),
-          userAgent: req.get('User-Agent') || null,
-          googleId: profile.id,
-          hasProfilePicture: !!profile.photos?.[0]?.value
-        })
-      });
-    } catch (activityError) {
-      console.error('Failed to log Google signup activity:', activityError);
-    }
     
     return done(null, newUser);
   } catch (error) {
