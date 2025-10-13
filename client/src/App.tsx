@@ -11,7 +11,6 @@ import ViewportSimulator from "./components/ViewportSimulator";
 import SignUp from "@/pages/SignUp";
 import AdminRoles from "@/pages/AdminRoles";
 import AdminUsers from "@/pages/AdminUsers";
-import AdminUserActivities from "@/pages/AdminUserActivities";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCategories from "@/pages/AdminCategories";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -34,7 +33,6 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/roles" component={AdminRoles} />
       <Route path="/admin/users" component={AdminUsers} />
-      <Route path="/admin/users/:id/activities" component={AdminUserActivities} />
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/plans" component={AdminPlans} />
       <Route component={NotFound} />

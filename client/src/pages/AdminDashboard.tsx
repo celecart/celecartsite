@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import UserActivityFeed from "@/components/UserActivityFeed";
 import {
   SidebarProvider,
   Sidebar,
@@ -21,7 +20,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags } from "lucide-react";
 
 interface User {
   id: number;
@@ -175,12 +174,6 @@ export default function AdminDashboard() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                  <CreditCard />
-                  <span>Plans</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
                   <Settings />
                   <span>Settings</span>
@@ -259,24 +252,17 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <UserActivityFeed 
-              showAllUsers={true}
-              limit={10}
-              className="hover:shadow-lg transition-shadow"
-            />
-            
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <Button onClick={() => setLocation('/admin/users')} className="gap-2 justify-start"><Users className="h-4 w-4" /> Manage Users</Button>
-                <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2 justify-start"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
-                <Button onClick={() => setLocation('/admin/categories')} variant="outline" className="gap-2 justify-start"><Tags className="h-4 w-4" /> Manage Categories</Button>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="flex gap-2">
+              <Button onClick={() => setLocation('/admin/users')} className="gap-2"><Users className="h-4 w-4" /> Manage Users</Button>
+-              <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
++              <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
++              <Button onClick={() => setLocation('/admin/categories')} variant="outline" className="gap-2"><Tags className="h-4 w-4" /> Manage Categories</Button>
+            </CardContent>
+          </Card>
         </div>
       </SidebarInset>
     </SidebarProvider>
