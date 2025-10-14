@@ -9,12 +9,13 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel
 import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface Plan {
   id: number;
-  imageUrl: string;
-  price: string;
-  discount?: string | null;
+  imageUrl?: string | null;
+  price: number;
+  discount?: number | null;
 }
 
 interface PlanFormData {
@@ -40,9 +41,22 @@ export default function AdminPlans() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isDark, setIsDark] = useState(false);
+
+  const { data, error, isLoading, refetch } = useQuery({ queryKey: ["plans"], queryFn: fetchPlans });
+  const { toast } = useToast();
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [form, setForm] = useState<Partial<Plan>>({ imageUrl: "", price: 0, discount: 0 });
+
+  const applyTheme = (dark: boolean) => {
+    const root = document.documentElement;
+    if (dark) root.classList.add("dark"); else root.classList.remove("dark");
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,7 +65,7 @@ export default function AdminPlans() {
         if (res.ok) {
           const data = await res.json();
           const u = data?.user || null;
-          setCurrentUser(u);
+          setUser(u);
           if (!u || u.role !== 'admin') {
             setLocation('/');
           }
@@ -80,27 +94,19 @@ export default function AdminPlans() {
     }
   }, []);
 
-  const applyTheme = (dark: boolean) => {
-    const root = document.documentElement;
-    if (dark) root.classList.add("dark"); else root.classList.remove("dark");
-  };
+  function openCreateDialog() {
+    setEditingPlan(null);
+    setForm({ imageUrl: "", price: 0, discount: 0 });
+    setIsCreateOpen(true);
+  }
 
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    applyTheme(next);
-    try {
-      localStorage.setItem('theme', next ? 'dark' : 'light');
-    } catch {}
-  };
+  function openEditDialog(p: Plan) {
+    setEditingPlan(p);
+    setForm({ imageUrl: p.imageUrl ?? "", price: p.price ?? 0, discount: p.discount ?? 0 });
+    setIsEditOpen(true);
+  }
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchPlans();
-    }
-  }, [currentUser]);
-
-  const fetchPlans = async () => {
+  async function handleCreateSubmit() {
     try {
       const response = await fetch('/api/plans');
       if (response.ok) {
@@ -233,11 +239,9 @@ export default function AdminPlans() {
     } finally {
       setUploading(false);
     }
-  };
+  }
 
-  const handleEditPlan = async () => {
-    if (!editingPlan) return;
-
+  async function handleEditSubmit() {
     try {
       setUploading(true);
       let imageUrl = formData.imageUrl;
@@ -297,11 +301,9 @@ export default function AdminPlans() {
     } finally {
       setUploading(false);
     }
-  };
+  }
 
-  const handleDeletePlan = async (planId: number) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
-
+  async function handleDelete(p: Plan) {
     try {
       const response = await fetch(`/api/plans/${planId}`, {
         method: 'DELETE',
@@ -361,7 +363,7 @@ export default function AdminPlans() {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  return (
+  return (<>
     <SidebarProvider className="bg-background text-white">
       <Sidebar variant="inset" collapsible="icon" className="border-r">
         <SidebarHeader>
@@ -406,7 +408,7 @@ export default function AdminPlans() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                  <CreditCard />
+                  <BadgeDollarSign />
                   <span>Plans</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -421,7 +423,7 @@ export default function AdminPlans() {
         </SidebarContent>
         <SidebarFooter>
           <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {currentUser?.displayName || currentUser?.username}
+            Signed in as {user?.displayName || user?.username}
           </div>
         </SidebarFooter>
         <SidebarRail />
@@ -430,14 +432,22 @@ export default function AdminPlans() {
       <SidebarInset>
         <div className="flex h-14 items-center gap-3 px-4 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger />
-          <div className="font-bold text-lg">Plans Management</div>
+          <div className="font-bold text-lg">Cele Admin</div>
           <div className="ml-auto flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+            <Input placeholder="Search" className="w-48" />
+            <Button variant="outline" size="icon" onClick={() => {
+              const next = !isDark; setIsDark(next); applyTheme(next);
+              try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch {}
+            }} aria-label="Toggle theme">
               {isDark ? (
                 <Sun className="h-[1.2rem] w-[1.2rem]" />
               ) : (
                 <Moon className="h-[1.2rem] w-[1.2rem]" />
               )}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <Button onClick={openCreateDialog} className="gap-2">
+              <BadgeDollarSign className="h-4 w-4" /> New Plan
             </Button>
           </div>
         </div>
@@ -601,7 +611,6 @@ export default function AdminPlans() {
               </Button>
             </div>
           )}
-        </div>
 
         {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -694,5 +703,51 @@ export default function AdminPlans() {
         </Dialog>
       </SidebarInset>
     </SidebarProvider>
-  );
+
+    {/* Create Plan Dialog */}
+    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create Plan</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <label className="text-sm">Image URL</label>
+          <Input placeholder="https://..." value={String(form.imageUrl ?? "")} onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))} />
+
+          <label className="text-sm">Price</label>
+          <Input type="number" step="0.01" value={String(form.price ?? 0)} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
+
+          <label className="text-sm">Discount (%)</label>
+          <Input type="number" step="1" value={String(form.discount ?? 0)} onChange={(e) => setForm(f => ({ ...f, discount: Number(e.target.value) }))} />
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setIsCreateOpen(false)} variant="outline">Cancel</Button>
+          <Button onClick={handleCreateSubmit}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Plan Dialog */}
+    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Plan</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <label className="text-sm">Image URL</label>
+          <Input placeholder="https://..." value={String(form.imageUrl ?? "")} onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))} />
+
+          <label className="text-sm">Price</label>
+          <Input type="number" step="0.01" value={String(form.price ?? 0)} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
+
+          <label className="text-sm">Discount (%)</label>
+          <Input type="number" step="1" value={String(form.discount ?? 0)} onChange={(e) => setForm(f => ({ ...f, discount: Number(e.target.value) }))} />
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setIsEditOpen(false)} variant="outline">Cancel</Button>
+          <Button onClick={handleEditSubmit}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>);
 }

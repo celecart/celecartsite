@@ -1439,63 +1439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Forgot password: generate reset token and expiry
-  app.post('/auth/forgot-password', async (req: Request, res: Response) => {
-    try {
-      const email = (req.body?.email || '').trim().toLowerCase();
-      if (!email || !/\S+@\S+\.\S+/.test(email)) {
-        return res.status(400).json({ message: 'Valid email is required' });
-      }
-  
-      const user = await storage.getUserByEmail(email);
-      // Always respond with success-like message to avoid enumeration
-      const genericResponse = { message: 'If an account exists for that email, a reset link has been sent.' };
-  
-      if (!user) {
-        return res.json(genericResponse);
-      }
-  
-      const token = crypto.randomBytes(32).toString('hex');
-      const expires = Date.now() + 60 * 60 * 1000; // 1 hour
-      await storage.updateUser(user.id, { resetToken: token, resetTokenExpires: Math.floor(expires) });
-  
-      // Dev: return reset URL directly (in real app, send via email)
-      const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5000';
-      const resetUrl = `${origin}/reset-password?token=${token}`;
-      return res.json({ ...genericResponse, resetUrl });
-    } catch (error) {
-      console.error('Forgot password error:', error);
-      return res.status(500).json({ message: 'Failed to process forgot password request' });
-    }
-  });
-  
-  // Reset password: validate token and update password
-  app.post('/auth/reset-password', async (req: Request, res: Response) => {
-    try {
-      const { token, password } = req.body as { token?: string; password?: string };
-      if (!token || typeof token !== 'string') {
-        return res.status(400).json({ message: 'Reset token is required' });
-      }
-      if (!password || password.length < 6) {
-        return res.status(400).json({ message: 'Password must be at least 6 characters' });
-      }
-  
-      const users = await storage.getUsers();
-      const user = users.find(u => u.resetToken === token);
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid or expired token' });
-      }
-      if (!user.resetTokenExpires || Date.now() > user.resetTokenExpires) {
-        return res.status(400).json({ message: 'Token has expired' });
-      }
-  
-      await storage.updateUser(user.id, { password, resetToken: undefined as any, resetTokenExpires: undefined as any });
-      return res.json({ message: 'Password has been reset successfully' });
-    } catch (error) {
-      console.error('Reset password error:', error);
-      return res.status(500).json({ message: 'Failed to reset password' });
-    }
-  });
+
 
   // File upload endpoint for plan images
   const planImageUpload = multer({
