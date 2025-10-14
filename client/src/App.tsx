@@ -13,10 +13,13 @@ import AdminRoles from "@/pages/AdminRoles";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminCategories from "@/pages/AdminCategories";
+import AdminCelebrities from "@/pages/AdminCelebrities";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Profile from "@/pages/Profile";
 import AdminPlans from "@/pages/AdminPlans";
+import Plans from "@/pages/Plans";
+import Celebrities from "@/pages/Celebrities";
 
 function Router() {
   return (
@@ -28,12 +31,15 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/profile" component={Profile} />
+      <Route path="/plans" component={Plans} />
+      <Route path="/celebrities" component={Celebrities} />
       <Route path="/celebrity/:id" component={CelebrityProfile} />
       <Route path="/content-creator" component={ContentCreator} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/roles" component={AdminRoles} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/admin/celebrities" component={AdminCelebrities} />
       <Route path="/admin/plans" component={AdminPlans} />
       <Route component={NotFound} />
     </Switch>

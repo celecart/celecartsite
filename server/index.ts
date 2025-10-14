@@ -37,6 +37,9 @@ app.use(passport.session());
 // Serve static assets from public directory
 app.use('/assets', express.static('public/assets'));
 
+// Serve uploaded files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -68,23 +71,30 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Add Randolph brand for Tom Cruise's aviators
-  await addRandolphBrandToDB();
-  
-  // Add Pakistani celebrities to database
-  await addPakistaniCelebritiesToDB();
-  
-  // Add Shoaib Akhtar cricket legend
-  await addShoaibAkhtar();
-  
-  // Add more Pakistani celebrities (Imran Khan, Shan, etc.)
-  await addMorePakistaniCelebritiesToDB();
-  
-  // Add Frazay Akbar fashion influencer and social media personality
-  await addFrazayAkbarProfileToDB();
-  
-  // Mark elite celebrities with premium status badges
-  await markEliteCelebrities();
+  // Only run seeders if RUN_SEEDERS environment variable is set to 'true'
+  if (process.env.RUN_SEEDERS === 'true') {
+    log('Running database seeders...');
+    
+    // Add Randolph brand for Tom Cruise's aviators
+    await addRandolphBrandToDB();
+    
+    // Add Pakistani celebrities to database
+    await addPakistaniCelebritiesToDB();
+    
+    // Add Shoaib Akhtar cricket legend
+    await addShoaibAkhtar();
+    
+    // Add more Pakistani celebrities (Imran Khan, Shan, etc.)
+    await addMorePakistaniCelebritiesToDB();
+    
+    // Add Frazay Akbar fashion influencer and social media personality
+    await addFrazayAkbarProfileToDB();
+    
+    // Mark elite celebrities with premium status badges
+    await markEliteCelebrities();
+    
+    log('Database seeders completed');
+  }
 
   // Ensure admin user exists and set password
   try {
@@ -136,11 +146,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "localhost", () => {
     log(`serving on port ${port}`);
   });
 })();

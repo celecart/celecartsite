@@ -887,6 +887,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create celebrity" });
     }
   });
+
+  // Update celebrity
+  app.put("/api/celebrities/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid celebrity ID" });
+      }
+      const existing = await storage.getCelebrityById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Celebrity not found" });
+      }
+      const partial = req.body as Partial<z.infer<typeof insertCelebritySchema>>;
+      const merged = { ...existing, ...partial };
+      const validated = insertCelebritySchema.parse(merged);
+      const updated = await storage.updateCelebrity(id, validated);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid celebrity data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update celebrity" });
+    }
+  });
+
+  // Delete celebrity
+  app.delete("/api/celebrities/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid celebrity ID" });
+      }
+      const existing = await storage.getCelebrityById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Celebrity not found" });
+      }
+      await storage.deleteCelebrity(id);
+      res.json({ message: "Celebrity deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete celebrity" });
+    }
+  });
   
   // Get all brands
   app.get("/api/brands", async (req: Request, res: Response) => {
@@ -1398,6 +1440,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+
+  // File upload endpoint for plan images
+  const planImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, 'uploads/plans/');
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `plan-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  // File upload endpoint for celebrity images
+  const celebrityImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, path.join(__dirname, '../uploads/celebrities/'));
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `celebrity-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  app.post("/api/upload/plan-image", planImageUpload.single('image'), (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      const imageUrl = `/uploads/plans/${req.file.filename}`;
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error('Image upload error:', error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  app.post("/api/upload/celebrity-image", celebrityImageUpload.single('image'), (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      const imageUrl = `/uploads/celebrities/${req.file.filename}`;
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error('Celebrity image upload error:', error);
+      res.status(500).json({ message: "Failed to upload celebrity image" });
+    }
+  });
 
   // Plans endpoints
   // Get all plans

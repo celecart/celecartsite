@@ -21,7 +21,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, Activity, ExternalLink, CreditCard, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
@@ -260,6 +260,18 @@ export default function AdminUsers() {
                   <Tags />
                   <span>Categories</span>
                  </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
+                  <Star />
+                  <span>Celebrities</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                  <CreditCard />
+                  <span>Plans</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">

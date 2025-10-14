@@ -2,6 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { storage } from './storage';
+import { User } from '../shared/schema';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -47,12 +48,12 @@ passport.use(new GoogleStrategy({
     
     return done(null, newUser);
   } catch (error) {
-    return done(error, null);
+    return done(error, false);
   }
 }));
 
 // Serialize user for session
-passport.serializeUser((user: User, done) => {
+passport.serializeUser((user: any, done) => {
   done(null, user.id);
 });
 
@@ -62,7 +63,7 @@ passport.deserializeUser(async (id: number, done) => {
     const user = await storage.getUser(id);
     done(null, user);
   } catch (error) {
-    done(error, null);
+    done(error, false);
   }
 });
 
