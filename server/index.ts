@@ -37,6 +37,9 @@ app.use(passport.session());
 // Serve static assets from public directory
 app.use('/assets', express.static('public/assets'));
 
+// Serve uploaded files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

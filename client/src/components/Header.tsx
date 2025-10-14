@@ -145,6 +145,16 @@ export default function Header() {
               >
                 Celebrities
               </a>
+              <Link 
+                href="/celebrities" 
+                className={cn(
+                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/celebrities" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                All Celebrities
+              </Link>
               <a 
                 href="#trending" 
                 className={cn(
@@ -166,13 +176,23 @@ export default function Header() {
               >
                 Brands
               </a>
+              <Link 
+                href="/plans" 
+                className={cn(
+                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/plans" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                Plans
+              </Link>
             </div>
           </nav>
           
           {/* Premium Action Section */}
           <div className="flex items-center space-x-3">
             {/* Enhanced Celebrity Filter */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block mr-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -245,7 +265,7 @@ export default function Header() {
                 <Input
                   type="text"
                   placeholder="Search celebrities..."
-                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-80 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
+                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-64 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
                   value={searchQuery}
                   onChange={handleSearchChange}
                 />
@@ -505,6 +525,13 @@ export default function Header() {
                   >
                     Celebrities
                   </a>
+                  <Link 
+                    href="/celebrities"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    All Celebrities
+                  </Link>
                   <a 
                     href="#spotlight"
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
@@ -527,6 +554,14 @@ export default function Header() {
                   >
                     Brands
                   </a>
+                  
+                  <Link 
+                    href="/plans"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    Plans
+                  </Link>
                   
                   {/* Mobile Sign In / Profile */}
                   <div className="w-full flex items-center justify-between gap-4">

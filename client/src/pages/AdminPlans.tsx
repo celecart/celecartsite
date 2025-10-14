@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Plus, Edit, Trash2, Sun, Moon, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +18,7 @@ interface Plan {
 }
 
 interface PlanFormData {
+  imageFile: File | null;
   imageUrl: string;
   price: string;
   discount: string;
@@ -30,10 +31,14 @@ export default function AdminPlans() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [formData, setFormData] = useState<PlanFormData>({
+    imageFile: null,
     imageUrl: '',
     price: '',
     discount: ''
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -102,25 +107,100 @@ export default function AdminPlans() {
         const data = await response.json();
         setPlans(data);
       } else {
-        toast.error('Failed to fetch plans');
+        toast({
+          title: "Error",
+          description: "Failed to fetch plans",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error fetching plans:', error);
-      toast.error('Error fetching plans');
+      toast({
+        title: "Error",
+        description: "Error fetching plans",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "Error",
+          description: "File size must be less than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setFormData({ ...formData, imageFile: file });
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch('/api/upload/plan-image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload image');
+    }
+
+    const data = await response.json();
+    return data.imageUrl;
+  };
+
   const handleCreatePlan = async () => {
     try {
+      setUploading(true);
+      let imageUrl = '';
+
+      // Upload the selected file
+      if (formData.imageFile) {
+        imageUrl = await uploadImage(formData.imageFile);
+      }
+
+      if (!imageUrl) {
+        toast({
+          title: "Error",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const response = await fetch('/api/plans', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrl: formData.imageUrl,
+          imageUrl: imageUrl,
           price: formData.price,
           discount: formData.discount || null
         }),
@@ -130,15 +210,28 @@ export default function AdminPlans() {
         const newPlan = await response.json();
         setPlans([...plans, newPlan]);
         setIsCreateModalOpen(false);
-        setFormData({ imageUrl: '', price: '', discount: '' });
-        toast.success('Plan created successfully');
+        resetForm();
+        toast({
+          title: "Success",
+          description: "Plan created successfully"
+        });
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to create plan');
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create plan",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error creating plan:', error);
-      toast.error('Error creating plan');
+      toast({
+        title: "Error",
+        description: "Error creating plan",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -146,13 +239,31 @@ export default function AdminPlans() {
     if (!editingPlan) return;
 
     try {
+      setUploading(true);
+      let imageUrl = formData.imageUrl;
+
+      // If a new file is selected, upload it first
+      if (formData.imageFile) {
+        imageUrl = await uploadImage(formData.imageFile);
+      }
+
+      // For editing, we allow keeping the existing image if no new file is selected
+      if (!imageUrl) {
+        toast({
+          title: "Error",
+          description: "Please select an image file or keep the existing image",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const response = await fetch(`/api/plans/${editingPlan.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrl: formData.imageUrl,
+          imageUrl: imageUrl,
           price: formData.price,
           discount: formData.discount || null
         }),
@@ -163,15 +274,28 @@ export default function AdminPlans() {
         setPlans(plans.map(plan => plan.id === editingPlan.id ? updatedPlan : plan));
         setIsEditModalOpen(false);
         setEditingPlan(null);
-        setFormData({ imageUrl: '', price: '', discount: '' });
-        toast.success('Plan updated successfully');
+        resetForm();
+        toast({
+          title: "Success",
+          description: "Plan updated successfully"
+        });
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to update plan');
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update plan",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error updating plan:', error);
-      toast.error('Error updating plan');
+      toast({
+        title: "Error",
+        description: "Error updating plan",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -185,30 +309,52 @@ export default function AdminPlans() {
 
       if (response.ok) {
         setPlans(plans.filter(plan => plan.id !== planId));
-        toast.success('Plan deleted successfully');
+        toast({
+          title: "Success",
+          description: "Plan deleted successfully"
+        });
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to delete plan');
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete plan",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error deleting plan:', error);
-      toast.error('Error deleting plan');
+      toast({
+        title: "Error",
+        description: "Error deleting plan",
+        variant: "destructive"
+      });
     }
   };
 
   const openEditModal = (plan: Plan) => {
     setEditingPlan(plan);
     setFormData({
+      imageFile: null,
       imageUrl: plan.imageUrl,
       price: plan.price,
       discount: plan.discount || ''
     });
+    setImagePreview(null);
     setIsEditModalOpen(true);
   };
 
   const resetForm = () => {
-    setFormData({ imageUrl: '', price: '', discount: '' });
+    setFormData({ 
+      imageFile: null,
+      imageUrl: '', 
+      price: '', 
+      discount: '' 
+    });
+    setImagePreview(null);
     setEditingPlan(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   if (loading) {
@@ -250,6 +396,12 @@ export default function AdminPlans() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                   <Tags />
                   <span>Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
+                  <Star />
+                  <span>Celebrities</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -309,13 +461,54 @@ export default function AdminPlans() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      placeholder="https://example.com/image.jpg"
-                    />
+                    <Label htmlFor="imageUpload">Plan Image</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Choose Image
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          {formData.imageFile ? formData.imageFile.name : 'No file selected'}
+                        </span>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      {imagePreview && (
+                        <div className="relative w-32 h-20 border rounded overflow-hidden">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-1 right-1 h-6 w-6 p-0"
+                            onClick={() => {
+                              setFormData({ ...formData, imageFile: null });
+                              setImagePreview(null);
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                              }
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="price">Price</Label>
@@ -339,8 +532,8 @@ export default function AdminPlans() {
                     <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleCreatePlan}>
-                      Create Plan
+                    <Button onClick={handleCreatePlan} disabled={uploading}>
+                      {uploading ? 'Creating...' : 'Create Plan'}
                     </Button>
                   </div>
                 </div>
@@ -418,13 +611,57 @@ export default function AdminPlans() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-imageUrl">Image URL</Label>
-                <Input
-                  id="edit-imageUrl"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <Label htmlFor="edit-imageUpload">Plan Image</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Choose New Image
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {formData.imageFile ? formData.imageFile.name : 'No new file selected'}
+                    </span>
+                  </div>
+                  {imagePreview && (
+                    <div className="relative w-32 h-20 border rounded overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0"
+                        onClick={() => {
+                          setFormData({ ...formData, imageFile: null });
+                          setImagePreview(null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  {!imagePreview && formData.imageUrl && (
+                    <div className="w-32 h-20 border rounded overflow-hidden">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Current"
+                        className="w-full h-full object-cover"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Current image</p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <Label htmlFor="edit-price">Price</Label>
@@ -448,8 +685,8 @@ export default function AdminPlans() {
                 <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleEditPlan}>
-                  Update Plan
+                <Button onClick={handleEditPlan} disabled={uploading}>
+                  {uploading ? 'Updating...' : 'Update Plan'}
                 </Button>
               </div>
             </div>

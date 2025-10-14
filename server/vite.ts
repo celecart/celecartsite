@@ -47,8 +47,8 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
-    // Do not intercept backend routes
-    if (url.startsWith('/auth/') || url.startsWith('/api/')) {
+    // Do not intercept backend routes and static files
+    if (url.startsWith('/auth/') || url.startsWith('/api/') || url.startsWith('/uploads/') || url.startsWith('/assets/')) {
       return next();
     }
 
