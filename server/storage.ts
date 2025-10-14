@@ -43,6 +43,11 @@ export interface IStorage {
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserPasswordByEmail(email: string, password: string): Promise<boolean>;
+  // Password reset operations
+  updateUserPassword(userId: number, password: string): Promise<boolean>;
+  storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void>;
+  verifyPasswordResetToken(userId: number, token: string): Promise<boolean>;
+  clearPasswordResetToken(userId: number): Promise<void>;
   
   // Celebrity operations
   getCelebrities(): Promise<Celebrity[]>;
@@ -147,6 +152,8 @@ export class MemStorage implements IStorage {
   private permissionId: number = 1;
   private rolePermissionId: number = 1;
   private userRoleId: number = 1;
+  // Password reset token storage
+  private passwordResetTokens: Map<number, { token: string; expiry: Date }>;
 
   constructor() {
     this.users = new Map();
@@ -163,6 +170,7 @@ export class MemStorage implements IStorage {
     this.permissions = new Map();
     this.rolePermissions = new Map();
     this.userRoles = new Map();
+    this.passwordResetTokens = new Map();
     
     // Initialize with mock data
     this.initializeMockData();
@@ -278,6 +286,31 @@ export class MemStorage implements IStorage {
     const updated: User = { ...user, password };
     this.users.set(user.id, updated);
     return true;
+  }
+
+  async updateUserPassword(userId: number, password: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    const updated: User = { ...user, password };
+    this.users.set(user.id, updated);
+    return true;
+  }
+
+  async storePasswordResetToken(userId: number, token: string, expiry: Date): Promise<void> {
+    this.passwordResetTokens.set(userId, { token, expiry });
+  }
+
+  async verifyPasswordResetToken(userId: number, token: string): Promise<boolean> {
+    const entry = this.passwordResetTokens.get(userId);
+    if (!entry) return false;
+    if (entry.token !== token) return false;
+    const now = new Date();
+    if (entry.expiry.getTime() < now.getTime()) return false;
+    return true;
+  }
+
+  async clearPasswordResetToken(userId: number): Promise<void> {
+    this.passwordResetTokens.delete(userId);
   }
 
   // Celebrity operations

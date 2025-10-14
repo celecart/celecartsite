@@ -210,7 +210,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send email
       await emailService.sendPasswordResetEmail(email, resetToken, resetUrl);
 
-      res.json({ message: 'If the email exists, a password reset link has been sent' });
+      // In development, include resetUrl to simplify local testing
+      const payload: any = { message: 'If the email exists, a password reset link has been sent' };
+      if (app.get('env') === 'development') {
+        payload.resetUrl = resetUrl;
+      }
+      res.json(payload);
     } catch (error) {
       console.error('Forgot password error:', error);
       res.status(500).json({ message: 'Failed to process password reset request' });

@@ -5,24 +5,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
+interface PlanFeature { label: string; value: string }
 interface Plan {
   id: number;
-  imageUrl?: string | null;
-  price: number;
-  discount?: number | null;
+  name: string;
+  imageUrl: string;
+  price: string;
+  discount?: string | null;
+  isActive: boolean;
+  features: PlanFeature[];
 }
 
 interface PlanFormData {
   imageFile: File | null;
+  name: string;
   imageUrl: string;
   price: string;
   discount: string;
+  isActive: boolean;
+  features: PlanFeature[];
 }
 
 export default function AdminPlans() {
@@ -33,30 +40,20 @@ export default function AdminPlans() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [formData, setFormData] = useState<PlanFormData>({
     imageFile: null,
+    name: '',
     imageUrl: '',
     price: '',
-    discount: ''
+    discount: '',
+    isActive: true,
+    features: []
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isDark, setIsDark] = useState(false);
-
-  const { data, error, isLoading, refetch } = useQuery({ queryKey: ["plans"], queryFn: fetchPlans });
   const { toast } = useToast();
-
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
-  const [form, setForm] = useState<Partial<Plan>>({ imageUrl: "", price: 0, discount: 0 });
-
-  const applyTheme = (dark: boolean) => {
-    const root = document.documentElement;
-    if (dark) root.classList.add("dark"); else root.classList.remove("dark");
-  };
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -65,7 +62,7 @@ export default function AdminPlans() {
         if (res.ok) {
           const data = await res.json();
           const u = data?.user || null;
-          setUser(u);
+          setCurrentUser(u);
           if (!u || u.role !== 'admin') {
             setLocation('/');
           }
@@ -94,19 +91,27 @@ export default function AdminPlans() {
     }
   }, []);
 
-  function openCreateDialog() {
-    setEditingPlan(null);
-    setForm({ imageUrl: "", price: 0, discount: 0 });
-    setIsCreateOpen(true);
-  }
+  const applyTheme = (dark: boolean) => {
+    const root = document.documentElement;
+    if (dark) root.classList.add("dark"); else root.classList.remove("dark");
+  };
 
-  function openEditDialog(p: Plan) {
-    setEditingPlan(p);
-    setForm({ imageUrl: p.imageUrl ?? "", price: p.price ?? 0, discount: p.discount ?? 0 });
-    setIsEditOpen(true);
-  }
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    applyTheme(next);
+    try {
+      localStorage.setItem('theme', next ? 'dark' : 'light');
+    } catch {}
+  };
 
-  async function handleCreateSubmit() {
+  useEffect(() => {
+    if (currentUser) {
+      fetchPlans();
+    }
+  }, [currentUser]);
+
+  const fetchPlans = async () => {
     try {
       const response = await fetch('/api/plans');
       if (response.ok) {
@@ -206,9 +211,12 @@ export default function AdminPlans() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          name: formData.name,
           imageUrl: imageUrl,
           price: formData.price,
-          discount: formData.discount || null
+          discount: formData.discount || null,
+          isActive: formData.isActive,
+          features: formData.features
         }),
       });
 
@@ -239,9 +247,11 @@ export default function AdminPlans() {
     } finally {
       setUploading(false);
     }
-  }
+  };
 
-  async function handleEditSubmit() {
+  const handleEditPlan = async () => {
+    if (!editingPlan) return;
+
     try {
       setUploading(true);
       let imageUrl = formData.imageUrl;
@@ -267,9 +277,12 @@ export default function AdminPlans() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          name: formData.name,
           imageUrl: imageUrl,
           price: formData.price,
-          discount: formData.discount || null
+          discount: formData.discount || null,
+          isActive: formData.isActive,
+          features: formData.features
         }),
       });
 
@@ -301,9 +314,11 @@ export default function AdminPlans() {
     } finally {
       setUploading(false);
     }
-  }
+  };
 
-  async function handleDelete(p: Plan) {
+  const handleDeletePlan = async (planId: number) => {
+    if (!confirm('Are you sure you want to delete this plan?')) return;
+
     try {
       const response = await fetch(`/api/plans/${planId}`, {
         method: 'DELETE',
@@ -337,9 +352,12 @@ export default function AdminPlans() {
     setEditingPlan(plan);
     setFormData({
       imageFile: null,
+      name: plan.name,
       imageUrl: plan.imageUrl,
       price: plan.price,
-      discount: plan.discount || ''
+      discount: plan.discount || '',
+      isActive: plan.isActive,
+      features: plan.features || []
     });
     setImagePreview(null);
     setIsEditModalOpen(true);
@@ -348,9 +366,12 @@ export default function AdminPlans() {
   const resetForm = () => {
     setFormData({ 
       imageFile: null,
+      name: '',
       imageUrl: '', 
       price: '', 
-      discount: '' 
+      discount: '',
+      isActive: true,
+      features: []
     });
     setImagePreview(null);
     setEditingPlan(null);
@@ -363,7 +384,7 @@ export default function AdminPlans() {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  return (<>
+  return (
     <SidebarProvider className="bg-background text-white">
       <Sidebar variant="inset" collapsible="icon" className="border-r">
         <SidebarHeader>
@@ -408,7 +429,7 @@ export default function AdminPlans() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                  <BadgeDollarSign />
+                  <CreditCard />
                   <span>Plans</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -423,7 +444,7 @@ export default function AdminPlans() {
         </SidebarContent>
         <SidebarFooter>
           <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {user?.displayName || user?.username}
+            Signed in as {currentUser?.displayName || currentUser?.username}
           </div>
         </SidebarFooter>
         <SidebarRail />
@@ -432,22 +453,14 @@ export default function AdminPlans() {
       <SidebarInset>
         <div className="flex h-14 items-center gap-3 px-4 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger />
-          <div className="font-bold text-lg">Cele Admin</div>
+          <div className="font-bold text-lg">Plans Management</div>
           <div className="ml-auto flex items-center gap-3">
-            <Input placeholder="Search" className="w-48" />
-            <Button variant="outline" size="icon" onClick={() => {
-              const next = !isDark; setIsDark(next); applyTheme(next);
-              try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch {}
-            }} aria-label="Toggle theme">
+            <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
               {isDark ? (
                 <Sun className="h-[1.2rem] w-[1.2rem]" />
               ) : (
                 <Moon className="h-[1.2rem] w-[1.2rem]" />
               )}
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-            <Button onClick={openCreateDialog} className="gap-2">
-              <BadgeDollarSign className="h-4 w-4" /> New Plan
             </Button>
           </div>
         </div>
@@ -470,6 +483,19 @@ export default function AdminPlans() {
                   <DialogTitle>Create New Plan</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="planName">Plan Name</Label>
+                    <Input
+                      id="planName"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., Basic, Premium"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="planActive">Active</Label>
+                    <Switch id="planActive" checked={formData.isActive} onCheckedChange={(v) => setFormData({ ...formData, isActive: !!v })} />
+                  </div>
                   <div>
                     <Label htmlFor="imageUpload">Plan Image</Label>
                     <div className="space-y-2">
@@ -530,6 +556,34 @@ export default function AdminPlans() {
                     />
                   </div>
                   <div>
+                    <Label>Plan Features</Label>
+                    <div className="space-y-2 mt-2">
+                      {formData.features.map((f, idx) => (
+                        <div key={idx} className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Feature label"
+                            value={f.label}
+                            onChange={(e) => {
+                              const next = [...formData.features];
+                              next[idx] = { ...next[idx], label: e.target.value };
+                              setFormData({ ...formData, features: next });
+                            }}
+                          />
+                          <Input
+                            placeholder="Feature value"
+                            value={f.value}
+                            onChange={(e) => {
+                              const next = [...formData.features];
+                              next[idx] = { ...next[idx], value: e.target.value };
+                              setFormData({ ...formData, features: next });
+                            }}
+                          />
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => setFormData({ ...formData, features: [...formData.features, { label: '', value: '' }] })}>Add Row</Button>
+                    </div>
+                  </div>
+                  <div>
                     <Label htmlFor="discount">Discount (Optional)</Label>
                     <Input
                       id="discount"
@@ -574,7 +628,22 @@ export default function AdminPlans() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="text-lg font-semibold">{plan.price}</div>
-                  <div className="text-sm text-muted-foreground">Plan ID: {plan.id}</div>
+                  <div className="flex items-center justify-between mt-1 mb-2">
+                    <div className="font-semibold">{plan.name}</div>
+                    <Badge variant={plan.isActive ? 'secondary' : 'outline'}>
+                      {plan.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                  {Array.isArray(plan.features) && plan.features.length > 0 && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      {plan.features.map((f, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>{f.label}</span>
+                          <span className="font-medium">{f.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="p-4 pt-0 flex gap-2">
                   <Button
@@ -611,6 +680,7 @@ export default function AdminPlans() {
               </Button>
             </div>
           )}
+        </div>
 
         {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -619,6 +689,18 @@ export default function AdminPlans() {
               <DialogTitle>Edit Plan</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-planName">Plan Name</Label>
+                <Input
+                  id="edit-planName"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="edit-planActive">Active</Label>
+                <Switch id="edit-planActive" checked={formData.isActive} onCheckedChange={(v) => setFormData({ ...formData, isActive: !!v })} />
+              </div>
               <div>
                 <Label htmlFor="edit-imageUpload">Plan Image</Label>
                 <div className="space-y-2">
@@ -682,6 +764,34 @@ export default function AdminPlans() {
                 />
               </div>
               <div>
+                <Label>Plan Features</Label>
+                <div className="space-y-2 mt-2">
+                  {formData.features.map((f, idx) => (
+                    <div key={idx} className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Feature label"
+                        value={f.label}
+                        onChange={(e) => {
+                          const next = [...formData.features];
+                          next[idx] = { ...next[idx], label: e.target.value };
+                          setFormData({ ...formData, features: next });
+                        }}
+                      />
+                      <Input
+                        placeholder="Feature value"
+                        value={f.value}
+                        onChange={(e) => {
+                          const next = [...formData.features];
+                          next[idx] = { ...next[idx], value: e.target.value };
+                          setFormData({ ...formData, features: next });
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => setFormData({ ...formData, features: [...formData.features, { label: '', value: '' }] })}>Add Row</Button>
+                </div>
+              </div>
+              <div>
                 <Label htmlFor="edit-discount">Discount (Optional)</Label>
                 <Input
                   id="edit-discount"
@@ -703,51 +813,5 @@ export default function AdminPlans() {
         </Dialog>
       </SidebarInset>
     </SidebarProvider>
-
-    {/* Create Plan Dialog */}
-    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Plan</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-3">
-          <label className="text-sm">Image URL</label>
-          <Input placeholder="https://..." value={String(form.imageUrl ?? "")} onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))} />
-
-          <label className="text-sm">Price</label>
-          <Input type="number" step="0.01" value={String(form.price ?? 0)} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
-
-          <label className="text-sm">Discount (%)</label>
-          <Input type="number" step="1" value={String(form.discount ?? 0)} onChange={(e) => setForm(f => ({ ...f, discount: Number(e.target.value) }))} />
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setIsCreateOpen(false)} variant="outline">Cancel</Button>
-          <Button onClick={handleCreateSubmit}>Create</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Edit Plan Dialog */}
-    <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Plan</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-3">
-          <label className="text-sm">Image URL</label>
-          <Input placeholder="https://..." value={String(form.imageUrl ?? "")} onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))} />
-
-          <label className="text-sm">Price</label>
-          <Input type="number" step="0.01" value={String(form.price ?? 0)} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))} />
-
-          <label className="text-sm">Discount (%)</label>
-          <Input type="number" step="1" value={String(form.discount ?? 0)} onChange={(e) => setForm(f => ({ ...f, discount: Number(e.target.value) }))} />
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setIsEditOpen(false)} variant="outline">Cancel</Button>
-          <Button onClick={handleEditSubmit}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </>);
+  );
 }
