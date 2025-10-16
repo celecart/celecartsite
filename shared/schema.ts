@@ -9,6 +9,7 @@ export const celebrities = pgTable("celebrities", {
   imageUrl: text("image_url").notNull(),
   description: text("description"),
   category: text("category").notNull(), // e.g., "Red Carpet", "Street Style", etc.
+  isActive: boolean("is_active").default(true).notNull(), // Active/Inactive status
   isElite: boolean("is_elite").default(false).notNull(), // Premium/Elite profile status
   managerInfo: jsonb("manager_info").$type<{
     name: string;
@@ -47,6 +48,7 @@ export const insertCelebritySchema = createInsertSchema(celebrities).pick({
   imageUrl: true,
   description: true,
   category: true,
+  isActive: true,
   isElite: true,
   managerInfo: true,
   stylingDetails: true,
@@ -292,15 +294,21 @@ export type UserRole = typeof userRoles.$inferSelect;
 // Plans
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
+  name: text("name").notNull(),
   imageUrl: text("image_url").notNull(),
   price: text("price").notNull(),
   discount: text("discount"),
+  isActive: boolean("is_active").default(true).notNull(),
+  features: jsonb("features").notNull().$type<{ label: string; value: string }[]>(),
 });
 
 export const insertPlanSchema = createInsertSchema(plans).pick({
+  name: true,
   imageUrl: true,
   price: true,
   discount: true,
+  isActive: true,
+  features: true,
 });
 
 export type InsertPlan = z.infer<typeof insertPlanSchema>;

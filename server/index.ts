@@ -4,7 +4,8 @@ import passport from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import dotenv from 'dotenv';
-import { storage } from "./storage";
+import { verifyDbConnection } from "./db";
+import { storage, setUseDbStorage } from "./storage";
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +72,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Verify DB connection (if DATABASE_URL is set)
+  const dbOk = await verifyDbConnection();
+  if (dbOk) {
+    setUseDbStorage(true);
+    log('Using Postgres-backed storage');
+  } else {
+    setUseDbStorage(false);
+    log('Using in-memory storage');
+  }
   // Only run seeders if RUN_SEEDERS environment variable is set to 'true'
   if (process.env.RUN_SEEDERS === 'true') {
     log('Running database seeders...');

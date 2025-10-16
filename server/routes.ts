@@ -28,8 +28,23 @@ import {
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { emailService } from "./services/email";
+import { db, pool } from "./db";
+import { roles, permissions, rolePermissions, userRoles } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // DB health check endpoint
+  app.get('/api/health/db', async (_req: Request, res: Response) => {
+    if (!pool) {
+      return res.json({ connected: false, message: 'DATABASE_URL not set' });
+    }
+    try {
+      const result = await pool.query('SELECT version()');
+      return res.json({ connected: true, version: result.rows?.[0]?.version ?? null });
+    } catch (err) {
+      return res.status(500).json({ connected: false, error: 'DB connection failed' });
+    }
+  });
   
   // Authentication routes
   
@@ -587,8 +602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Roles CRUD
   app.get('/api/roles', async (_req: Request, res: Response) => {
     try {
-      const roles = await storage.getRoles();
-      res.json(roles);
+      const list = db ? await db.select().from(roles) : await storage.getRoles();
+      res.json(list);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch roles' });
     }
@@ -597,9 +612,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/roles/:id', async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
-    const role = await storage.getRoleById(id);
-    if (!role) return res.status(404).json({ message: 'Role not found' });
-    res.json(role);
+    let record: any;
+    if (db) {
+      const rows = await db.select().from(roles).where(eq(roles.id, id)).limit(1);
+      record = rows[0];
+    } else {
+      record = await storage.getRoleById(id);
+    }
+    if (!record) return res.status(404).json({ message: 'Role not found' });
+    res.json(record);
   });
 
   app.post('/api/roles', requireAdmin, async (req: Request, res: Response) => {
@@ -608,8 +629,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
       }
-      const role = await storage.createRole(parsed.data);
-      res.status(201).json(role);
+      if (db) {
+        const [created] = await (db as any).insert(roles).values({
+          name: parsed.data.name,
+          description: (parsed.data as any).description ?? null,
+        }).returning();
+        return res.status(201).json(created);
+      } else {
+        const role = await storage.createRole(parsed.data);
+        return res.status(201).json(role);
+      }
     } catch (error) {
       res.status(500).json({ message: 'Failed to create role' });
     }
@@ -622,24 +651,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
     }
-    const updated = await storage.updateRole(id, parsed.data);
-    if (!updated) return res.status(404).json({ message: 'Role not found' });
-    res.json(updated);
+    if (db) {
+      const rows = await (db as any).update(roles).set({
+        name: parsed.data.name,
+        description: (parsed.data as any).description ?? null,
+      }).where(eq(roles.id, id)).returning();
+      const updated = rows[0];
+      if (!updated) return res.status(404).json({ message: 'Role not found' });
+      return res.json(updated);
+    } else {
+      const updated = await storage.updateRole(id, parsed.data);
+      if (!updated) return res.status(404).json({ message: 'Role not found' });
+      return res.json(updated);
+    }
   });
 
   app.delete('/api/roles/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
-    const ok = await storage.deleteRole(id);
-    if (!ok) return res.status(404).json({ message: 'Role not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(roles).where(eq(roles.id, id)).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Role not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.deleteRole(id);
+      if (!ok) return res.status(404).json({ message: 'Role not found' });
+      return res.json({ success: true });
+    }
   });
 
   // Permissions CRUD
   app.get('/api/permissions', async (_req: Request, res: Response) => {
     try {
-      const permissions = await storage.getPermissions();
-      res.json(permissions);
+      const list = db ? await db.select().from(permissions) : await storage.getPermissions();
+      res.json(list);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch permissions' });
     }
@@ -648,9 +694,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/permissions/:id', async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
-    const permission = await storage.getPermissionById(id);
-    if (!permission) return res.status(404).json({ message: 'Permission not found' });
-    res.json(permission);
+    let record: any;
+    if (db) {
+      const rows = await db.select().from(permissions).where(eq(permissions.id, id)).limit(1);
+      record = rows[0];
+    } else {
+      record = await storage.getPermissionById(id);
+    }
+    if (!record) return res.status(404).json({ message: 'Permission not found' });
+    res.json(record);
   });
 
   app.post('/api/permissions', requireAdmin, async (req: Request, res: Response) => {
@@ -659,8 +711,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
       }
-      const permission = await storage.createPermission(parsed.data);
-      res.status(201).json(permission);
+      if (db) {
+        const [created] = await (db as any).insert(permissions).values({
+          name: parsed.data.name,
+          description: (parsed.data as any).description ?? null,
+        }).returning();
+        return res.status(201).json(created);
+      } else {
+        const permission = await storage.createPermission(parsed.data);
+        return res.status(201).json(permission);
+      }
     } catch (error) {
       res.status(500).json({ message: 'Failed to create permission' });
     }
@@ -673,24 +733,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
     }
-    const updated = await storage.updatePermission(id, parsed.data);
-    if (!updated) return res.status(404).json({ message: 'Permission not found' });
-    res.json(updated);
+    if (db) {
+      const rows = await (db as any).update(permissions).set({
+        name: parsed.data.name,
+        description: (parsed.data as any).description ?? null,
+      }).where(eq(permissions.id, id)).returning();
+      const updated = rows[0];
+      if (!updated) return res.status(404).json({ message: 'Permission not found' });
+      return res.json(updated);
+    } else {
+      const updated = await storage.updatePermission(id, parsed.data);
+      if (!updated) return res.status(404).json({ message: 'Permission not found' });
+      return res.json(updated);
+    }
   });
 
   app.delete('/api/permissions/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
-    const ok = await storage.deletePermission(id);
-    if (!ok) return res.status(404).json({ message: 'Permission not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(permissions).where(eq(permissions.id, id)).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Permission not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.deletePermission(id);
+      if (!ok) return res.status(404).json({ message: 'Permission not found' });
+      return res.json({ success: true });
+    }
   });
 
   // Role-Permissions mapping
   app.get('/api/roles/:roleId/permissions', async (req: Request, res: Response) => {
     const roleId = parseInt(req.params.roleId);
     if (isNaN(roleId)) return res.status(400).json({ message: 'Invalid role ID' });
-    const list = await storage.getRolePermissions(roleId);
+    const list = db
+      ? await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId))
+      : await storage.getRolePermissions(roleId);
     res.json(list);
   });
 
@@ -698,24 +777,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const roleId = parseInt(req.params.roleId);
     const permissionId = parseInt(req.params.permissionId);
     if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const rp = await storage.addPermissionToRole(roleId, permissionId);
-    res.status(201).json(rp);
+    if (db) {
+      const existing = await db.select().from(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId))).limit(1);
+      if (existing[0]) return res.status(201).json(existing[0]);
+      const [inserted] = await (db as any).insert(rolePermissions).values({ roleId, permissionId }).returning();
+      return res.status(201).json(inserted);
+    } else {
+      const rp = await storage.addPermissionToRole(roleId, permissionId);
+      return res.status(201).json(rp);
+    }
   });
 
   app.delete('/api/roles/:roleId/permissions/:permissionId', requireAdmin, async (req: Request, res: Response) => {
     const roleId = parseInt(req.params.roleId);
     const permissionId = parseInt(req.params.permissionId);
     if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ok = await storage.removePermissionFromRole(roleId, permissionId);
-    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId))).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.removePermissionFromRole(roleId, permissionId);
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    }
   });
 
   // User-Roles mapping
   app.get('/api/users/:userId/roles', async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
-    const list = await storage.getUserRoles(userId);
+    const list = db
+      ? await db.select().from(userRoles).where(eq(userRoles.userId, userId))
+      : await storage.getUserRoles(userId);
     res.json(list);
   });
 
@@ -723,17 +818,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = parseInt(req.params.userId);
     const roleId = parseInt(req.params.roleId);
     if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ur = await storage.assignRoleToUser(userId, roleId);
-    res.status(201).json(ur);
+    if (db) {
+      const existing = await db.select().from(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).limit(1);
+      if (existing[0]) return res.status(201).json(existing[0]);
+      const [inserted] = await (db as any).insert(userRoles).values({ userId, roleId }).returning();
+      return res.status(201).json(inserted);
+    } else {
+      const ur = await storage.assignRoleToUser(userId, roleId);
+      return res.status(201).json(ur);
+    }
   });
 
   app.delete('/api/users/:userId/roles/:roleId', requireAdmin, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     const roleId = parseInt(req.params.roleId);
     if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ok = await storage.removeRoleFromUser(userId, roleId);
-    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.removeRoleFromUser(userId, roleId);
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    }
   });
 
   // User Activity endpoints
@@ -1568,7 +1677,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const partial = req.body as Partial<z.infer<typeof insertPlanSchema>>;
       const merged = { ...existing, ...partial };
-      const validated = insertPlanSchema.parse({ imageUrl: merged.imageUrl, price: merged.price, discount: merged.discount });
+      const validated = insertPlanSchema.parse({
+        name: merged.name,
+        imageUrl: merged.imageUrl,
+        price: merged.price,
+        discount: merged.discount,
+        isActive: merged.isActive,
+        features: merged.features,
+      });
       const updated = await storage.updatePlan(id, validated);
       res.json(updated);
     } catch (error) {

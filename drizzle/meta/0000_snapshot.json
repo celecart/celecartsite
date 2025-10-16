@@ -1,0 +1,908 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.brands": {
+      "name": "brands",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "celeb_wearers": {
+          "name": "celeb_wearers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "brands_id_not_null": {
+          "name": "brands_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "brands_name_not_null": {
+          "name": "brands_name_not_null",
+          "value": "NOT NULL name"
+        },
+        "brands_image_url_not_null": {
+          "name": "brands_image_url_not_null",
+          "value": "NOT NULL image_url"
+        },
+        "brands_celeb_wearers_not_null": {
+          "name": "brands_celeb_wearers_not_null",
+          "value": "NOT NULL celeb_wearers"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.categories": {
+      "name": "categories",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "categories_id_not_null": {
+          "name": "categories_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "categories_name_not_null": {
+          "name": "categories_name_not_null",
+          "value": "NOT NULL name"
+        },
+        "categories_description_not_null": {
+          "name": "categories_description_not_null",
+          "value": "NOT NULL description"
+        },
+        "categories_image_url_not_null": {
+          "name": "categories_image_url_not_null",
+          "value": "NOT NULL image_url"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.celebrities": {
+      "name": "celebrities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "profession": {
+          "name": "profession",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_elite": {
+          "name": "is_elite",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "manager_info": {
+          "name": "manager_info",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "styling_details": {
+          "name": "styling_details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "celebrities_id_not_null": {
+          "name": "celebrities_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "celebrities_name_not_null": {
+          "name": "celebrities_name_not_null",
+          "value": "NOT NULL name"
+        },
+        "celebrities_profession_not_null": {
+          "name": "celebrities_profession_not_null",
+          "value": "NOT NULL profession"
+        },
+        "celebrities_image_url_not_null": {
+          "name": "celebrities_image_url_not_null",
+          "value": "NOT NULL image_url"
+        },
+        "celebrities_category_not_null": {
+          "name": "celebrities_category_not_null",
+          "value": "NOT NULL category"
+        },
+        "celebrities_is_elite_not_null": {
+          "name": "celebrities_is_elite_not_null",
+          "value": "NOT NULL is_elite"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.celebrity_brands": {
+      "name": "celebrity_brands",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "celebrity_id": {
+          "name": "celebrity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "item_type": {
+          "name": "item_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_position": {
+          "name": "image_position",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "equipment_specs": {
+          "name": "equipment_specs",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occasion_pricing": {
+          "name": "occasion_pricing",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "relationship_start_year": {
+          "name": "relationship_start_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grand_slam_appearances": {
+          "name": "grand_slam_appearances",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "celebrity_brands_id_not_null": {
+          "name": "celebrity_brands_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "celebrity_brands_celebrity_id_not_null": {
+          "name": "celebrity_brands_celebrity_id_not_null",
+          "value": "NOT NULL celebrity_id"
+        },
+        "celebrity_brands_brand_id_not_null": {
+          "name": "celebrity_brands_brand_id_not_null",
+          "value": "NOT NULL brand_id"
+        },
+        "celebrity_brands_image_position_not_null": {
+          "name": "celebrity_brands_image_position_not_null",
+          "value": "NOT NULL image_position"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.permissions": {
+      "name": "permissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "permissions_id_not_null": {
+          "name": "permissions_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "permissions_name_not_null": {
+          "name": "permissions_name_not_null",
+          "value": "NOT NULL name"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.plans": {
+      "name": "plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discount": {
+          "name": "discount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "features": {
+          "name": "features",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "plans_id_not_null": {
+          "name": "plans_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "plans_name_not_null": {
+          "name": "plans_name_not_null",
+          "value": "NOT NULL name"
+        },
+        "plans_image_url_not_null": {
+          "name": "plans_image_url_not_null",
+          "value": "NOT NULL image_url"
+        },
+        "plans_price_not_null": {
+          "name": "plans_price_not_null",
+          "value": "NOT NULL price"
+        },
+        "plans_is_active_not_null": {
+          "name": "plans_is_active_not_null",
+          "value": "NOT NULL is_active"
+        },
+        "plans_features_not_null": {
+          "name": "plans_features_not_null",
+          "value": "NOT NULL features"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.role_permissions": {
+      "name": "role_permissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permission_id": {
+          "name": "permission_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "role_permissions_id_not_null": {
+          "name": "role_permissions_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "role_permissions_role_id_not_null": {
+          "name": "role_permissions_role_id_not_null",
+          "value": "NOT NULL role_id"
+        },
+        "role_permissions_permission_id_not_null": {
+          "name": "role_permissions_permission_id_not_null",
+          "value": "NOT NULL permission_id"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.roles": {
+      "name": "roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "roles_id_not_null": {
+          "name": "roles_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "roles_name_not_null": {
+          "name": "roles_name_not_null",
+          "value": "NOT NULL name"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.tournament_outfits": {
+      "name": "tournament_outfits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "celebrity_id": {
+          "name": "celebrity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tournament_id": {
+          "name": "tournament_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outfit_details": {
+          "name": "outfit_details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "associated_brands": {
+          "name": "associated_brands",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "tournament_outfits_id_not_null": {
+          "name": "tournament_outfits_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "tournament_outfits_celebrity_id_not_null": {
+          "name": "tournament_outfits_celebrity_id_not_null",
+          "value": "NOT NULL celebrity_id"
+        },
+        "tournament_outfits_tournament_id_not_null": {
+          "name": "tournament_outfits_tournament_id_not_null",
+          "value": "NOT NULL tournament_id"
+        },
+        "tournament_outfits_year_not_null": {
+          "name": "tournament_outfits_year_not_null",
+          "value": "NOT NULL year"
+        },
+        "tournament_outfits_image_url_not_null": {
+          "name": "tournament_outfits_image_url_not_null",
+          "value": "NOT NULL image_url"
+        },
+        "tournament_outfits_outfit_details_not_null": {
+          "name": "tournament_outfits_outfit_details_not_null",
+          "value": "NOT NULL outfit_details"
+        },
+        "tournament_outfits_associated_brands_not_null": {
+          "name": "tournament_outfits_associated_brands_not_null",
+          "value": "NOT NULL associated_brands"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.tournaments": {
+      "name": "tournaments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "location": {
+          "name": "location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "surface_type": {
+          "name": "surface_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tier": {
+          "name": "tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "tournaments_id_not_null": {
+          "name": "tournaments_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "tournaments_name_not_null": {
+          "name": "tournaments_name_not_null",
+          "value": "NOT NULL name"
+        },
+        "tournaments_location_not_null": {
+          "name": "tournaments_location_not_null",
+          "value": "NOT NULL location"
+        },
+        "tournaments_surface_type_not_null": {
+          "name": "tournaments_surface_type_not_null",
+          "value": "NOT NULL surface_type"
+        },
+        "tournaments_start_date_not_null": {
+          "name": "tournaments_start_date_not_null",
+          "value": "NOT NULL start_date"
+        },
+        "tournaments_end_date_not_null": {
+          "name": "tournaments_end_date_not_null",
+          "value": "NOT NULL end_date"
+        },
+        "tournaments_image_url_not_null": {
+          "name": "tournaments_image_url_not_null",
+          "value": "NOT NULL image_url"
+        },
+        "tournaments_tier_not_null": {
+          "name": "tournaments_tier_not_null",
+          "value": "NOT NULL tier"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.user_roles": {
+      "name": "user_roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "user_roles_id_not_null": {
+          "name": "user_roles_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "user_roles_user_id_not_null": {
+          "name": "user_roles_user_id_not_null",
+          "value": "NOT NULL user_id"
+        },
+        "user_roles_role_id_not_null": {
+          "name": "user_roles_role_id_not_null",
+          "value": "NOT NULL role_id"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_id": {
+          "name": "google_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profile_picture": {
+          "name": "profile_picture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account_status": {
+          "name": "account_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Active'"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'local'"
+        },
+        "reset_token": {
+          "name": "reset_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reset_token_expires": {
+          "name": "reset_token_expires",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "columns": [
+            "username"
+          ],
+          "nullsNotDistinct": false,
+          "name": "users_username_unique"
+        },
+        "users_email_unique": {
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false,
+          "name": "users_email_unique"
+        },
+        "users_google_id_unique": {
+          "columns": [
+            "google_id"
+          ],
+          "nullsNotDistinct": false,
+          "name": "users_google_id_unique"
+        }
+      },
+      "checkConstraints": {
+        "users_id_not_null": {
+          "name": "users_id_not_null",
+          "value": "NOT NULL id"
+        },
+        "users_username_not_null": {
+          "name": "users_username_not_null",
+          "value": "NOT NULL username"
+        },
+        "users_account_status_not_null": {
+          "name": "users_account_status_not_null",
+          "value": "NOT NULL account_status"
+        },
+        "users_source_not_null": {
+          "name": "users_source_not_null",
+          "value": "NOT NULL source"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {}
+  }
+}

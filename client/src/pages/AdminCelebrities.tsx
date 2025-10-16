@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Plus, Edit, Trash2, Sun, Moon, CreditCard, Upload, X, Star } from 'lucide-react';
@@ -21,6 +22,7 @@ interface Celebrity {
   imageUrl: string;
   description?: string;
   category: string;
+  isActive: boolean;
   isElite: boolean;
   managerInfo?: {
     name: string;
@@ -59,6 +61,7 @@ interface CelebrityFormData {
   imageUrl: string;
   description: string;
   category: string;
+  isActive: boolean;
   isElite: boolean;
 }
 
@@ -76,6 +79,7 @@ export default function AdminCelebrities() {
     imageUrl: '',
     description: '',
     category: '',
+    isActive: true,
     isElite: false
   });
   const [uploading, setUploading] = useState(false);
@@ -312,6 +316,27 @@ export default function AdminCelebrities() {
     }
   };
 
+  const handleToggleActive = async (c: Celebrity) => {
+    try {
+      const response = await fetch(`/api/celebrities/${c.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !c.isActive })
+      });
+      if (response.ok) {
+        const updatedCelebrity = await response.json();
+        setCelebrities(celebrities.map((x) => x.id === c.id ? updatedCelebrity : x));
+        toast({ title: 'Success', description: `Status updated to ${updatedCelebrity.isActive ? 'Active' : 'Inactive'}` });
+      } else {
+        const error = await response.json();
+        toast({ title: 'Error', description: error.message || 'Failed to update status', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Error toggling active status:', error);
+      toast({ title: 'Error', description: 'Error updating status', variant: 'destructive' });
+    }
+  };
+
   const openEditModal = (celebrity: Celebrity) => {
     setEditingCelebrity(celebrity);
     setFormData({
@@ -320,6 +345,7 @@ export default function AdminCelebrities() {
       imageUrl: celebrity.imageUrl,
       description: celebrity.description || '',
       category: celebrity.category,
+      isActive: celebrity.isActive,
       isElite: celebrity.isElite
     });
     setIsEditModalOpen(true);
@@ -418,7 +444,8 @@ export default function AdminCelebrities() {
       imageUrl: '',
       description: '',
       category: '',
-      isElite: false
+    isActive: true,
+    isElite: false
     });
     setEditingCelebrity(null);
   };
@@ -644,6 +671,14 @@ export default function AdminCelebrities() {
                     />
                     <Label htmlFor="isElite">Elite Profile</Label>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="isActive">Active</Label>
+                    <Switch
+                      id="isActive"
+                      checked={formData.isActive}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
+                    />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
@@ -683,9 +718,16 @@ export default function AdminCelebrities() {
                       onClick={() => handleImagePreview(celebrity)}
                     />
                   </div>
-                  <Badge variant="outline" className="mb-2">
-                    {celebrity.category}
-                  </Badge>
+                  <div className="flex gap-2 mb-2">
+                    <Badge variant="outline">
+                      {celebrity.category}
+                    </Badge>
+                    {celebrity.isActive ? (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">Active</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-red-100 text-red-800">Inactive</Badge>
+                    )}
+                  </div>
                   {celebrity.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {celebrity.description}
@@ -693,25 +735,35 @@ export default function AdminCelebrities() {
                   )}
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <div className="flex gap-2 w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditModal(celebrity)}
-                      className="flex-1"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteCelebrity(celebrity.id)}
-                      className="flex-1"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditModal(celebrity)}
+                      className=""
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteCelebrity(celebrity.id)}
+                      className=""
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`active-${celebrity.id}`} className="text-xs">Active</Label>
+                      <Switch
+                        id={`active-${celebrity.id}`}
+                        checked={celebrity.isActive}
+                        onCheckedChange={() => handleToggleActive(celebrity)}
+                      />
+                    </div>
                   </div>
                 </CardFooter>
               </Card>
@@ -836,6 +888,14 @@ export default function AdminCelebrities() {
                     onCheckedChange={(checked) => setFormData({ ...formData, isElite: checked as boolean })}
                   />
                   <Label htmlFor="edit-isElite">Elite Profile</Label>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-isActive">Active</Label>
+                  <Switch
+                    id="edit-isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked as boolean })}
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-2">

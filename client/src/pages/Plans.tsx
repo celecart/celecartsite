@@ -6,11 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Star, Crown, Zap } from 'lucide-react';
 import Header from '@/components/Header';
 
+interface PlanFeature { label: string; value: string }
 interface Plan {
   id: number;
+  name: string;
   imageUrl: string;
   price: string;
   discount?: string | null;
+  isActive: boolean;
+  features: PlanFeature[];
 }
 
 export default function Plans() {
@@ -108,7 +112,7 @@ export default function Plans() {
 
         {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {plans.map((plan, index) => (
+          {plans.filter(p => p.isActive).map((plan, index) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 30 }}
@@ -132,7 +136,7 @@ export default function Plans() {
                     {getPlanIcon(index)}
                   </div>
                   <CardTitle className="text-2xl font-bold text-white mb-2">
-                    {getPlanName(index)}
+                    {plan.name || 'Plan'}
                   </CardTitle>
                   <div className="flex items-center justify-center gap-2">
                     {plan.discount && (
@@ -152,7 +156,7 @@ export default function Plans() {
                   <div className="aspect-video rounded-lg overflow-hidden bg-gray-800">
                     <img
                       src={plan.imageUrl}
-                      alt={`${getPlanName(index)} Plan`}
+                      alt={`${plan.name || 'Plan'} Plan`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -163,12 +167,12 @@ export default function Plans() {
 
                   {/* Features List */}
                   <div className="space-y-3">
-                    {getPlanFeatures(index).map((feature, featureIndex) => (
+                    {(Array.isArray(plan.features) ? plan.features : []).map((feature, featureIndex) => (
                       <div key={featureIndex} className="flex items-center gap-3">
                         <div className="w-5 h-5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0">
                           <Check className="h-3 w-3 text-black" />
                         </div>
-                        <span className="text-gray-300 text-sm">{feature}</span>
+                        <span className="text-gray-300 text-sm">{feature.label}{feature.value ? `: ${feature.value}` : ''}</span>
                       </div>
                     ))}
                   </div>

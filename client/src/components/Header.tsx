@@ -135,6 +135,18 @@ export default function Header() {
               >
                 Featured
               </a>
+              {/* Celebrities anchor hidden; keep All Celebrities link */}
+              <Link 
+                href="/celebrities" 
+                className={cn(
+                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/celebrities" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                All Celebrities
+              </Link>
+              {/*
               <a 
                 href="#celebrities" 
                 className={cn(
@@ -155,6 +167,7 @@ export default function Header() {
               >
                 All Celebrities
               </Link>
+              */}
               <a 
                 href="#trending" 
                 className={cn(
@@ -518,6 +531,15 @@ export default function Header() {
                   >
                     Featured
                   </a>
+                  {/* Celebrities links removed */}
+                  <Link 
+                    href="/celebrities"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    All Celebrities
+                  </Link>
+                  {/*
                   <a 
                     href="#celebrities"
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
@@ -532,6 +554,7 @@ export default function Header() {
                   >
                     All Celebrities
                   </Link>
+                  */}
                   <a 
                     href="#spotlight"
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
