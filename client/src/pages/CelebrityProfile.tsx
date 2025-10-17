@@ -1,4 +1,4 @@
-import { useRoute } from "wouter";
+﻿import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -147,6 +147,27 @@ export default function CelebrityProfile() {
     );
   }
 
+  // Guard: hide inactive profiles from public view
+  if (celebrity && celebrity.isActive === false) {
+    return (
+      <div className="bg-dark min-h-screen">
+        <Header />
+        <div className="pt-24 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+          <div className="text-center max-w-lg">
+            <AlertCircle className="w-12 h-12 text-warning mx-auto mb-4" />
+            <h1 className="text-2xl font-bold mb-4">Celebrity Unavailable</h1>
+            <p className="text-light/70 mb-6">
+              This profile is currently inactive.
+            </p>
+            <Button asChild>
+              <a href="/">Return to Homepage</a>
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
   return (
     <div className="bg-dark min-h-screen">
       <Header />
@@ -682,7 +703,7 @@ export default function CelebrityProfile() {
                                 <span className="ml-2 text-xs text-neutral-500">Signature crystal bottle design</span>
                               </div>
                               <p className="mt-2 text-sm text-gray-600">
-                                Featuring Kim, Khloé, and Kourtney in the iconic diamond-inspired bottles. Each fragrance represents their unique personalities with pink, clear, and yellow diamond variants.
+                                Featuring Kim, KhloÃ©, and Kourtney in the iconic diamond-inspired bottles. Each fragrance represents their unique personalities with pink, clear, and yellow diamond variants.
                               </p>
                             </div>
                           </div>
@@ -1552,9 +1573,9 @@ export default function CelebrityProfile() {
                         Connect, share experiences, and get exclusive access to celebrity content and interactions.
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">💬 Direct Messages</span>
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">🎭 Exclusive Content</span>
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">👥 Fan Community</span>
+                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">ðŸ’¬ Direct Messages</span>
+                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">ðŸŽ­ Exclusive Content</span>
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">ðŸ‘¥ Fan Community</span>
                       </div>
                     </div>
                   </div>
@@ -1579,7 +1600,7 @@ export default function CelebrityProfile() {
                       <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                         <div className="text-center">
                           <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span className="text-white font-bold text-lg">👔</span>
+                            <span className="text-white font-bold text-lg">ðŸ‘”</span>
                           </div>
                           <h4 className="font-semibold text-gray-800 mb-1">Executive Fashion</h4>
                           <p className="text-sm text-gray-600">Business & formal wear</p>
@@ -1589,7 +1610,7 @@ export default function CelebrityProfile() {
                       <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                         <div className="text-center">
                           <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span className="text-white font-bold text-lg">🍽️</span>
+                            <span className="text-white font-bold text-lg">ðŸ½ï¸</span>
                           </div>
                           <h4 className="font-semibold text-gray-800 mb-1">Favorite Restaurant</h4>
                           <p className="text-sm text-gray-600">Dining preferences</p>
@@ -1599,7 +1620,7 @@ export default function CelebrityProfile() {
                       <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                         <div className="text-center">
                           <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span className="text-white font-bold text-lg">🏙️</span>
+                            <span className="text-white font-bold text-lg">ðŸ™ï¸</span>
                           </div>
                           <h4 className="font-semibold text-gray-800 mb-1">Favorite Cities</h4>
                           <p className="text-sm text-gray-600">Travel destinations</p>
@@ -1609,7 +1630,7 @@ export default function CelebrityProfile() {
                       <div className="bg-white rounded-lg p-4 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                         <div className="text-center">
                           <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span className="text-white font-bold text-lg">🍸</span>
+                            <span className="text-white font-bold text-lg">ðŸ¸</span>
                           </div>
                           <h4 className="font-semibold text-gray-800 mb-1">Favorite Lounge</h4>
                           <p className="text-sm text-gray-600">Entertainment venues</p>
@@ -1651,7 +1672,7 @@ export default function CelebrityProfile() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-white text-2xl">👑</span>
+                          <span className="text-white text-2xl">ðŸ‘‘</span>
                         </div>
                         <h4 className="font-semibold text-amber-400 mb-2">Signature Style</h4>
                         <p className="text-gray-400 text-sm">Timeless elegance meets modern sophistication</p>
@@ -1659,7 +1680,7 @@ export default function CelebrityProfile() {
                       
                       <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-white text-2xl">💎</span>
+                          <span className="text-white text-2xl">ðŸ’Ž</span>
                         </div>
                         <h4 className="font-semibold text-amber-400 mb-2">Luxury Accessories</h4>
                         <p className="text-gray-400 text-sm">Carefully curated premium pieces</p>
@@ -1667,7 +1688,7 @@ export default function CelebrityProfile() {
                       
                       <div className="text-center">
                         <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-white text-2xl">✨</span>
+                          <span className="text-white text-2xl">âœ¨</span>
                         </div>
                         <h4 className="font-semibold text-amber-400 mb-2">Style Evolution</h4>
                         <p className="text-gray-400 text-sm">Fashion journey through the years</p>
@@ -1734,9 +1755,9 @@ export default function CelebrityProfile() {
                         Discover outfit combinations, color palettes, and styling tips tailored just for you.
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">🎨 Style Analysis</span>
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">👗 Outfit Suggestions</span>
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">🤖 AI Recommendations</span>
+                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">ðŸŽ¨ Style Analysis</span>
+                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">ðŸ‘— Outfit Suggestions</span>
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">ðŸ¤– AI Recommendations</span>
                       </div>
                     </div>
                   </div>
@@ -1754,7 +1775,7 @@ export default function CelebrityProfile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                       <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">🎯</span>
+                        <span className="text-white font-bold text-lg">ðŸŽ¯</span>
                       </div>
                       <h4 className="font-semibold text-gray-800 mb-2 text-center">Personal Style Analysis</h4>
                       <p className="text-sm text-gray-600 text-center">AI analyzes your preferences to create personalized style profiles</p>
@@ -1762,7 +1783,7 @@ export default function CelebrityProfile() {
 
                     <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                       <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">👕</span>
+                        <span className="text-white font-bold text-lg">ðŸ‘•</span>
                       </div>
                       <h4 className="font-semibold text-gray-800 mb-2 text-center">Smart Outfit Builder</h4>
                       <p className="text-sm text-gray-600 text-center">Mix and match clothing items based on celebrity style patterns</p>
@@ -1770,7 +1791,7 @@ export default function CelebrityProfile() {
 
                     <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
                       <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">🌈</span>
+                        <span className="text-white font-bold text-lg">ðŸŒˆ</span>
                       </div>
                       <h4 className="font-semibold text-gray-800 mb-2 text-center">Color Palette Generator</h4>
                       <p className="text-sm text-gray-600 text-center">Find perfect color combinations that complement your style</p>
@@ -1814,3 +1835,4 @@ export default function CelebrityProfile() {
     </div>
   );
 }
+

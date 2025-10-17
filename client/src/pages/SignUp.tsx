@@ -329,6 +329,19 @@ export default function Signup() {
             </div>
           </motion.form>
 
+          {/* Celebrity Sign-Up CTA */}
+          <div className="mt-4">
+            <Link href="/celebrity-signup">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-3 rounded-lg font-medium text-white bg-gradient-to-r from-fuchsia-500 via-purple-500 to-amber-500 hover:from-fuchsia-600 hover:via-purple-600 hover:to-amber-600 transition-all shadow-lg"
+              >
+                Celebrity Sign Up
+              </motion.button>
+            </Link>
+          </div>
+
           {/* Footer */}
           <div className="text-center mt-6 text-white/40 text-sm">
             <p>
