@@ -479,22 +479,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', async (_req: Request, res: Response) => {
     try {
       const users = await storage.getUsers();
-      const safe = users.map(u => ({
-        id: u.id,
-        username: (u as any).username,
-        email: (u as any).email,
-        displayName: (u as any).displayName,
-        profilePicture: (u as any).profilePicture,
-        firstName: (u as any).firstName,
-        lastName: (u as any).lastName,
-        phone: (u as any).phone,
-        accountStatus: (u as any).accountStatus,
-        source: (u as any).source,
-        ipAddress: (u as any).ipAddress,
-        registrationDate: (u as any).registrationDate,
-        googleId: (u as any).googleId,
+      const usersWithRoles = await Promise.all(users.map(async (u) => {
+        // Get user roles
+        const userRoles = await storage.getUserRoles(u.id);
+        const roles = await Promise.all(userRoles.map(async (ur) => {
+          const role = await storage.getRoleById(ur.roleId);
+          return role ? { id: role.id, name: role.name, description: role.description } : null;
+        }));
+        
+        return {
+          id: u.id,
+          username: (u as any).username,
+          email: (u as any).email,
+          displayName: (u as any).displayName,
+          profilePicture: (u as any).profilePicture,
+          firstName: (u as any).firstName,
+          lastName: (u as any).lastName,
+          phone: (u as any).phone,
+          accountStatus: (u as any).accountStatus,
+          source: (u as any).source,
+          ipAddress: (u as any).ipAddress,
+          registrationDate: (u as any).registrationDate,
+          googleId: (u as any).googleId,
+          roles: roles.filter(role => role !== null)
+        };
       }));
-      res.json(safe);
+      res.json(usersWithRoles);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch users' });
     }
@@ -525,7 +535,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create user (admin only)
-  app.post('/api/users', requireAdmin, async (req: Request, res: Response) => {
+  const adminUserUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }
+  });
+
+  app.post('/api/users', requireAdmin, adminUserUpload.single('profilePicture'), async (req: Request, res: Response) => {
     try {
       const parsed = insertUserSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -534,12 +549,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
       const normalizedStatus = parsed.data.accountStatus && allowedStatuses.includes(parsed.data.accountStatus) ? parsed.data.accountStatus : 'Active';
       
+      // Handle profile picture (optional)
+      let profilePicture: string | undefined = parsed.data.profilePicture;
+      if (req.file && req.file.buffer) {
+        const mime = req.file.mimetype || 'image/png';
+        const base64 = req.file.buffer.toString('base64');
+        profilePicture = `data:${mime};base64,${base64}`;
+      }
+      
       // Capture IP address and registration date
       const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
       const registrationDate = new Date();
       
       const created = await storage.createUser({ 
         ...parsed.data, 
+        profilePicture,
         accountStatus: normalizedStatus, 
         source: parsed.data.source ?? 'local',
         ipAddress,
@@ -597,6 +621,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const ok = await storage.deleteUser(id);
     if (!ok) return res.status(404).json({ message: 'User not found' });
     res.json({ success: true });
+  });
+
+  // Update user profile (authenticated user only)
+  app.put('/api/profile', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    try {
+      const user = req.user as any;
+      const userId = user.id;
+
+      // Validate the profile data
+      const profileData = req.body;
+      
+      // Update user profile with celebrity-like fields
+      const updated = await storage.updateUser(userId, {
+        displayName: profileData.displayName,
+        email: profileData.email,
+        username: profileData.username,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        profession: profileData.profession,
+        description: profileData.description,
+        category: profileData.category,
+        instagram: profileData.instagram,
+        twitter: profileData.twitter,
+        youtube: profileData.youtube,
+        tiktok: profileData.tiktok
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Log user activity for profile update
+      try {
+        await storage.logUserActivity({
+          userId: userId,
+          activityType: 'update',
+          entityType: 'profile',
+          entityId: userId,
+          entityName: 'Profile Update',
+          metadata: JSON.stringify({ 
+            updatedFields: Object.keys(profileData),
+            timestamp: new Date().toISOString(),
+            userAgent: req.get('User-Agent') || null
+          })
+        });
+      } catch (activityError) {
+        console.error('Failed to log profile update activity:', activityError);
+      }
+
+      // Return sanitized user data
+      const safe = {
+        id: updated.id,
+        username: (updated as any).username,
+        email: (updated as any).email,
+        displayName: (updated as any).displayName,
+        profilePicture: (updated as any).profilePicture,
+        firstName: (updated as any).firstName,
+        lastName: (updated as any).lastName,
+        phone: (updated as any).phone,
+        accountStatus: (updated as any).accountStatus,
+        source: (updated as any).source,
+        profession: (updated as any).profession,
+        description: (updated as any).description,
+        category: (updated as any).category,
+        instagram: (updated as any).instagram,
+        twitter: (updated as any).twitter,
+        youtube: (updated as any).youtube,
+        tiktok: (updated as any).tiktok,
+        role: user?.email === 'admin@cele.com' ? 'admin' : (updated as any).role || 'user'
+      };
+
+      res.json(safe);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
   });
 
   // Roles CRUD
@@ -926,10 +1031,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all celebrities
   app.get("/api/celebrities", async (req: Request, res: Response) => {
     try {
+      console.log('Fetching celebrities from storage...');
       const celebrities = await storage.getCelebrities();
+      console.log('Successfully fetched celebrities:', celebrities.length);
       res.json(celebrities);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch celebrities" });
+      console.error('Error in /api/celebrities endpoint:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ message: "Failed to fetch celebrities", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
@@ -941,7 +1050,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid celebrity ID" });
       }
       
-      const celebrity = await storage.getCelebrityById(id);
+      // First try to get celebrity by celebrity ID
+      let celebrity = await storage.getCelebrityById(id);
+      
+      // If not found, try to get celebrity by user ID
+      if (!celebrity) {
+        celebrity = await storage.getCelebrityByUserId(id);
+      }
+      
       if (!celebrity) {
         return res.status(404).json({ message: "Celebrity not found" });
       }
@@ -954,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: user.id,
             activityType: 'view',
             entityType: 'celebrity',
-            entityId: id,
+            entityId: celebrity.id,
             entityName: celebrity.name,
             metadata: JSON.stringify({ 
               timestamp: new Date().toISOString(),
@@ -1713,6 +1829,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete plan" });
+    }
+  });
+
+  // Assign celebrity role to user
+  app.post('/api/users/:id/assign-celebrity-role', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const userId = parseInt(req.params.id);
+      const currentUser = req.user;
+
+      // Check if current user is admin
+      const isAdmin = currentUser?.email === 'admin@cele.com';
+      if (!currentUser || !isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Find or create celebrity role
+      let celebrityRole = (await storage.getRoles()).find(role => role.name === 'celebrity');
+      if (!celebrityRole) {
+        celebrityRole = await storage.createRole({
+          name: 'celebrity',
+          description: 'Celebrity user with special privileges'
+        });
+      }
+
+      // Check if user already has celebrity role
+      const userRoles = await storage.getUserRoles(userId);
+      const hasCelebrityRole = userRoles.some(ur => ur.roleId === celebrityRole.id);
+      
+      if (!hasCelebrityRole) {
+        // Assign celebrity role to user only if they don't have it
+        await storage.assignRoleToUser(userId, celebrityRole.id);
+      }
+
+      // Create celebrity profile if it doesn't exist
+      const existingCelebrity = await storage.getCelebrityByUserId(userId);
+      if (!existingCelebrity) {
+        await storage.createCelebrity({
+          userId: userId,
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username || user.email || 'Celebrity',
+          profession: user.profession || 'Celebrity',
+          imageUrl: user.profilePicture || null,
+          description: user.description || 'Celebrity profile',
+          category: user.category || 'general',
+          isActive: true,
+          isElite: false,
+          managerInfo: null,
+          stylingDetails: null
+        });
+      }
+
+      // Log the activity
+      await storage.logUserActivity({
+        userId: currentUser.id,
+        action: 'assign_celebrity_role',
+        details: `${hasCelebrityRole ? 'Updated' : 'Assigned'} celebrity role for user ${user.username || user.email} (ID: ${userId})`,
+        timestamp: new Date()
+      });
+
+      res.json({ 
+        message: hasCelebrityRole ? 'Celebrity role updated successfully' : 'Celebrity role assigned successfully',
+        user: user,
+        role: celebrityRole,
+        alreadyHadRole: hasCelebrityRole
+      });
+    } catch (error) {
+      console.error('Error assigning celebrity role:', error);
+      res.status(500).json({ message: 'Failed to assign celebrity role', error: error.message });
     }
   });
 

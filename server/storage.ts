@@ -124,6 +124,8 @@ export interface IStorage {
 
   getCelebrityById(id: number): Promise<Celebrity | undefined>;
 
+  getCelebrityByUserId(userId: number): Promise<Celebrity | undefined>;
+
   getCelebritiesByCategory(category: string): Promise<Celebrity[]>;
 
   createCelebrity(celebrity: InsertCelebrity): Promise<Celebrity>;
@@ -683,6 +685,12 @@ export class MemStorage implements IStorage {
   async getCelebrityById(id: number): Promise<Celebrity | undefined> {
 
     return this.celebrities.get(id);
+
+  }
+
+  async getCelebrityByUserId(userId: number): Promise<Celebrity | undefined> {
+
+    return Array.from(this.celebrities.values()).find(celebrity => celebrity.userId === userId);
 
   }
 
@@ -1806,7 +1814,14 @@ export class PgStorage implements IStorage {
   async updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined> {
     const setObj: any = {};
     for (const [k, v] of Object.entries(user)) {
-      if (v !== undefined) setObj[k] = v;
+      if (v !== undefined) {
+        // Handle empty strings for unique fields that should be null instead
+        if ((k === 'googleId' || k === 'email') && v === '') {
+          setObj[k] = null;
+        } else {
+          setObj[k] = v;
+        }
+      }
     }
     const rows = await this._db.update(users).set(setObj).where(eq(users.id, id)).returning();
     return rows[0];
@@ -1840,9 +1855,11 @@ export class PgStorage implements IStorage {
     return rows.length > 0;
   }
 
-  // Celebrity operations (delegate to memory for now)
+  // Celebrity operations
+  // Celebrity operations (delegate to in-memory storage for now)
   async getCelebrities(): Promise<Celebrity[]> { return this.mem.getCelebrities(); }
   async getCelebrityById(id: number): Promise<Celebrity | undefined> { return this.mem.getCelebrityById(id); }
+  async getCelebrityByUserId(userId: number): Promise<Celebrity | undefined> { return this.mem.getCelebrityByUserId(userId); }
   async getCelebritiesByCategory(category: string): Promise<Celebrity[]> { return this.mem.getCelebritiesByCategory(category); }
   async createCelebrity(celebrity: InsertCelebrity): Promise<Celebrity> { return this.mem.createCelebrity(celebrity); }
   async createCelebrityWithId(celebrity: InsertCelebrity, id: number): Promise<Celebrity> { return this.mem.createCelebrityWithId(celebrity, id); }

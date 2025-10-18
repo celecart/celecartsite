@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const celebrities = pgTable("celebrities", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id"), // Link to user account (nullable for existing celebrities)
   name: text("name").notNull(),
   profession: text("profession").notNull(),
   imageUrl: text("image_url").notNull(),
@@ -43,6 +44,7 @@ export const celebrities = pgTable("celebrities", {
 });
 
 export const insertCelebritySchema = createInsertSchema(celebrities).pick({
+  userId: true,
   name: true,
   profession: true,
   imageUrl: true,

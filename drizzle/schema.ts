@@ -35,6 +35,8 @@ export const celebrities = pgTable("celebrities", {
 	imageUrl: text("image_url").notNull(),
 	description: text(),
 	category: text().notNull(),
+	userId: integer("user_id"),
+	isActive: boolean("is_active").default(true).notNull(),
 	isElite: boolean("is_elite").default(false).notNull(),
 	managerInfo: jsonb("manager_info"),
 	stylingDetails: jsonb("styling_details"),
@@ -44,6 +46,7 @@ export const celebrities = pgTable("celebrities", {
 	check("celebrities_profession_not_null", sql`NOT NULL profession`),
 	check("celebrities_image_url_not_null", sql`NOT NULL image_url`),
 	check("celebrities_category_not_null", sql`NOT NULL category`),
+	check("celebrities_is_active_not_null", sql`NOT NULL is_active`),
 	check("celebrities_is_elite_not_null", sql`NOT NULL is_elite`),
 ]);
 

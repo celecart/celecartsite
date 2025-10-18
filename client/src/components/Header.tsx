@@ -126,7 +126,7 @@ export default function Header() {
           <nav className="hidden lg:flex items-center space-x-1">
             <div className="flex items-center space-x-1 bg-white/5 backdrop-blur-sm rounded-full p-2 border border-white/10">
               <a 
-                href="#featuredfuck" 
+                href="#featured" 
                 className={cn(
                   "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
                   "text-white/90 hover:text-amber-400 uppercase tracking-wide",
@@ -144,7 +144,7 @@ export default function Header() {
                   location === "/celebrities" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                All Celebrities
+                Celebrities
               </Link>
               {/*
               <a 
@@ -235,7 +235,7 @@ export default function Header() {
                     onClick={() => setActiveSportFilter(null)}
                   >
                     <Trophy className="mr-2 h-4 w-4" />
-                    <span>All Celebrities</span>
+                    <span>Celebrities</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     className={cn(
@@ -537,7 +537,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    All Celebrities
+                    Celebrities
                   </Link>
                   {/*
                   <a 

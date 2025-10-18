@@ -3543,8 +3543,5 @@ export const mockTournamentOutfits: TournamentOutfit[] = [
       designInspiration: "Tennis heritage and tradition"
     },
     associatedBrands: [5, 3] // Uniqlo, Rolex
-  },
-
-
-  {
-    id: 8,
+  }
+];
