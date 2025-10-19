@@ -1,0 +1,1 @@
+ALTER TABLE "celebrities" ADD COLUMN "user_id" integer;

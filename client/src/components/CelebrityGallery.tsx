@@ -26,7 +26,7 @@ export default function CelebrityGallery() {
     const matchesSearch = searchTerm === "" || 
       celebrity.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       celebrity.profession.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return celebrity.isActive && matchesCategory && matchesSearch;
   });
   
   // Display all filtered celebrities without pagination

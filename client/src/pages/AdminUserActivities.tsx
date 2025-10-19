@@ -21,7 +21,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star, CreditCard } from "lucide-react";
 import UserActivityFeed from "@/components/UserActivityFeed";
 
 interface User {
@@ -229,8 +229,14 @@ export default function AdminUserActivities() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
                   <FileText />
+                  <span>Content</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                  <CreditCard />
                   <span>Plans</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

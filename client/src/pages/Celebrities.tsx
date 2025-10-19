@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Celebrity } from "@shared/schema";
@@ -29,7 +29,7 @@ export default function Celebrities() {
     const matchesSearch = searchTerm === "" || 
       celebrity.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       celebrity.profession.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    return celebrity.isActive && matchesCategory && matchesSearch;
   });
   
   // Categories for the filter buttons

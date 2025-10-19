@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star, FileText } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +32,33 @@ interface PlanFormData {
   features: PlanFeature[];
 }
 
+// Predefined feature toggles with default ON text
+const FEATURE_OPTIONS: { label: string; defaultValue: string }[] = [
+  { label: 'Monthly Price (PKR)', defaultValue: '' },
+  { label: 'Access Level', defaultValue: 'View celebrity profiles & product previews' },
+  { label: 'Ads', defaultValue: 'With ads' },
+  { label: 'AI Rose Recommendations', defaultValue: 'Basic outfit suggestions' },
+  { label: 'Wishlist / Favorites', defaultValue: 'Up to 10' },
+  { label: 'Exclusive Drops', defaultValue: 'Early access to celebrity collabs & limited editions' },
+  { label: 'Shopping Links', defaultValue: 'Limited product access' },
+  { label: 'Content Quality', defaultValue: 'HD images' },
+  { label: 'Devices Supported', defaultValue: '2' },
+  { label: 'Support Level', defaultValue: 'Standard helpdesk' },
+  { label: 'Bonus Perk', defaultValue: '' },
+];
+
+function normalizeFeatures(current: PlanFeature[]): PlanFeature[] {
+  const byLabel = new Map(current.map((f) => [f.label, f.value]));
+  const normalized = FEATURE_OPTIONS.map((opt) => ({
+    label: opt.label,
+    value: byLabel.has(opt.label) ? (byLabel.get(opt.label) as string) : '----',
+  }));
+  const extras = current.filter(
+    (f) => !FEATURE_OPTIONS.some((opt) => opt.label === f.label)
+  );
+  return [...normalized, ...extras];
+}
+
 export default function AdminPlans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +72,7 @@ export default function AdminPlans() {
     price: '',
     discount: '',
     isActive: true,
-    features: []
+    features: FEATURE_OPTIONS.map((opt) => ({ label: opt.label, value: '----' }))
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -357,7 +384,7 @@ export default function AdminPlans() {
       price: plan.price,
       discount: plan.discount || '',
       isActive: plan.isActive,
-      features: plan.features || []
+      features: normalizeFeatures(plan.features || [])
     });
     setImagePreview(null);
     setIsEditModalOpen(true);
@@ -371,7 +398,7 @@ export default function AdminPlans() {
       price: '', 
       discount: '',
       isActive: true,
-      features: []
+      features: FEATURE_OPTIONS.map((opt) => ({ label: opt.label, value: '----' }))
     });
     setImagePreview(null);
     setEditingPlan(null);
@@ -428,6 +455,12 @@ export default function AdminPlans() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
+                  <FileText />
+                  <span>Content</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
                   <CreditCard />
                   <span>Plans</span>
@@ -478,10 +511,10 @@ export default function AdminPlans() {
                   Create Plan
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Plan</DialogTitle>
-                </DialogHeader>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Plan</DialogTitle>
+              </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="planName">Plan Name</Label>
@@ -557,30 +590,43 @@ export default function AdminPlans() {
                   </div>
                   <div>
                     <Label>Plan Features</Label>
-                    <div className="space-y-2 mt-2">
-                      {formData.features.map((f, idx) => (
-                        <div key={idx} className="grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Feature label"
-                            value={f.label}
-                            onChange={(e) => {
-                              const next = [...formData.features];
-                              next[idx] = { ...next[idx], label: e.target.value };
-                              setFormData({ ...formData, features: next });
-                            }}
-                          />
-                          <Input
-                            placeholder="Feature value"
-                            value={f.value}
-                            onChange={(e) => {
-                              const next = [...formData.features];
-                              next[idx] = { ...next[idx], value: e.target.value };
-                              setFormData({ ...formData, features: next });
-                            }}
-                          />
-                        </div>
-                      ))}
-                      <Button type="button" variant="outline" onClick={() => setFormData({ ...formData, features: [...formData.features, { label: '', value: '' }] })}>Add Row</Button>
+                    <div className="space-y-3 mt-2">
+                      {FEATURE_OPTIONS.map((opt) => {
+                        const current = (formData.features || []).find((f) => f.label === opt.label);
+                        const enabled = !!current && current.value !== '----';
+                        return (
+                          <div key={opt.label} className="grid grid-cols-2 gap-2 items-center">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={enabled}
+                                onCheckedChange={(checked) => {
+                                  const next = normalizeFeatures(formData.features || []);
+                                  const idx = next.findIndex((f) => f.label === opt.label);
+                                  next[idx] = {
+                                    label: opt.label,
+                                    value: checked
+                                      ? (current && current.value !== '----' ? current.value : opt.defaultValue)
+                                      : '----',
+                                  };
+                                  setFormData({ ...formData, features: next });
+                                }}
+                              />
+                              <span className="text-sm">{opt.label}</span>
+                            </div>
+                            <Input
+                              disabled={!enabled}
+                              placeholder={opt.defaultValue || 'Enter value'}
+                              value={enabled ? (current?.value ?? '') : '----'}
+                              onChange={(e) => {
+                                const next = normalizeFeatures(formData.features || []);
+                                const idx = next.findIndex((f) => f.label === opt.label);
+                                next[idx] = { label: opt.label, value: e.target.value };
+                                setFormData({ ...formData, features: next });
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div>
@@ -605,7 +651,7 @@ export default function AdminPlans() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-8">
             {plans.map((plan) => (
               <Card key={plan.id} className="overflow-hidden">
                 <CardHeader className="p-0">
@@ -635,11 +681,16 @@ export default function AdminPlans() {
                     </Badge>
                   </div>
                   {Array.isArray(plan.features) && plan.features.length > 0 && (
-                    <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="text-sm lg:text-base space-y-2">
                       {plan.features.map((f, i) => (
-                        <div key={i} className="flex justify-between">
-                          <span>{f.label}</span>
-                          <span className="font-medium">{f.value}</span>
+                        <div
+                          key={i}
+                          className="grid grid-cols-[40%_60%] sm:grid-cols-[35%_65%] gap-x-4 items-start"
+                        >
+                          <span className="text-muted-foreground min-w-0 break-words" title={f.label}>{f.label}</span>
+                          <span className="font-medium min-w-0 break-words leading-tight" title={f.value}>
+                            {f.value}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -684,7 +735,7 @@ export default function AdminPlans() {
 
         {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Plan</DialogTitle>
             </DialogHeader>
@@ -765,30 +816,43 @@ export default function AdminPlans() {
               </div>
               <div>
                 <Label>Plan Features</Label>
-                <div className="space-y-2 mt-2">
-                  {formData.features.map((f, idx) => (
-                    <div key={idx} className="grid grid-cols-2 gap-2">
-                      <Input
-                        placeholder="Feature label"
-                        value={f.label}
-                        onChange={(e) => {
-                          const next = [...formData.features];
-                          next[idx] = { ...next[idx], label: e.target.value };
-                          setFormData({ ...formData, features: next });
-                        }}
-                      />
-                      <Input
-                        placeholder="Feature value"
-                        value={f.value}
-                        onChange={(e) => {
-                          const next = [...formData.features];
-                          next[idx] = { ...next[idx], value: e.target.value };
-                          setFormData({ ...formData, features: next });
-                        }}
-                      />
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" onClick={() => setFormData({ ...formData, features: [...formData.features, { label: '', value: '' }] })}>Add Row</Button>
+                <div className="space-y-3 mt-2">
+                  {FEATURE_OPTIONS.map((opt) => {
+                    const current = (formData.features || []).find((f) => f.label === opt.label);
+                    const enabled = !!current && current.value !== '----';
+                    return (
+                      <div key={opt.label} className="grid grid-cols-2 gap-2 items-center">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={enabled}
+                            onCheckedChange={(checked) => {
+                              const next = normalizeFeatures(formData.features || []);
+                              const idx = next.findIndex((f) => f.label === opt.label);
+                              next[idx] = {
+                                label: opt.label,
+                                value: checked
+                                  ? (current && current.value !== '----' ? current.value : opt.defaultValue)
+                                  : '----',
+                              };
+                              setFormData({ ...formData, features: next });
+                            }}
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </div>
+                        <Input
+                          disabled={!enabled}
+                          placeholder={opt.defaultValue || 'Enter value'}
+                          value={enabled ? (current?.value ?? '') : '----'}
+                          onChange={(e) => {
+                            const next = normalizeFeatures(formData.features || []);
+                            const idx = next.findIndex((f) => f.label === opt.label);
+                            next[idx] = { label: opt.label, value: e.target.value };
+                            setFormData({ ...formData, features: next });
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
               <div>

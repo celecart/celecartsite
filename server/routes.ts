@@ -28,8 +28,23 @@ import {
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { emailService } from "./services/email";
+import { db, pool } from "./db";
+import { roles, permissions, rolePermissions, userRoles } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // DB health check endpoint
+  app.get('/api/health/db', async (_req: Request, res: Response) => {
+    if (!pool) {
+      return res.json({ connected: false, message: 'DATABASE_URL not set' });
+    }
+    try {
+      const result = await pool.query('SELECT version()');
+      return res.json({ connected: true, version: result.rows?.[0]?.version ?? null });
+    } catch (err) {
+      return res.status(500).json({ connected: false, error: 'DB connection failed' });
+    }
+  });
   
   // Authentication routes
   
@@ -469,22 +484,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', async (_req: Request, res: Response) => {
     try {
       const users = await storage.getUsers();
-      const safe = users.map(u => ({
-        id: u.id,
-        username: (u as any).username,
-        email: (u as any).email,
-        displayName: (u as any).displayName,
-        profilePicture: (u as any).profilePicture,
-        firstName: (u as any).firstName,
-        lastName: (u as any).lastName,
-        phone: (u as any).phone,
-        accountStatus: (u as any).accountStatus,
-        source: (u as any).source,
-        ipAddress: (u as any).ipAddress,
-        registrationDate: (u as any).registrationDate,
-        googleId: (u as any).googleId,
+      const usersWithRoles = await Promise.all(users.map(async (u) => {
+        // Get user roles
+        const userRoles = await storage.getUserRoles(u.id);
+        const roles = await Promise.all(userRoles.map(async (ur) => {
+          const role = await storage.getRoleById(ur.roleId);
+          return role ? { id: role.id, name: role.name, description: role.description } : null;
+        }));
+        
+        return {
+          id: u.id,
+          username: (u as any).username,
+          email: (u as any).email,
+          displayName: (u as any).displayName,
+          profilePicture: (u as any).profilePicture,
+          firstName: (u as any).firstName,
+          lastName: (u as any).lastName,
+          phone: (u as any).phone,
+          accountStatus: (u as any).accountStatus,
+          source: (u as any).source,
+          ipAddress: (u as any).ipAddress,
+          registrationDate: (u as any).registrationDate,
+          googleId: (u as any).googleId,
+          roles: roles.filter(role => role !== null)
+        };
       }));
-      res.json(safe);
+      res.json(usersWithRoles);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch users' });
     }
@@ -515,7 +540,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create user (admin only)
-  app.post('/api/users', requireAdmin, async (req: Request, res: Response) => {
+  const adminUserUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }
+  });
+
+  app.post('/api/users', requireAdmin, adminUserUpload.single('profilePicture'), async (req: Request, res: Response) => {
     try {
       const parsed = insertUserSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -524,12 +554,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedStatuses = ['Active', 'Suspended', 'Pending Verification', 'Deleted'];
       const normalizedStatus = parsed.data.accountStatus && allowedStatuses.includes(parsed.data.accountStatus) ? parsed.data.accountStatus : 'Active';
       
+      // Handle profile picture (optional)
+      let profilePicture: string | undefined = parsed.data.profilePicture;
+      if (req.file && req.file.buffer) {
+        const mime = req.file.mimetype || 'image/png';
+        const base64 = req.file.buffer.toString('base64');
+        profilePicture = `data:${mime};base64,${base64}`;
+      }
+      
       // Capture IP address and registration date
       const ipAddress = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
       const registrationDate = new Date();
       
       const created = await storage.createUser({ 
         ...parsed.data, 
+        profilePicture,
         accountStatus: normalizedStatus, 
         source: parsed.data.source ?? 'local',
         ipAddress,
@@ -589,11 +628,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
 
+  // Update user profile (authenticated user only)
+  app.put('/api/profile', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    try {
+      const user = req.user as any;
+      const userId = user.id;
+
+      // Validate the profile data
+      const profileData = req.body;
+      
+      // Update user profile with celebrity-like fields
+      const updated = await storage.updateUser(userId, {
+        displayName: profileData.displayName,
+        email: profileData.email,
+        username: profileData.username,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        profession: profileData.profession,
+        description: profileData.description,
+        category: profileData.category,
+        instagram: profileData.instagram,
+        twitter: profileData.twitter,
+        youtube: profileData.youtube,
+        tiktok: profileData.tiktok
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Log user activity for profile update
+      try {
+        await storage.logUserActivity({
+          userId: userId,
+          activityType: 'update',
+          entityType: 'profile',
+          entityId: userId,
+          entityName: 'Profile Update',
+          metadata: JSON.stringify({ 
+            updatedFields: Object.keys(profileData),
+            timestamp: new Date().toISOString(),
+            userAgent: req.get('User-Agent') || null
+          })
+        });
+      } catch (activityError) {
+        console.error('Failed to log profile update activity:', activityError);
+      }
+
+      // Return sanitized user data
+      const safe = {
+        id: updated.id,
+        username: (updated as any).username,
+        email: (updated as any).email,
+        displayName: (updated as any).displayName,
+        profilePicture: (updated as any).profilePicture,
+        firstName: (updated as any).firstName,
+        lastName: (updated as any).lastName,
+        phone: (updated as any).phone,
+        accountStatus: (updated as any).accountStatus,
+        source: (updated as any).source,
+        profession: (updated as any).profession,
+        description: (updated as any).description,
+        category: (updated as any).category,
+        instagram: (updated as any).instagram,
+        twitter: (updated as any).twitter,
+        youtube: (updated as any).youtube,
+        tiktok: (updated as any).tiktok,
+        role: user?.email === 'admin@cele.com' ? 'admin' : (updated as any).role || 'user'
+      };
+
+      res.json(safe);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
+
   // Roles CRUD
   app.get('/api/roles', async (_req: Request, res: Response) => {
     try {
-      const roles = await storage.getRoles();
-      res.json(roles);
+      const list = db ? await db.select().from(roles) : await storage.getRoles();
+      res.json(list);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch roles' });
     }
@@ -602,9 +722,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/roles/:id', async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
-    const role = await storage.getRoleById(id);
-    if (!role) return res.status(404).json({ message: 'Role not found' });
-    res.json(role);
+    let record: any;
+    if (db) {
+      const rows = await db.select().from(roles).where(eq(roles.id, id)).limit(1);
+      record = rows[0];
+    } else {
+      record = await storage.getRoleById(id);
+    }
+    if (!record) return res.status(404).json({ message: 'Role not found' });
+    res.json(record);
   });
 
   app.post('/api/roles', requireAdmin, async (req: Request, res: Response) => {
@@ -613,8 +739,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
       }
-      const role = await storage.createRole(parsed.data);
-      res.status(201).json(role);
+      if (db) {
+        const [created] = await (db as any).insert(roles).values({
+          name: parsed.data.name,
+          description: (parsed.data as any).description ?? null,
+        }).returning();
+        return res.status(201).json(created);
+      } else {
+        const role = await storage.createRole(parsed.data);
+        return res.status(201).json(role);
+      }
     } catch (error) {
       res.status(500).json({ message: 'Failed to create role' });
     }
@@ -627,24 +761,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid role data', errors: parsed.error.flatten() });
     }
-    const updated = await storage.updateRole(id, parsed.data);
-    if (!updated) return res.status(404).json({ message: 'Role not found' });
-    res.json(updated);
+    if (db) {
+      const rows = await (db as any).update(roles).set({
+        name: parsed.data.name,
+        description: (parsed.data as any).description ?? null,
+      }).where(eq(roles.id, id)).returning();
+      const updated = rows[0];
+      if (!updated) return res.status(404).json({ message: 'Role not found' });
+      return res.json(updated);
+    } else {
+      const updated = await storage.updateRole(id, parsed.data);
+      if (!updated) return res.status(404).json({ message: 'Role not found' });
+      return res.json(updated);
+    }
   });
 
   app.delete('/api/roles/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid role ID' });
-    const ok = await storage.deleteRole(id);
-    if (!ok) return res.status(404).json({ message: 'Role not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(roles).where(eq(roles.id, id)).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Role not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.deleteRole(id);
+      if (!ok) return res.status(404).json({ message: 'Role not found' });
+      return res.json({ success: true });
+    }
   });
 
   // Permissions CRUD
   app.get('/api/permissions', async (_req: Request, res: Response) => {
     try {
-      const permissions = await storage.getPermissions();
-      res.json(permissions);
+      const list = db ? await db.select().from(permissions) : await storage.getPermissions();
+      res.json(list);
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch permissions' });
     }
@@ -653,9 +804,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/permissions/:id', async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
-    const permission = await storage.getPermissionById(id);
-    if (!permission) return res.status(404).json({ message: 'Permission not found' });
-    res.json(permission);
+    let record: any;
+    if (db) {
+      const rows = await db.select().from(permissions).where(eq(permissions.id, id)).limit(1);
+      record = rows[0];
+    } else {
+      record = await storage.getPermissionById(id);
+    }
+    if (!record) return res.status(404).json({ message: 'Permission not found' });
+    res.json(record);
   });
 
   app.post('/api/permissions', requireAdmin, async (req: Request, res: Response) => {
@@ -664,8 +821,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
       }
-      const permission = await storage.createPermission(parsed.data);
-      res.status(201).json(permission);
+      if (db) {
+        const [created] = await (db as any).insert(permissions).values({
+          name: parsed.data.name,
+          description: (parsed.data as any).description ?? null,
+        }).returning();
+        return res.status(201).json(created);
+      } else {
+        const permission = await storage.createPermission(parsed.data);
+        return res.status(201).json(permission);
+      }
     } catch (error) {
       res.status(500).json({ message: 'Failed to create permission' });
     }
@@ -678,24 +843,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid permission data', errors: parsed.error.flatten() });
     }
-    const updated = await storage.updatePermission(id, parsed.data);
-    if (!updated) return res.status(404).json({ message: 'Permission not found' });
-    res.json(updated);
+    if (db) {
+      const rows = await (db as any).update(permissions).set({
+        name: parsed.data.name,
+        description: (parsed.data as any).description ?? null,
+      }).where(eq(permissions.id, id)).returning();
+      const updated = rows[0];
+      if (!updated) return res.status(404).json({ message: 'Permission not found' });
+      return res.json(updated);
+    } else {
+      const updated = await storage.updatePermission(id, parsed.data);
+      if (!updated) return res.status(404).json({ message: 'Permission not found' });
+      return res.json(updated);
+    }
   });
 
   app.delete('/api/permissions/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ message: 'Invalid permission ID' });
-    const ok = await storage.deletePermission(id);
-    if (!ok) return res.status(404).json({ message: 'Permission not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(permissions).where(eq(permissions.id, id)).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Permission not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.deletePermission(id);
+      if (!ok) return res.status(404).json({ message: 'Permission not found' });
+      return res.json({ success: true });
+    }
   });
 
   // Role-Permissions mapping
   app.get('/api/roles/:roleId/permissions', async (req: Request, res: Response) => {
     const roleId = parseInt(req.params.roleId);
     if (isNaN(roleId)) return res.status(400).json({ message: 'Invalid role ID' });
-    const list = await storage.getRolePermissions(roleId);
+    const list = db
+      ? await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId))
+      : await storage.getRolePermissions(roleId);
     res.json(list);
   });
 
@@ -703,24 +887,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const roleId = parseInt(req.params.roleId);
     const permissionId = parseInt(req.params.permissionId);
     if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const rp = await storage.addPermissionToRole(roleId, permissionId);
-    res.status(201).json(rp);
+    if (db) {
+      const existing = await db.select().from(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId))).limit(1);
+      if (existing[0]) return res.status(201).json(existing[0]);
+      const [inserted] = await (db as any).insert(rolePermissions).values({ roleId, permissionId }).returning();
+      return res.status(201).json(inserted);
+    } else {
+      const rp = await storage.addPermissionToRole(roleId, permissionId);
+      return res.status(201).json(rp);
+    }
   });
 
   app.delete('/api/roles/:roleId/permissions/:permissionId', requireAdmin, async (req: Request, res: Response) => {
     const roleId = parseInt(req.params.roleId);
     const permissionId = parseInt(req.params.permissionId);
     if (isNaN(roleId) || isNaN(permissionId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ok = await storage.removePermissionFromRole(roleId, permissionId);
-    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(rolePermissions).where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.permissionId, permissionId))).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.removePermissionFromRole(roleId, permissionId);
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    }
   });
 
   // User-Roles mapping
   app.get('/api/users/:userId/roles', async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
-    const list = await storage.getUserRoles(userId);
+    const list = db
+      ? await db.select().from(userRoles).where(eq(userRoles.userId, userId))
+      : await storage.getUserRoles(userId);
     res.json(list);
   });
 
@@ -728,17 +928,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = parseInt(req.params.userId);
     const roleId = parseInt(req.params.roleId);
     if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ur = await storage.assignRoleToUser(userId, roleId);
-    res.status(201).json(ur);
+    if (db) {
+      const existing = await db.select().from(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).limit(1);
+      if (existing[0]) return res.status(201).json(existing[0]);
+      const [inserted] = await (db as any).insert(userRoles).values({ userId, roleId }).returning();
+      return res.status(201).json(inserted);
+    } else {
+      const ur = await storage.assignRoleToUser(userId, roleId);
+      return res.status(201).json(ur);
+    }
   });
 
   app.delete('/api/users/:userId/roles/:roleId', requireAdmin, async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     const roleId = parseInt(req.params.roleId);
     if (isNaN(userId) || isNaN(roleId)) return res.status(400).json({ message: 'Invalid IDs' });
-    const ok = await storage.removeRoleFromUser(userId, roleId);
-    if (!ok) return res.status(404).json({ message: 'Mapping not found' });
-    res.json({ success: true });
+    if (db) {
+      const rows = await (db as any).delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).returning();
+      const ok = rows.length > 0;
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    } else {
+      const ok = await storage.removeRoleFromUser(userId, roleId);
+      if (!ok) return res.status(404).json({ message: 'Mapping not found' });
+      return res.json({ success: true });
+    }
   });
 
   // User Activity endpoints
@@ -822,10 +1036,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all celebrities
   app.get("/api/celebrities", async (req: Request, res: Response) => {
     try {
+      console.log('Fetching celebrities from storage...');
       const celebrities = await storage.getCelebrities();
+      console.log('Successfully fetched celebrities:', celebrities.length);
       res.json(celebrities);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch celebrities" });
+      console.error('Error in /api/celebrities endpoint:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ message: "Failed to fetch celebrities", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
   
@@ -837,7 +1055,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid celebrity ID" });
       }
       
-      const celebrity = await storage.getCelebrityById(id);
+      // First try to get celebrity by celebrity ID
+      let celebrity = await storage.getCelebrityById(id);
+      
+      // If not found, try to get celebrity by user ID
+      if (!celebrity) {
+        celebrity = await storage.getCelebrityByUserId(id);
+      }
+      
       if (!celebrity) {
         return res.status(404).json({ message: "Celebrity not found" });
       }
@@ -850,7 +1075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: user.id,
             activityType: 'view',
             entityType: 'celebrity',
-            entityId: id,
+            entityId: celebrity.id,
             entityName: celebrity.name,
             metadata: JSON.stringify({ 
               timestamp: new Date().toISOString(),
@@ -1573,7 +1798,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const partial = req.body as Partial<z.infer<typeof insertPlanSchema>>;
       const merged = { ...existing, ...partial };
-      const validated = insertPlanSchema.parse({ imageUrl: merged.imageUrl, price: merged.price, discount: merged.discount });
+      const validated = insertPlanSchema.parse({
+        name: merged.name,
+        imageUrl: merged.imageUrl,
+        price: merged.price,
+        discount: merged.discount,
+        isActive: merged.isActive,
+        features: merged.features,
+      });
       const updated = await storage.updatePlan(id, validated);
       res.json(updated);
     } catch (error) {
@@ -1602,6 +1834,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete plan" });
+    }
+  });
+
+  // Assign celebrity role to user
+  app.post('/api/users/:id/assign-celebrity-role', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const userId = parseInt(req.params.id);
+      const currentUser = req.user;
+
+      // Check if current user is admin
+      const isAdmin = currentUser?.email === 'admin@cele.com';
+      if (!currentUser || !isAdmin) {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Find or create celebrity role
+      let celebrityRole = (await storage.getRoles()).find(role => role.name === 'celebrity');
+      if (!celebrityRole) {
+        celebrityRole = await storage.createRole({
+          name: 'celebrity',
+          description: 'Celebrity user with special privileges'
+        });
+      }
+
+      // Check if user already has celebrity role
+      const userRoles = await storage.getUserRoles(userId);
+      const hasCelebrityRole = userRoles.some(ur => ur.roleId === celebrityRole.id);
+      
+      if (!hasCelebrityRole) {
+        // Assign celebrity role to user only if they don't have it
+        await storage.assignRoleToUser(userId, celebrityRole.id);
+      }
+
+      // Create celebrity profile if it doesn't exist
+      const existingCelebrity = await storage.getCelebrityByUserId(userId);
+      if (!existingCelebrity) {
+        await storage.createCelebrity({
+          userId: userId,
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username || user.email || 'Celebrity',
+          profession: user.profession || 'Celebrity',
+          imageUrl: user.profilePicture || null,
+          description: user.description || 'Celebrity profile',
+          category: user.category || 'general',
+          isActive: true,
+          isElite: false,
+          managerInfo: null,
+          stylingDetails: null
+        });
+      }
+
+      // Log the activity
+      await storage.logUserActivity({
+        userId: currentUser.id,
+        action: 'assign_celebrity_role',
+        details: `${hasCelebrityRole ? 'Updated' : 'Assigned'} celebrity role for user ${user.username || user.email} (ID: ${userId})`,
+        timestamp: new Date()
+      });
+
+      res.json({ 
+        message: hasCelebrityRole ? 'Celebrity role updated successfully' : 'Celebrity role assigned successfully',
+        user: user,
+        role: celebrityRole,
+        alreadyHadRole: hasCelebrityRole
+      });
+    } catch (error) {
+      console.error('Error assigning celebrity role:', error);
+      res.status(500).json({ message: 'Failed to assign celebrity role', error: error.message });
     }
   });
 

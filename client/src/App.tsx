@@ -9,6 +9,7 @@ import ContentCreator from "@/pages/ContentCreator";
 import Login from "@/pages/Login";
 import ViewportSimulator from "./components/ViewportSimulator";
 import SignUp from "@/pages/SignUp";
+import CelebritySignUp from "@/pages/CelebritySignUp";
 import AdminRoles from "@/pages/AdminRoles";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/signin" component={Login} />
       <Route path="/signup" component={SignUp} />
+      <Route path="/celebrity-signup" component={CelebritySignUp} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/profile" component={Profile} />

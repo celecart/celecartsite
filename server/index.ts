@@ -4,7 +4,8 @@ import passport from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import dotenv from 'dotenv';
-import { storage } from "./storage";
+import { verifyDbConnection } from "./db";
+import { storage, setUseDbStorage } from "./storage";
 
 // Load environment variables
 dotenv.config();
@@ -14,10 +15,12 @@ import { addShoaibAkhtar } from "./addShoaibAkhtar";
 import { addMorePakistaniCelebritiesToDB } from "./addMorePakistaniCelebrities";
 import { addFrazayAkbarProfileToDB } from "./addFarazayProfile";
 import { markEliteCelebrities } from "./markEliteCelebrities";
+import { seedModulesAndPermissions } from "./seedModules";
+import { addTestCelebrityUser } from "./addTestCelebrityUser";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Session configuration
 app.use(session({
@@ -71,27 +74,42 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Verify DB connection (if DATABASE_URL is set)
+  const dbOk = await verifyDbConnection();
+  if (dbOk) {
+    setUseDbStorage(true);
+    log('Using Postgres-backed storage');
+  } else {
+    setUseDbStorage(false);
+    log('Using in-memory storage');
+  }
   // Only run seeders if RUN_SEEDERS environment variable is set to 'true'
   if (process.env.RUN_SEEDERS === 'true') {
     log('Running database seeders...');
+    
+    // Seed modules and permissions first
+    await seedModulesAndPermissions();
     
     // Add Randolph brand for Tom Cruise's aviators
     await addRandolphBrandToDB();
     
     // Add Pakistani celebrities to database
-    await addPakistaniCelebritiesToDB();
+    // await addPakistaniCelebritiesToDB();
     
     // Add Shoaib Akhtar cricket legend
-    await addShoaibAkhtar();
+    // await addShoaibAkhtar();
     
     // Add more Pakistani celebrities (Imran Khan, Shan, etc.)
-    await addMorePakistaniCelebritiesToDB();
+    // await addMorePakistaniCelebritiesToDB();
     
     // Add Frazay Akbar fashion influencer and social media personality
-    await addFrazayAkbarProfileToDB();
+    // await addFrazayAkbarProfileToDB();
     
     // Mark elite celebrities with premium status badges
-    await markEliteCelebrities();
+    // await markEliteCelebrities();
+    
+    // Add test celebrity user for testing
+    // await addTestCelebrityUser();
     
     log('Database seeders completed');
   }
