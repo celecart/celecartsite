@@ -339,6 +339,8 @@ export class MemStorage implements IStorage {
   private rolePermissionId: number = 1;
 
   private userRoleId: number = 1;
+  // Password reset token storage
+  private passwordResetTokens: Map<number, { token: string; expiry: Date }>;
 
 
 

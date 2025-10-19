@@ -96,9 +96,9 @@ export class EmailService {
             <p>Hello,</p>
             <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
             <p>To reset your password, click the button below:</p>
-            <a href="${resetUrl}?token=${resetToken}" class="button">Reset Password</a>
+            <a href="${resetUrl}" class="button">Reset Password</a>
             <p>Or copy and paste this link into your browser:</p>
-            <p><a href="${resetUrl}?token=${resetToken}">${resetUrl}?token=${resetToken}</a></p>
+            <p><a href="${resetUrl}">${resetUrl}</a></p>
             <p>This link will expire in 1 hour for security reasons.</p>
             <p>If you're having trouble clicking the button, copy and paste the URL above into your web browser.</p>
           </div>
@@ -119,7 +119,7 @@ export class EmailService {
       We received a request to reset your password. If you didn't make this request, you can safely ignore this email.
       
       To reset your password, visit this link:
-      ${resetUrl}?token=${resetToken}
+      ${resetUrl}
       
       This link will expire in 1 hour for security reasons.
       
