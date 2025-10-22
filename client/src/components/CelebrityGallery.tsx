@@ -20,13 +20,14 @@ export default function CelebrityGallery() {
     queryKey: ["/api/celebrities"],
   });
   
-  // Filter celebrities by category and search term
+  // Filter celebrities by category and search term, excluding elite celebrities
   const filteredCelebrities = celebrities?.filter(celebrity => {
     const matchesCategory = selectedCategory === "All" || celebrity.category === selectedCategory;
     const matchesSearch = searchTerm === "" || 
       celebrity.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       celebrity.profession.toLowerCase().includes(searchTerm.toLowerCase());
-    return celebrity.isActive && matchesCategory && matchesSearch;
+    // Exclude elite celebrities from the regular gallery
+    return celebrity.isActive && !celebrity.isElite && matchesCategory && matchesSearch;
   });
   
   // Display all filtered celebrities without pagination

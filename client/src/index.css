@@ -165,3 +165,84 @@
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Custom styles for React Quill dark theme */
+.ql-toolbar {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.ql-toolbar .ql-stroke {
+  fill: none;
+  stroke: #f3f4f6 !important;
+}
+
+.ql-toolbar .ql-fill {
+  fill: #f3f4f6 !important;
+  stroke: none;
+}
+
+.ql-toolbar .ql-picker-label {
+  color: #f3f4f6 !important;
+}
+
+.ql-toolbar .ql-picker-options {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.ql-toolbar .ql-picker-item {
+  color: #f3f4f6 !important;
+}
+
+.ql-toolbar .ql-picker-item:hover {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+.ql-container {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #f3f4f6 !important;
+}
+
+.ql-editor {
+  color: #f3f4f6 !important;
+  min-height: 300px !important;
+}
+
+.ql-editor.ql-blank::before {
+  color: rgba(243, 244, 246, 0.5) !important;
+}
+
+.ql-editor h1, .ql-editor h2, .ql-editor h3, .ql-editor h4, .ql-editor h5, .ql-editor h6 {
+  color: #fbbf24 !important;
+}
+
+.ql-editor strong {
+  color: #fbbf24 !important;
+}
+
+.ql-editor a {
+  color: #f59e0b !important;
+}
+
+.ql-tooltip {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f3f4f6 !important;
+}
+
+.ql-tooltip input {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f3f4f6 !important;
+}
+
+.ql-tooltip .ql-action::after {
+  color: #f59e0b !important;
+}
+
+.ql-tooltip .ql-remove::before {
+  color: #ef4444 !important;
+}

@@ -1,5 +1,5 @@
-// Use the compiled JavaScript version
-const { storage } = require('./dist/index.js');
+// Use ES modules to import the compiled code
+import { storage } from './dist/index.js';
 
 async function checkUser() {
   try {

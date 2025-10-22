@@ -315,6 +315,110 @@ export const insertPlanSchema = createInsertSchema(plans).pick({
 
 export type InsertPlan = z.infer<typeof insertPlanSchema>;
 export type Plan = typeof plans.$inferSelect;
+
+// Blogs table for celebrity blog posts
+export const blogs = pgTable("blogs", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  imageUrl: text("image_url"),
+  authorId: integer("author_id").notNull(), // Link to user who created the blog
+  celebrityId: integer("celebrity_id"), // Optional link to celebrity if it's about a specific celebrity
+  category: text("category").notNull().default("general"), // e.g., "fashion", "lifestyle", "news", etc.
+  tags: jsonb("tags").$type<string[]>(), // Array of tags for the blog post
+  isPublished: boolean("is_published").default(false).notNull(),
+  publishedAt: text("published_at"), // ISO date string when published
+  createdAt: text("created_at").notNull().default("now()"), // ISO date string when created
+  updatedAt: text("updated_at").notNull().default("now()"), // ISO date string when last updated
+  viewCount: integer("view_count").default(0).notNull(),
+  likes: integer("likes").default(0).notNull(),
+});
+
+export const insertBlogSchema = createInsertSchema(blogs).pick({
+  title: true,
+  content: true,
+  excerpt: true,
+  imageUrl: true,
+  authorId: true,
+  celebrityId: true,
+  category: true,
+  tags: true,
+  isPublished: true,
+  publishedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+  likes: true,
+});
+
+export type InsertBlog = z.infer<typeof insertBlogSchema>;
+export type Blog = typeof blogs.$inferSelect;
+
+// Blog with populated author information for frontend use
+export type BlogWithAuthor = Blog & {
+  author: {
+    id: number;
+    displayName: string | null;
+    email: string | null;
+  };
+};
+
+// Celebrity Products table for products that celebrities want to showcase
+export const celebrityProducts = pgTable("celebrity_products", {
+  id: serial("id").primaryKey(),
+  celebrityId: integer("celebrity_id").notNull(), // Link to celebrity who owns this product
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // e.g., "Restaurant", "City", "Lounge", "Fashion", "Beauty", etc.
+  imageUrl: text("image_url").notNull(),
+  price: text("price"), // Optional price information
+  location: text("location"), // For restaurants, cities, lounges
+  website: text("website"), // Link to product/place website
+  purchaseLink: text("purchase_link"), // Direct purchase link if applicable
+  rating: integer("rating"), // 1-5 star rating
+  isActive: boolean("is_active").default(true).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(), // Featured products show first
+  createdAt: text("created_at").notNull().default("now()"),
+  updatedAt: text("updated_at").notNull().default("now()"),
+  metadata: jsonb("metadata").$type<{
+    cuisine?: string; // For restaurants
+    atmosphere?: string; // For lounges/restaurants
+    priceRange?: string; // Budget range
+    specialties?: string[]; // Special features or offerings
+    openingHours?: string; // For places
+    contactInfo?: {
+      phone?: string;
+      email?: string;
+      address?: string;
+    };
+    tags?: string[]; // Additional categorization
+  } | null>(),
+});
+
+export const insertCelebrityProductSchema = createInsertSchema(celebrityProducts).pick({
+  celebrityId: true,
+  name: true,
+  description: true,
+  category: true,
+  imageUrl: true,
+  price: true,
+  location: true,
+  website: true,
+  purchaseLink: true,
+  rating: true,
+  isActive: true,
+  isFeatured: true,
+  createdAt: true,
+  updatedAt: true,
+  metadata: true,
+}).extend({
+  // Allow imageUrl to be either a single string or an array of strings
+  imageUrl: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+export type InsertCelebrityProduct = z.infer<typeof insertCelebrityProductSchema>;
+export type CelebrityProduct = typeof celebrityProducts.$inferSelect;
 export type UserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;

@@ -16,31 +16,33 @@ export default function FeaturedCelebrity({ onBrandClick }: FeaturedCelebrityPro
     queryKey: ["/api/celebrities"],
   });
   
-  // Featured celebrities are Priyanka Chopra (ID 142), Katrina Kaif (ID 160), and Mehwish Hayat (ID 192)
-  const featuredCelebrityIds = [142, 160, 192];
+  // Featured celebrities are those marked as Elite
+  const featuredCelebrities = celebrities?.filter(celeb => celeb.isElite && celeb.isActive) || [];
   
-  // Get brands for all three celebrities
-  const { data: celebrityBrands142, isLoading: brandsLoading142 } = useQuery<any[]>({
-    queryKey: [`/api/celebritybrands/142`],
+  // Get brands for the first 3 elite celebrities to maintain consistent hook calls
+  const celebrity1 = featuredCelebrities[0];
+  const celebrity2 = featuredCelebrities[1];
+  const celebrity3 = featuredCelebrities[2];
+  
+  const celebrity1Brands = useQuery<any[]>({
+    queryKey: [`/api/celebritybrands/${celebrity1?.id}`],
+    enabled: !!celebrity1?.id,
   });
   
-  const { data: celebrityBrands160, isLoading: brandsLoading160 } = useQuery<any[]>({
-    queryKey: [`/api/celebritybrands/160`],
+  const celebrity2Brands = useQuery<any[]>({
+    queryKey: [`/api/celebritybrands/${celebrity2?.id}`],
+    enabled: !!celebrity2?.id,
   });
   
-  const { data: celebrityBrands192, isLoading: brandsLoading192 } = useQuery<any[]>({
-    queryKey: [`/api/celebritybrands/192`],
+  const celebrity3Brands = useQuery<any[]>({
+    queryKey: [`/api/celebritybrands/${celebrity3?.id}`],
+    enabled: !!celebrity3?.id,
   });
   
-  // Get all three featured celebrities from the list
-  const featuredCelebrities = celebrities?.filter(celeb => featuredCelebrityIds.includes(celeb.id)) || [];
+  const celebrityBrandQueries = [celebrity1Brands, celebrity2Brands, celebrity3Brands];
   
   // Get brands for each celebrity
-  const priyankaBrands = celebrityBrands142?.map((item: any) => item.brand).filter(Boolean) || [];
-  const katrinaBrands = celebrityBrands160?.map((item: any) => item.brand).filter(Boolean) || [];
-  const mehwishBrands = celebrityBrands192?.map((item: any) => item.brand).filter(Boolean) || [];
-  
-  const brandsLoading = brandsLoading142 || brandsLoading160 || brandsLoading192;
+  const brandsLoading = celebrityBrandQueries.some(query => query.isLoading);
   
   if (isLoading) {
     return (
@@ -129,10 +131,11 @@ export default function FeaturedCelebrity({ onBrandClick }: FeaturedCelebrityPro
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
         >
-          {/* Render all three celebrities */}
-          {featuredCelebrities.map((celebrity, index) => {
-            const brands = celebrity.id === 142 ? priyankaBrands : celebrity.id === 160 ? katrinaBrands : mehwishBrands;
-            const celebrityBrands = celebrity.id === 142 ? celebrityBrands142 : celebrity.id === 160 ? celebrityBrands160 : celebrityBrands192;
+          {/* Render up to 3 elite celebrities */}
+          {featuredCelebrities.slice(0, 3).map((celebrity, index) => {
+            const celebrityBrandQuery = celebrityBrandQueries[index];
+            const celebrityBrands = celebrityBrandQuery?.data;
+            const brands = celebrityBrands?.map((item: any) => item.brand).filter(Boolean) || [];
             
             return (
               <motion.div
@@ -169,7 +172,7 @@ export default function FeaturedCelebrity({ onBrandClick }: FeaturedCelebrityPro
                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                       >
                         <Crown className="w-3 h-3" />
-                        #{celebrity.id === 142 ? '01' : celebrity.id === 160 ? '02' : '03'}
+                        ELITE
                       </motion.div>
                     </div>
                   </div>
