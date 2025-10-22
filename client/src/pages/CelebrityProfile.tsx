@@ -1,4 +1,4 @@
-﻿import { useRoute } from "wouter";
+import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -9,7 +9,7 @@ import { Celebrity, Brand, CelebrityBrand } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus } from "lucide-react";
+import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus, Package } from "lucide-react";
 import FashionStyleEpisodes from "@/components/FashionStyleEpisodes";
 import { useState } from "react";
 import BrandModal from "@/components/BrandModal";
@@ -17,6 +17,7 @@ import BrandImage from "@/components/BrandImage";
 import { toast } from "@/hooks/use-toast";
 import SignatureEquipment from "@/components/SignatureEquipment";
 import ApparelAccessories from "@/components/ApparelAccessories";
+import CelebrityProducts from "@/components/CelebrityProducts";
 
 import OccasionPricing from "@/components/OccasionPricing";
 import StylingDetails from "@/components/StylingDetails";
@@ -298,6 +299,15 @@ export default function CelebrityProfile() {
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
                   <ShoppingBag className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
                   <span className="relative z-10 font-medium whitespace-nowrap">Shopping playlist</span>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="products" 
+                  className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+                  <Package className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
+                  <span className="relative z-10 font-medium whitespace-nowrap">Products</span>
                 </TabsTrigger>
                 
                 <TabsTrigger 
@@ -1799,6 +1809,10 @@ export default function CelebrityProfile() {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+            
+            <TabsContent value="products" className="mt-6">
+              <CelebrityProducts celebrityId={celebrity.id} />
             </TabsContent>
           </Tabs>
         </div>

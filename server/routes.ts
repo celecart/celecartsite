@@ -12,7 +12,8 @@ import {
   insertRoleSchema,
   insertPermissionSchema,
   insertUserSchema,
-  insertPlanSchema
+  insertPlanSchema,
+  insertCelebrityProductSchema
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -1198,6 +1199,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Celebrity Products API endpoints
+  
+  // Get all celebrity products
+  app.get("/api/celebrity-products", async (req: Request, res: Response) => {
+    try {
+      console.log("Fetching celebrity products with query:", req.query);
+      const celebrityId = req.query.celebrityId ? parseInt(req.query.celebrityId as string) : undefined;
+      const products = await storage.getCelebrityProducts(celebrityId);
+      console.log("Fetched products:", products);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching celebrity products:", error);
+      res.status(500).json({ message: "Failed to fetch celebrity products", error: error.message });
+    }
+  });
+  
+  // Get celebrity product by ID
+  app.get("/api/celebrity-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const product = await storage.getCelebrityProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+  
+  // Create celebrity product
+  app.post("/api/celebrity-products", async (req: Request, res: Response) => {
+    try {
+      console.log("Creating celebrity product with data:", req.body);
+      const validatedData = insertCelebrityProductSchema.parse(req.body);
+      console.log("Validated data:", validatedData);
+      const product = await storage.createCelebrityProduct(validatedData);
+      console.log("Created product:", product);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Error creating celebrity product:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create product", error: error.message });
+    }
+  });
+  
+  // Update celebrity product
+  app.put("/api/celebrity-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const validatedData = insertCelebrityProductSchema.partial().parse(req.body);
+      const product = await storage.updateCelebrityProduct(id, validatedData);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+  
+  // Delete celebrity product
+  app.delete("/api/celebrity-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const success = await storage.deleteCelebrityProduct(id);
+      if (!success) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+  
   // Get celebrity brands by celebrity ID
   app.get("/api/celebritybrands/:celebrityId", async (req: Request, res: Response) => {
     try {
@@ -1905,6 +2003,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error assigning celebrity role:', error);
       res.status(500).json({ message: 'Failed to assign celebrity role', error: error.message });
+    }
+  });
+
+  // Blog API endpoints
+  
+  // Get all published blogs
+  app.get('/api/blogs', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const category = req.query.category as string;
+      
+      let blogs;
+      if (category) {
+        blogs = await storage.getBlogsByCategory(category, limit, offset);
+      } else {
+        blogs = await storage.getPublishedBlogs(limit, offset);
+      }
+      
+      res.json(blogs);
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      res.status(500).json({ message: 'Failed to fetch blogs', error: error.message });
+    }
+  });
+
+  // Get single blog by ID
+  app.get('/api/blogs/:id', async (req, res) => {
+    try {
+      const blogId = parseInt(req.params.id);
+      if (isNaN(blogId)) {
+        return res.status(400).json({ message: 'Invalid blog ID' });
+      }
+
+      const blog = await storage.getBlogById(blogId);
+      if (!blog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+
+      // Increment view count
+      await storage.incrementBlogViews(blogId);
+
+      res.json(blog);
+    } catch (error) {
+      console.error('Error fetching blog:', error);
+      res.status(500).json({ message: 'Failed to fetch blog', error: error.message });
+    }
+  });
+
+  // Create new blog (authenticated users only)
+  app.post('/api/blogs', async (req, res) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const currentUser = req.user as any;
+      const { title, content, excerpt, imageUrl, celebrityId, category, tags, isPublished } = req.body;
+
+      if (!title || !content) {
+        return res.status(400).json({ message: 'Title and content are required' });
+      }
+
+      const blogData = {
+        title,
+        content,
+        excerpt: excerpt || content.substring(0, 200) + '...',
+        imageUrl: imageUrl || null,
+        authorId: currentUser.id,
+        celebrityId: celebrityId || null,
+        category: category || 'general',
+        tags: tags || [],
+        isPublished: isPublished || false,
+        publishedAt: isPublished ? new Date().toISOString() : null,
+      };
+
+      const newBlog = await storage.createBlog(blogData);
+
+      // Log the activity
+      await storage.logUserActivity({
+        userId: currentUser.id,
+        action: 'create_blog',
+        details: `Created blog: ${title}`,
+        timestamp: new Date()
+      });
+
+      res.status(201).json(newBlog);
+    } catch (error) {
+      console.error('Error creating blog:', error);
+      res.status(500).json({ message: 'Failed to create blog', error: error.message });
+    }
+  });
+
+  // Update blog (author or admin only)
+  app.put('/api/blogs/:id', async (req, res) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const currentUser = req.user as any;
+      const blogId = parseInt(req.params.id);
+      
+      if (isNaN(blogId)) {
+        return res.status(400).json({ message: 'Invalid blog ID' });
+      }
+
+      const existingBlog = await storage.getBlogById(blogId);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+
+      // Check if user is author or admin
+      const isAdmin = currentUser.roles?.some((role: any) => role.name === 'admin');
+      if (existingBlog.authorId !== currentUser.id && !isAdmin) {
+        return res.status(403).json({ message: 'Not authorized to update this blog' });
+      }
+
+      const { title, content, excerpt, imageUrl, celebrityId, category, tags, isPublished } = req.body;
+      
+      const updates: any = {};
+      if (title !== undefined) updates.title = title;
+      if (content !== undefined) updates.content = content;
+      if (excerpt !== undefined) updates.excerpt = excerpt;
+      if (imageUrl !== undefined) updates.imageUrl = imageUrl;
+      if (celebrityId !== undefined) updates.celebrityId = celebrityId;
+      if (category !== undefined) updates.category = category;
+      if (tags !== undefined) updates.tags = tags;
+      if (isPublished !== undefined) {
+        updates.isPublished = isPublished;
+        if (isPublished && !existingBlog.publishedAt) {
+          updates.publishedAt = new Date().toISOString();
+        }
+      }
+
+      const updatedBlog = await storage.updateBlog(blogId, updates);
+
+      // Log the activity
+      await storage.logUserActivity({
+        userId: currentUser.id,
+        action: 'update_blog',
+        details: `Updated blog: ${existingBlog.title}`,
+        timestamp: new Date()
+      });
+
+      res.json(updatedBlog);
+    } catch (error) {
+      console.error('Error updating blog:', error);
+      res.status(500).json({ message: 'Failed to update blog', error: error.message });
+    }
+  });
+
+  // Delete blog (author or admin only)
+  app.delete('/api/blogs/:id', async (req, res) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const currentUser = req.user as any;
+      const blogId = parseInt(req.params.id);
+      
+      if (isNaN(blogId)) {
+        return res.status(400).json({ message: 'Invalid blog ID' });
+      }
+
+      const existingBlog = await storage.getBlogById(blogId);
+      if (!existingBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+
+      // Check if user is author or admin
+      const isAdmin = currentUser.roles?.some((role: any) => role.name === 'admin');
+      if (existingBlog.authorId !== currentUser.id && !isAdmin) {
+        return res.status(403).json({ message: 'Not authorized to delete this blog' });
+      }
+
+      const deleted = await storage.deleteBlog(blogId);
+      if (!deleted) {
+        return res.status(500).json({ message: 'Failed to delete blog' });
+      }
+
+      // Log the activity
+      await storage.logUserActivity({
+        userId: currentUser.id,
+        action: 'delete_blog',
+        details: `Deleted blog: ${existingBlog.title}`,
+        timestamp: new Date()
+      });
+
+      res.json({ message: 'Blog deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting blog:', error);
+      res.status(500).json({ message: 'Failed to delete blog', error: error.message });
+    }
+  });
+
+  // Like a blog
+  app.post('/api/blogs/:id/like', async (req, res) => {
+    try {
+      const blogId = parseInt(req.params.id);
+      if (isNaN(blogId)) {
+        return res.status(400).json({ message: 'Invalid blog ID' });
+      }
+
+      const updatedBlog = await storage.incrementBlogLikes(blogId);
+      if (!updatedBlog) {
+        return res.status(404).json({ message: 'Blog not found' });
+      }
+
+      res.json({ likes: updatedBlog.likes });
+    } catch (error) {
+      console.error('Error liking blog:', error);
+      res.status(500).json({ message: 'Failed to like blog', error: error.message });
+    }
+  });
+
+  // Get blogs by author
+  app.get('/api/users/:userId/blogs', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const blogs = await storage.getBlogsByAuthor(userId, limit, offset);
+      res.json(blogs);
+    } catch (error) {
+      console.error('Error fetching user blogs:', error);
+      res.status(500).json({ message: 'Failed to fetch user blogs', error: error.message });
     }
   });
 

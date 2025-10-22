@@ -46,7 +46,13 @@ import {
 
   type Plan,
 
-  type InsertPlan
+  type InsertPlan,
+
+  blogs,
+
+  type Blog,
+
+  type InsertBlog
 
 } from "@shared/schema";
 
@@ -66,11 +72,11 @@ import {
 
 } from "@shared/data";
 
-import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole } from "@shared/schema";
+import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole, celebrityProducts, type CelebrityProduct, type InsertCelebrityProduct } from "@shared/schema";
 
 import { db } from "./db";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 
@@ -311,6 +317,10 @@ export class MemStorage implements IStorage {
   private userRoles: Map<number, UserRole>;
 
   private userActivities: Map<number, UserActivity[]> = new Map();
+
+  private blogs: Map<number, Blog> = new Map();
+
+  private celebrityProducts: Map<number, CelebrityProduct> = new Map();
 
   
 
@@ -1855,16 +1865,184 @@ export class PgStorage implements IStorage {
     return rows.length > 0;
   }
 
-  // Celebrity operations
-  // Celebrity operations (delegate to in-memory storage for now)
-  async getCelebrities(): Promise<Celebrity[]> { return this.mem.getCelebrities(); }
-  async getCelebrityById(id: number): Promise<Celebrity | undefined> { return this.mem.getCelebrityById(id); }
-  async getCelebrityByUserId(userId: number): Promise<Celebrity | undefined> { return this.mem.getCelebrityByUserId(userId); }
-  async getCelebritiesByCategory(category: string): Promise<Celebrity[]> { return this.mem.getCelebritiesByCategory(category); }
-  async createCelebrity(celebrity: InsertCelebrity): Promise<Celebrity> { return this.mem.createCelebrity(celebrity); }
-  async createCelebrityWithId(celebrity: InsertCelebrity, id: number): Promise<Celebrity> { return this.mem.createCelebrityWithId(celebrity, id); }
-  async updateCelebrity(id: number, celebrity: InsertCelebrity): Promise<Celebrity | undefined> { return this.mem.updateCelebrity(id, celebrity); }
-  async deleteCelebrity(id: number): Promise<boolean> { return this.mem.deleteCelebrity(id); }
+  // Celebrity operations (database-backed)
+  async getCelebrities(): Promise<Celebrity[]> {
+    const rows = await this._db.select().from(celebrities);
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    }));
+  }
+
+  async getCelebrityById(id: number): Promise<Celebrity | undefined> {
+    const rows = await this._db.select().from(celebrities).where(eq(celebrities.id, id));
+    if (rows.length === 0) return undefined;
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    };
+  }
+
+  async getCelebrityByUserId(userId: number): Promise<Celebrity | undefined> {
+    const rows = await this._db.select().from(celebrities).where(eq(celebrities.userId, userId));
+    if (rows.length === 0) return undefined;
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    };
+  }
+
+  async getCelebritiesByCategory(category: string): Promise<Celebrity[]> {
+    const rows = await this._db.select().from(celebrities).where(eq(celebrities.category, category));
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    }));
+  }
+
+  async createCelebrity(celebrity: InsertCelebrity): Promise<Celebrity> {
+    const rows = await this._db.insert(celebrities).values({
+      name: celebrity.name,
+      profession: celebrity.profession,
+      imageUrl: celebrity.imageUrl || '/placeholder-celebrity.jpg',
+      description: celebrity.description,
+      category: celebrity.category,
+      userId: celebrity.userId,
+      isActive: celebrity.isActive ?? true,
+      isElite: celebrity.isElite ?? false,
+      managerInfo: celebrity.managerInfo,
+      stylingDetails: celebrity.stylingDetails
+    }).returning();
+    
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    };
+  }
+
+  async createCelebrityWithId(celebrity: InsertCelebrity, id: number): Promise<Celebrity> {
+    // Check if ID already exists
+    const existing = await this.getCelebrityById(id);
+    if (existing) {
+      throw new Error(`Celebrity with ID ${id} already exists`);
+    }
+    
+    const rows = await this._db.insert(celebrities).values({
+      id,
+      name: celebrity.name,
+      profession: celebrity.profession,
+      imageUrl: celebrity.imageUrl || '/placeholder-celebrity.jpg',
+      description: celebrity.description,
+      category: celebrity.category,
+      userId: celebrity.userId,
+      isActive: celebrity.isActive ?? true,
+      isElite: celebrity.isElite ?? false,
+      managerInfo: celebrity.managerInfo,
+      stylingDetails: celebrity.stylingDetails
+    }).returning();
+    
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    };
+  }
+
+  async updateCelebrity(id: number, celebrity: InsertCelebrity): Promise<Celebrity | undefined> {
+    const rows = await this._db.update(celebrities)
+      .set({
+        name: celebrity.name,
+        profession: celebrity.profession,
+        imageUrl: celebrity.imageUrl,
+        description: celebrity.description,
+        category: celebrity.category,
+        userId: celebrity.userId,
+        isActive: celebrity.isActive,
+        isElite: celebrity.isElite,
+        managerInfo: celebrity.managerInfo,
+        stylingDetails: celebrity.stylingDetails
+      })
+      .where(eq(celebrities.id, id))
+      .returning();
+    
+    if (rows.length === 0) return undefined;
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      profession: row.profession,
+      imageUrl: row.imageUrl,
+      description: row.description,
+      category: row.category,
+      userId: row.userId,
+      isActive: row.isActive,
+      isElite: row.isElite,
+      managerInfo: row.managerInfo as any,
+      stylingDetails: row.stylingDetails as any
+    };
+  }
+
+  async deleteCelebrity(id: number): Promise<boolean> {
+    const rows = await this._db.delete(celebrities).where(eq(celebrities.id, id)).returning();
+    return rows.length > 0;
+  }
 
   // Brand operations (delegate)
   async getBrands(): Promise<Brand[]> { return this.mem.getBrands(); }
@@ -2035,6 +2213,402 @@ export class PgStorage implements IStorage {
     const existed = this.userActivities.has(userId);
     this.userActivities.delete(userId);
     return existed;
+  }
+
+  // Blog CRUD operations
+  async createBlog(blog: InsertBlog): Promise<Blog> {
+    const now = new Date().toISOString();
+    const blogData = {
+      ...blog,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    if (this._db) {
+      const rows = await this._db.insert(blogs).values(blogData).returning();
+      return rows[0] as Blog;
+    } else {
+      // In-memory storage fallback
+      const id = Math.max(0, ...Array.from(this.blogs.keys())) + 1;
+      const newBlog: Blog = { id, ...blogData };
+      this.blogs.set(id, newBlog);
+      return newBlog;
+    }
+  }
+
+  async getBlogById(id: number): Promise<Blog | null> {
+    if (this._db) {
+      const rows = await this._db.select().from(blogs).where(eq(blogs.id, id)).limit(1);
+      if (rows.length === 0) return null;
+      
+      const blog = rows[0];
+      // Populate author information
+      const author = await this._db.select().from(users).where(eq(users.id, blog.authorId)).limit(1);
+      
+      return {
+        ...blog,
+        author: author[0] ? {
+          id: author[0].id,
+          displayName: author[0].displayName || author[0].username,
+          email: author[0].email
+        } : null
+      };
+    } else {
+      const blog = this.blogs.get(id);
+      if (!blog) return null;
+      
+      // Populate author information for in-memory storage
+      const author = this.users.get(blog.authorId);
+      return {
+        ...blog,
+        author: author ? {
+          id: author.id,
+          displayName: author.displayName || author.username,
+          email: author.email
+        } : null
+      };
+    }
+  }
+
+  async getAllBlogs(limit: number = 50, offset: number = 0): Promise<Blog[]> {
+    if (this._db) {
+      const blogResults = await this._db.select().from(blogs)
+        .orderBy(desc(blogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Populate author information for each blog
+      const blogsWithAuthors = await Promise.all(
+        blogResults.map(async (blog) => {
+          const author = await this._db.select().from(users).where(eq(users.id, blog.authorId)).limit(1);
+          return {
+            ...blog,
+            author: author[0] ? {
+              id: author[0].id,
+              displayName: author[0].displayName || author[0].username,
+              email: author[0].email
+            } : null
+          };
+        })
+      );
+      
+      return blogsWithAuthors;
+    } else {
+      const allBlogs = Array.from(this.blogs.values());
+      const sortedBlogs = allBlogs
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Populate author information for in-memory storage
+      return sortedBlogs.map(blog => {
+        const author = this.users.get(blog.authorId);
+        return {
+          ...blog,
+          author: author ? {
+            id: author.id,
+            displayName: author.displayName || author.username,
+            email: author.email
+          } : null
+        };
+      });
+    }
+  }
+
+  async getPublishedBlogs(limit: number = 50, offset: number = 0): Promise<Blog[]> {
+    if (this._db) {
+      const blogResults = await this._db.select().from(blogs)
+        .where(eq(blogs.isPublished, true))
+        .orderBy(desc(blogs.publishedAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Populate author information for each blog
+      const blogsWithAuthors = await Promise.all(
+        blogResults.map(async (blog) => {
+          const author = await this._db.select().from(users).where(eq(users.id, blog.authorId)).limit(1);
+          return {
+            ...blog,
+            author: author[0] ? {
+              id: author[0].id,
+              displayName: author[0].displayName || author[0].username,
+              email: author[0].email
+            } : null
+          };
+        })
+      );
+      
+      return blogsWithAuthors;
+    } else {
+      const allBlogs = Array.from(this.blogs.values());
+      const filteredBlogs = allBlogs
+        .filter(blog => blog.isPublished)
+        .sort((a, b) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Populate author information for in-memory storage
+      return filteredBlogs.map(blog => {
+        const author = this.users.get(blog.authorId);
+        return {
+          ...blog,
+          author: author ? {
+            id: author.id,
+            displayName: author.displayName || author.username,
+            email: author.email
+          } : null
+        };
+      });
+    }
+  }
+
+  async getBlogsByAuthor(authorId: number, limit: number = 50, offset: number = 0): Promise<Blog[]> {
+    if (this._db) {
+      const blogResults = await this._db.select().from(blogs)
+        .where(eq(blogs.authorId, authorId))
+        .orderBy(desc(blogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Populate author information for each blog
+      const blogsWithAuthors = await Promise.all(
+        blogResults.map(async (blog) => {
+          const author = await this._db.select().from(users).where(eq(users.id, blog.authorId)).limit(1);
+          return {
+            ...blog,
+            author: author[0] ? {
+              id: author[0].id,
+              displayName: author[0].displayName || author[0].username,
+              email: author[0].email
+            } : null
+          };
+        })
+      );
+      
+      return blogsWithAuthors;
+    } else {
+      const allBlogs = Array.from(this.blogs.values());
+      const filteredBlogs = allBlogs
+        .filter(blog => blog.authorId === authorId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Populate author information for in-memory storage
+      return filteredBlogs.map(blog => {
+        const author = this.users.get(blog.authorId);
+        return {
+          ...blog,
+          author: author ? {
+            id: author.id,
+            displayName: author.displayName || author.username,
+            email: author.email
+          } : null
+        };
+      });
+    }
+  }
+
+  async getBlogsByCategory(category: string, limit: number = 50, offset: number = 0): Promise<Blog[]> {
+    if (this._db) {
+      const blogResults = await this._db.select().from(blogs)
+        .where(eq(blogs.category, category))
+        .orderBy(desc(blogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Populate author information for each blog
+      const blogsWithAuthors = await Promise.all(
+        blogResults.map(async (blog) => {
+          const author = await this._db.select().from(users).where(eq(users.id, blog.authorId)).limit(1);
+          return {
+            ...blog,
+            author: author[0] ? {
+              id: author[0].id,
+              displayName: author[0].displayName || author[0].username,
+              email: author[0].email
+            } : null
+          };
+        })
+      );
+      
+      return blogsWithAuthors;
+    } else {
+      const allBlogs = Array.from(this.blogs.values());
+      const filteredBlogs = allBlogs
+        .filter(blog => blog.category === category)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(offset, offset + limit);
+      
+      // Populate author information for in-memory storage
+      return filteredBlogs.map(blog => {
+        const author = this.users.get(blog.authorId);
+        return {
+          ...blog,
+          author: author ? {
+            id: author.id,
+            displayName: author.displayName || author.username,
+            email: author.email
+          } : null
+        };
+      });
+    }
+  }
+
+  async updateBlog(id: number, updates: Partial<InsertBlog>): Promise<Blog | null> {
+    const now = new Date().toISOString();
+    const updateData = {
+      ...updates,
+      updatedAt: now,
+    };
+
+    if (this._db) {
+      const rows = await this._db.update(blogs)
+        .set(updateData)
+        .where(eq(blogs.id, id))
+        .returning();
+      return rows[0] as Blog || null;
+    } else {
+      const existing = this.blogs.get(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updateData };
+      this.blogs.set(id, updated);
+      return updated;
+    }
+  }
+
+  async deleteBlog(id: number): Promise<boolean> {
+    if (this._db) {
+      const rows = await this._db.delete(blogs).where(eq(blogs.id, id)).returning({ id: blogs.id });
+      return rows.length > 0;
+    } else {
+      return this.blogs.delete(id);
+    }
+  }
+
+  async incrementBlogViews(id: number): Promise<Blog | null> {
+    if (this._db) {
+      const rows = await this._db.update(blogs)
+        .set({ viewCount: sql`${blogs.viewCount} + 1` })
+        .where(eq(blogs.id, id))
+        .returning();
+      return rows[0] as Blog || null;
+    } else {
+      const existing = this.blogs.get(id);
+      if (!existing) return null;
+      const updated = { ...existing, viewCount: existing.viewCount + 1 };
+      this.blogs.set(id, updated);
+      return updated;
+    }
+  }
+
+  async incrementBlogLikes(id: number): Promise<Blog | null> {
+    if (this._db) {
+      const rows = await this._db.update(blogs)
+        .set({ likes: sql`${blogs.likes} + 1` })
+        .where(eq(blogs.id, id))
+        .returning();
+      return rows[0] as Blog || null;
+    } else {
+      const existing = this.blogs.get(id);
+      if (!existing) return null;
+      const updated = { ...existing, likes: existing.likes + 1 };
+      this.blogs.set(id, updated);
+      return updated;
+    }
+  }
+
+  // Celebrity Products CRUD operations
+  async getCelebrityProducts(celebrityId?: number): Promise<CelebrityProduct[]> {
+    console.log("Getting celebrity products, celebrityId:", celebrityId, "DB available:", !!this._db);
+    if (this._db) {
+      try {
+        if (celebrityId) {
+          console.log("Querying database for celebrity products with celebrityId:", celebrityId);
+          const result = await this._db.select().from(celebrityProducts).where(eq(celebrityProducts.celebrityId, celebrityId));
+          console.log("Database query result:", result);
+          return result;
+        } else {
+          console.log("Querying database for all celebrity products");
+          const result = await this._db.select().from(celebrityProducts);
+          console.log("Database query result:", result);
+          return result;
+        }
+      } catch (error) {
+        console.error("Database query failed:", error);
+        throw error;
+      }
+    } else {
+      console.log("Using in-memory storage for celebrity products");
+      // In-memory fallback
+      if (celebrityId) {
+        const result = Array.from(this.celebrityProducts.values()).filter(product => product.celebrityId === celebrityId);
+        console.log("In-memory filtered result:", result);
+        return result;
+      } else {
+        const result = Array.from(this.celebrityProducts.values());
+        console.log("In-memory all products result:", result);
+        return result;
+      }
+    }
+  }
+
+  async getCelebrityProductById(id: number): Promise<CelebrityProduct | null> {
+    if (this._db) {
+      const rows = await this._db.select().from(celebrityProducts).where(eq(celebrityProducts.id, id));
+      return rows[0] as CelebrityProduct || null;
+    } else {
+      return this.celebrityProducts.get(id) || null;
+    }
+  }
+
+  async createCelebrityProduct(productData: InsertCelebrityProduct): Promise<CelebrityProduct> {
+    console.log("Creating celebrity product with data:", productData);
+    if (this._db) {
+      try {
+        console.log("Using database to create product");
+        const rows = await this._db.insert(celebrityProducts).values(productData).returning();
+        console.log("Database insert successful, rows:", rows);
+        return rows[0] as CelebrityProduct;
+      } catch (error) {
+        console.error("Database insert failed:", error);
+        throw error;
+      }
+    } else {
+      console.log("Using in-memory storage to create product");
+      const id = Math.max(0, ...Array.from(this.celebrityProducts.keys())) + 1;
+      const newProduct: CelebrityProduct = {
+        id,
+        ...productData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.celebrityProducts.set(id, newProduct);
+      console.log("In-memory product created:", newProduct);
+      return newProduct;
+    }
+  }
+
+  async updateCelebrityProduct(id: number, updateData: Partial<InsertCelebrityProduct>): Promise<CelebrityProduct | null> {
+    if (this._db) {
+      const rows = await this._db.update(celebrityProducts)
+        .set({ ...updateData, updatedAt: new Date().toISOString() })
+        .where(eq(celebrityProducts.id, id))
+        .returning();
+      return rows[0] as CelebrityProduct || null;
+    } else {
+      const existing = this.celebrityProducts.get(id);
+      if (!existing) return null;
+      const updated = { ...existing, ...updateData, updatedAt: new Date().toISOString() };
+      this.celebrityProducts.set(id, updated);
+      return updated;
+    }
+  }
+
+  async deleteCelebrityProduct(id: number): Promise<boolean> {
+    if (this._db) {
+      const rows = await this._db.delete(celebrityProducts).where(eq(celebrityProducts.id, id)).returning({ id: celebrityProducts.id });
+      return rows.length > 0;
+    } else {
+      return this.celebrityProducts.delete(id);
+    }
   }
 }
 

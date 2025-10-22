@@ -15,6 +15,20 @@
       "when": 1760771007835,
       "tag": "0001_empty_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760965647099,
+      "tag": "0002_green_hobgoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1761054693999,
+      "tag": "0003_flat_shriek",
+      "breakpoints": true
     }
   ]
 }

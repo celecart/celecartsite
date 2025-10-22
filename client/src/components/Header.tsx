@@ -102,7 +102,7 @@ export default function Header() {
   
   return (
     <header className={cn(
-      "fixed w-full z-50 transition-all duration-500",
+      "fixed top-0 w-full z-50 transition-all duration-500",
       isScrolled 
         ? "bg-gradient-to-r from-black via-gray-900 to-black backdrop-blur-xl border-b border-amber-500/20 shadow-2xl" 
         : "bg-gradient-to-r from-black/80 via-gray-900/80 to-black/80 backdrop-blur-lg"
@@ -198,6 +198,16 @@ export default function Header() {
                 )}
               >
                 Plans
+              </Link>
+              <Link 
+                href="/cele-world" 
+                className={cn(
+                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/cele-world" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                Cele World
               </Link>
             </div>
           </nav>
@@ -353,6 +363,16 @@ export default function Header() {
                     <Link href="/profile">
                       <span className="flex items-center">
                         <User className="mr-2 h-4 w-4" /> Profile
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/add-blog">
+                      <span className="flex items-center">
+                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        Cele Blogs
                       </span>
                     </Link>
                   </DropdownMenuItem>
@@ -584,6 +604,14 @@ export default function Header() {
                     onClick={() => setShowMobileMenu(false)}
                   >
                     Plans
+                  </Link>
+                  
+                  <Link 
+                    href="/cele-world"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    Cele World
                   </Link>
                   
                   {/* Mobile Sign In / Profile */}

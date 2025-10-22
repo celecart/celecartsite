@@ -69,6 +69,35 @@ export const celebrityBrands = pgTable("celebrity_brands", {
 	check("celebrity_brands_image_position_not_null", sql`NOT NULL image_position`),
 ]);
 
+export const celebrityProducts = pgTable("celebrity_products", {
+	id: serial().primaryKey().notNull(),
+	celebrityId: integer("celebrity_id").notNull(),
+	name: text().notNull(),
+	description: text(),
+	category: text().notNull(),
+	imageUrl: text("image_url").notNull(),
+	price: text(),
+	location: text(),
+	website: text(),
+	purchaseLink: text("purchase_link"),
+	rating: integer(),
+	isActive: boolean("is_active").default(true).notNull(),
+	isFeatured: boolean("is_featured").default(false).notNull(),
+	createdAt: text("created_at").default('now()').notNull(),
+	updatedAt: text("updated_at").default('now()').notNull(),
+	metadata: jsonb(),
+}, (table) => [
+	check("celebrity_products_id_not_null", sql`NOT NULL id`),
+	check("celebrity_products_celebrity_id_not_null", sql`NOT NULL celebrity_id`),
+	check("celebrity_products_name_not_null", sql`NOT NULL name`),
+	check("celebrity_products_category_not_null", sql`NOT NULL category`),
+	check("celebrity_products_image_url_not_null", sql`NOT NULL image_url`),
+	check("celebrity_products_is_active_not_null", sql`NOT NULL is_active`),
+	check("celebrity_products_is_featured_not_null", sql`NOT NULL is_featured`),
+	check("celebrity_products_created_at_not_null", sql`NOT NULL created_at`),
+	check("celebrity_products_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
 export const permissions = pgTable("permissions", {
 	id: serial().primaryKey().notNull(),
 	name: text().notNull(),
