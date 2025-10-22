@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { User, Edit, Save, X, Star, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import MultiImageUpload from '@/components/MultiImageUpload';
 
 interface ProfileData {
   displayName: string;
@@ -98,11 +99,19 @@ export default function Profile() {
       const url = editingProduct ? `/api/celebrity-products/${editingProduct.id}` : '/api/celebrity-products';
       const method = editingProduct ? 'PUT' : 'POST';
       
+      // Ensure imageUrl is properly formatted for the backend
+      const formattedData = {
+        ...productData,
+        celebrityId: user.id
+      };
+      
+      console.log('Sending product data to backend:', formattedData);
+      
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...productData, celebrityId: user.id })
+        body: JSON.stringify(formattedData)
       });
 
       if (res.ok) {
@@ -114,6 +123,8 @@ export default function Profile() {
         }
         setShowAddProduct(false);
         setEditingProduct(null);
+        // Refresh products data to ensure we have the latest
+        await loadProducts(user.id);
         toast({ title: "Success", description: `Product ${editingProduct ? 'updated' : 'created'} successfully` });
       }
     } catch (error) {
@@ -195,6 +206,8 @@ export default function Profile() {
           // Check celebrity role
           if (data.user?.id) {
             await checkCelebrityRole(data.user.id);
+            // Load products for celebrity users
+            await loadProducts(data.user.id);
           }
           
           // Initialize profile data with user data
@@ -663,6 +676,11 @@ export default function Profile() {
                                             src={url} 
                                             alt={`${product.name} ${index + 1}`}
                                             className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
+                                            onError={(e) => {
+                                              const target = e.target as HTMLImageElement;
+                                              target.onerror = null;
+                                              target.src = "/placeholder-celebrity.jpg";
+                                            }}
                                           />
                                         ))}
                                         {product.imageUrl.length > 2 && (
@@ -676,6 +694,11 @@ export default function Profile() {
                                         src={product.imageUrl} 
                                         alt={product.name}
                                         className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.onerror = null;
+                                          target.src = "/placeholder-celebrity.jpg";
+                                        }}
                                       />
                                     )
                                   ) : (
@@ -783,14 +806,15 @@ function ProductModal({
   onClose 
 }: { 
   product: CelebrityProduct | null; 
-  onSave: (data: Partial<CelebrityProduct>) => void; 
+  onSave: (data: Partial<CelebrityProduct>) => Promise<void>; 
   onClose: () => void; 
 }) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
     category: product?.category || '',
-    imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : ['']),
+    imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     price: product?.price || '',
     location: product?.location || '',
     website: product?.website || '',
@@ -800,27 +824,48 @@ function ProductModal({
     isFeatured: product?.isFeatured ?? false
   });
 
-  const addImageUrl = () => {
-    setFormData({...formData, imageUrls: [...formData.imageUrls, '']});
-  };
-
-  const removeImageUrl = (index: number) => {
-    const newUrls = formData.imageUrls.filter((_, i) => i !== index);
-    setFormData({...formData, imageUrls: newUrls});
-  };
-
-  const updateImageUrl = (index: number, value: string) => {
-    const newUrls = [...formData.imageUrls];
-    newUrls[index] = value;
-    setFormData({...formData, imageUrls: newUrls});
+  const handleImagesChange = async (imageUrls: string[]) => {
+    const updatedFormData = {...formData, imageUrls};
+    setFormData(updatedFormData);
+    
+    // Auto-save the product when images are uploaded (only for existing products)
+    if (product && imageUrls.length > 0) {
+      const submitData = {
+        ...updatedFormData,
+        imageUrl: imageUrls
+      } as any;
+      // Remove imageUrls since backend expects imageUrl
+      delete submitData.imageUrls;
+      console.log('Auto-saving product with new images:', submitData.imageUrl);
+      
+      try {
+        await onSave(submitData);
+        toast({ 
+          title: "Images Updated", 
+          description: "Product images have been saved successfully" 
+        });
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast({ 
+          title: "Auto-save Failed", 
+          description: "Images uploaded but failed to save to product. Please click Save Product manually.", 
+          variant: "destructive" 
+        });
+      }
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Filter out empty URLs and convert to appropriate format
-    const filteredUrls = formData.imageUrls.filter(url => url.trim() !== '');
-    const imageUrl = filteredUrls.length === 1 ? filteredUrls[0] : filteredUrls;
-    onSave({...formData, imageUrl});
+    // Map imageUrls to imageUrl for backend compatibility
+    const submitData = {
+      ...formData,
+      imageUrl: formData.imageUrls
+    };
+    // Remove imageUrls since backend expects imageUrl
+    delete submitData.imageUrls;
+    console.log('Submitting product with imageUrl:', submitData.imageUrl);
+    onSave(submitData);
   };
 
   return (
@@ -894,40 +939,12 @@ function ProductModal({
             </div>
 
             <div>
-              <Label className="text-white/70">Image URLs</Label>
-              <div className="space-y-2">
-                {formData.imageUrls.map((url, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={url}
-                      onChange={(e) => updateImageUrl(index, e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="bg-white/5 border-white/20 text-white flex-1"
-                    />
-                    {formData.imageUrls.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeImageUrl(index)}
-                        className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addImageUrl}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Image
-                </Button>
-              </div>
+              <Label className="text-white/70">Product Images</Label>
+              <MultiImageUpload
+                onImagesChange={handleImagesChange}
+                initialImages={formData.imageUrls}
+                maxFiles={10}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

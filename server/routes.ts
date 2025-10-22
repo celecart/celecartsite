@@ -17,6 +17,13 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { analyzeStyle, generateOutfitRecommendations, getChatbotResponse, analyzeImageForSimilarOutfits } from "./services/openai";
 // Import Anthropic services for enhanced AI features
 import { 
@@ -1261,16 +1268,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid product ID" });
       }
       
+      console.log("Updating celebrity product with data:", req.body);
       const validatedData = insertCelebrityProductSchema.partial().parse(req.body);
+      console.log("Validated data for update:", validatedData);
       const product = await storage.updateCelebrityProduct(id, validatedData);
       
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
       
+      console.log("Updated product result:", product);
       res.json(product);
     } catch (error) {
+      console.error("Error updating celebrity product:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid product data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update product" });
@@ -1808,6 +1820,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File upload endpoint for celebrity product images (supports multiple files)
+  const celebrityProductImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadsDir = path.join(__dirname, '../uploads/products/');
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        cb(null, uploadsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `product-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { 
+      fileSize: 10 * 1024 * 1024, // 10MB per file
+      files: 10 // Maximum 10 files per upload
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
   app.post("/api/upload/plan-image", planImageUpload.single('image'), (req: Request, res: Response) => {
     try {
       if (!req.file) {
@@ -1833,6 +1875,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Celebrity image upload error:', error);
       res.status(500).json({ message: "Failed to upload celebrity image" });
+    }
+  });
+
+  // Upload multiple product images
+  app.post("/api/upload/product-images", celebrityProductImageUpload.array('images', 10), (req: Request, res: Response) => {
+    try {
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+        return res.status(400).json({ message: "No image files provided" });
+      }
+      
+      const imageUrls = req.files.map(file => `/uploads/products/${file.filename}`);
+      res.json({ imageUrls });
+    } catch (error) {
+      console.error('Product images upload error:', error);
+      res.status(500).json({ message: "Failed to upload product images" });
     }
   });
 

@@ -412,6 +412,9 @@ export const insertCelebrityProductSchema = createInsertSchema(celebrityProducts
   createdAt: true,
   updatedAt: true,
   metadata: true,
+}).extend({
+  // Allow imageUrl to be either a single string or an array of strings
+  imageUrl: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
 export type InsertCelebrityProduct = z.infer<typeof insertCelebrityProductSchema>;

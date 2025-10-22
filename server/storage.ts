@@ -2517,20 +2517,42 @@ export class PgStorage implements IStorage {
 
   // Celebrity Products CRUD operations
   async getCelebrityProducts(celebrityId?: number): Promise<CelebrityProduct[]> {
-    console.log("Getting celebrity products, celebrityId:", celebrityId, "DB available:", !!this._db);
     if (this._db) {
       try {
+        let result;
         if (celebrityId) {
-          console.log("Querying database for celebrity products with celebrityId:", celebrityId);
-          const result = await this._db.select().from(celebrityProducts).where(eq(celebrityProducts.celebrityId, celebrityId));
-          console.log("Database query result:", result);
-          return result;
+          result = await this._db.select().from(celebrityProducts).where(eq(celebrityProducts.celebrityId, celebrityId));
         } else {
-          console.log("Querying database for all celebrity products");
-          const result = await this._db.select().from(celebrityProducts);
-          console.log("Database query result:", result);
-          return result;
+          result = await this._db.select().from(celebrityProducts);
         }
+        
+        // Process imageUrl conversion for each product
+        const processedResult = result.map((product) => {
+          let processedImageUrl = product.imageUrl;
+          
+          // Handle empty array string case first
+          if (typeof product.imageUrl === 'string' && product.imageUrl === '[]') {
+            processedImageUrl = '';
+          }
+          // If imageUrl is a JSON string, try to parse it
+          else if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('[')) {
+            try {
+              const parsedUrls = JSON.parse(product.imageUrl);
+              // For display purposes, use the first image URL or empty string if array is empty
+              processedImageUrl = Array.isArray(parsedUrls) && parsedUrls.length > 0 ? parsedUrls[0] : '';
+            } catch (e) {
+              console.error("Failed to parse imageUrl JSON:", product.imageUrl);
+              processedImageUrl = '';
+            }
+          }
+          
+          return {
+            ...product,
+            imageUrl: processedImageUrl
+          };
+        });
+        
+        return processedResult;
       } catch (error) {
         console.error("Database query failed:", error);
         throw error;
@@ -2553,7 +2575,27 @@ export class PgStorage implements IStorage {
   async getCelebrityProductById(id: number): Promise<CelebrityProduct | null> {
     if (this._db) {
       const rows = await this._db.select().from(celebrityProducts).where(eq(celebrityProducts.id, id));
-      return rows[0] as CelebrityProduct || null;
+      if (rows.length === 0) return null;
+      
+      const product = rows[0] as CelebrityProduct;
+      let processedImageUrl = product.imageUrl;
+      
+      // If imageUrl is a JSON string, try to parse it
+      if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('[')) {
+        try {
+          const parsedUrls = JSON.parse(product.imageUrl);
+          // For display purposes, use the first image URL or empty string if array is empty
+          processedImageUrl = Array.isArray(parsedUrls) && parsedUrls.length > 0 ? parsedUrls[0] : '';
+        } catch (e) {
+          console.error("Failed to parse imageUrl JSON:", product.imageUrl);
+          processedImageUrl = '';
+        }
+      }
+      
+      return {
+        ...product,
+        imageUrl: processedImageUrl
+      };
     } else {
       return this.celebrityProducts.get(id) || null;
     }
@@ -2564,9 +2606,29 @@ export class PgStorage implements IStorage {
     if (this._db) {
       try {
         console.log("Using database to create product");
-        const rows = await this._db.insert(celebrityProducts).values(productData).returning();
+        
+        // Handle imageUrl - convert array to JSON string for database storage
+        const processedData = {
+          ...productData,
+          imageUrl: Array.isArray(productData.imageUrl) 
+            ? JSON.stringify(productData.imageUrl) 
+            : productData.imageUrl || ''
+        };
+        
+        const rows = await this._db.insert(celebrityProducts).values(processedData).returning();
         console.log("Database insert successful, rows:", rows);
-        return rows[0] as CelebrityProduct;
+        
+        // Convert back to array format for response if needed
+        const result = rows[0] as CelebrityProduct;
+        if (result.imageUrl && result.imageUrl.startsWith('[')) {
+          try {
+            result.imageUrl = JSON.parse(result.imageUrl);
+          } catch (e) {
+            // Keep as string if parsing fails
+          }
+        }
+        
+        return result;
       } catch (error) {
         console.error("Database insert failed:", error);
         throw error;
@@ -2577,6 +2639,9 @@ export class PgStorage implements IStorage {
       const newProduct: CelebrityProduct = {
         id,
         ...productData,
+        imageUrl: Array.isArray(productData.imageUrl) 
+          ? productData.imageUrl.join(',') 
+          : productData.imageUrl || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -2587,16 +2652,64 @@ export class PgStorage implements IStorage {
   }
 
   async updateCelebrityProduct(id: number, updateData: Partial<InsertCelebrityProduct>): Promise<CelebrityProduct | null> {
+    console.log("Updating celebrity product with ID:", id, "and data:", updateData);
+    
     if (this._db) {
+      // Handle imageUrl - convert array to JSON string for database storage
+      const processedData = {
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (updateData.imageUrl !== undefined) {
+        if (Array.isArray(updateData.imageUrl)) {
+          processedData.imageUrl = updateData.imageUrl.length > 0 
+            ? JSON.stringify(updateData.imageUrl) 
+            : '[]';
+        } else {
+          processedData.imageUrl = updateData.imageUrl || '[]';
+        }
+        console.log("Processed imageUrl for database:", processedData.imageUrl);
+      }
+      
+      console.log("Final processed data for update:", processedData);
+      
       const rows = await this._db.update(celebrityProducts)
-        .set({ ...updateData, updatedAt: new Date().toISOString() })
+        .set(processedData)
         .where(eq(celebrityProducts.id, id))
         .returning();
-      return rows[0] as CelebrityProduct || null;
+        
+      console.log("Database update result:", rows);
+        
+      if (rows.length === 0) return null;
+      
+      // Convert back to array format for response if needed
+      const result = rows[0] as CelebrityProduct;
+      if (result.imageUrl && (result.imageUrl.startsWith('[') || result.imageUrl.startsWith('['))) {
+        try {
+          result.imageUrl = JSON.parse(result.imageUrl);
+        } catch (e) {
+          // Keep as string if parsing fails
+          result.imageUrl = [];
+        }
+      } else if (!result.imageUrl || result.imageUrl === '') {
+        result.imageUrl = [];
+      }
+      
+      console.log("Final result returned:", result);
+      return result;
     } else {
       const existing = this.celebrityProducts.get(id);
       if (!existing) return null;
-      const updated = { ...existing, ...updateData, updatedAt: new Date().toISOString() };
+      
+      const processedUpdateData = { ...updateData };
+      if (updateData.imageUrl !== undefined) {
+        processedUpdateData.imageUrl = Array.isArray(updateData.imageUrl) 
+          ? updateData.imageUrl.join(',') 
+          : updateData.imageUrl || '';
+      }
+      
+      const updated = { ...existing, ...processedUpdateData, updatedAt: new Date().toISOString() };
       this.celebrityProducts.set(id, updated);
       return updated;
     }
