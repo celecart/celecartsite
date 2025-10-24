@@ -111,12 +111,12 @@ export default function Header() {
         <div className="flex justify-between items-center py-6">
           {/* Clean Professional Logo */}
           <div className="flex items-center">
-            <Link href="/" className="group flex items-center">
+            <Link href="/" className="group flex flex-col items-start -ml-1 sm:-ml-2">
               <div className="text-2xl font-bold font-playfair tracking-wide">
                 <span className="text-amber-400">C</span>
                 <span className="text-white">ELECART</span>
               </div>
-              <div className="ml-3 text-xs text-white/60 uppercase tracking-widest font-light">
+              <div className="mt-1 text-xs text-white/60 uppercase tracking-widest font-light">
                 Celebrity Style
               </div>
             </Link>
@@ -139,7 +139,7 @@ export default function Header() {
               <Link 
                 href="/celebrities" 
                 className={cn(
-                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
+                  "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 ml-4 md:ml-6",
                   "text-white/90 hover:text-amber-400 uppercase tracking-wide",
                   location === "/celebrities" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
@@ -215,7 +215,7 @@ export default function Header() {
           {/* Premium Action Section */}
           <div className="flex items-center space-x-3">
             {/* Enhanced Celebrity Filter */}
-            <div className="hidden lg:block mr-2">
+            <div className="hidden lg:block ml-3 md:ml-4 mr-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -282,13 +282,13 @@ export default function Header() {
             </div>
             
             {/* Premium Search Bar */}
-            <div className="relative hidden lg:block">
+            <div className="relative hidden lg:block w-56">
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-400/20 to-orange-400/20 rounded-full blur-sm group-focus-within:blur-md transition-all duration-300"></div>
                 <Input
                   type="text"
                   placeholder="Search celebrities..."
-                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-64 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
+                  className="relative bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 py-3 pl-12 pr-4 rounded-full w-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm transition-all duration-300"
                   value={searchQuery}
                   onChange={handleSearchChange}
                 />

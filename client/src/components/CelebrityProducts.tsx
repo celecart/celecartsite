@@ -149,15 +149,26 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, featured = false }: ProductCardProps) {
+  const imageSrc = (() => {
+    const val = product.imageUrl;
+    if (!val) return '';
+    try {
+      if (typeof val === 'string' && val.trim().startsWith('[')) {
+        const arr = JSON.parse(val);
+        if (Array.isArray(arr)) return arr[0] || '';
+      }
+    } catch {}
+    return val as string;
+  })();
   return (
     <div className={`bg-white rounded-lg shadow-sm border overflow-hidden hover:shadow-md transition-all duration-300 ${
       featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-gray-200'
     }`}>
       {/* Product Image */}
       <div className="relative h-48 bg-gray-100 overflow-hidden">
-        {product.imageUrl ? (
+        {imageSrc ? (
           <img 
-            src={product.imageUrl} 
+            src={imageSrc} 
             alt={product.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />

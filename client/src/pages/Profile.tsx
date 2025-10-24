@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { User, Edit, Save, X, Star, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube } from "lucide-react";
+import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 interface ProfileData {
   displayName: string;
@@ -58,6 +59,12 @@ export default function Profile() {
   const [products, setProducts] = useState<CelebrityProduct[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<CelebrityProduct | null>(null);
+  // Add nested products tab state
+  const [productTab, setProductTab] = useState<
+    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'aiStylist' | 'fashionEpisodes'
+  >('personalFavourite');
+  // Track where Add Product was triggered to prefill category and render placement
+  const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
   const [profileData, setProfileData] = useState<ProfileData>({
     displayName: '',
     email: '',
@@ -318,7 +325,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <Header />
-      <div className="max-w-4xl mx-auto px-4 py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {loading ? (
           <div className="text-white/70 text-center">Loading...</div>
         ) : !user ? (
@@ -643,112 +650,399 @@ export default function Profile() {
               {canAccessCelebrityDetails() && (
                 <TabsContent value="products" className="space-y-6">
                   <Card className="bg-white/5 backdrop-blur-xl border-white/10">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <Star className="w-5 h-5 text-amber-400" />
-                        My Products
-                      </CardTitle>
-                      <Button 
-                        onClick={() => setShowAddProduct(true)}
-                        className="bg-amber-500 hover:bg-amber-600 text-black rounded-full"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Product
-                      </Button>
-                    </CardHeader>
+                    <CardHeader />
                     <CardContent className="space-y-4">
-                      {products.length === 0 ? (
-                        <div className="text-center py-8 text-white/70">
-                          <p>No products added yet. Start by adding your first product!</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {products.map((product) => (
-                            <Card key={product.id} className="bg-white/5 border-white/10">
-                              <CardContent className="p-4">
-                                <div className="aspect-video bg-white/10 rounded-lg mb-3 overflow-hidden">
-                                  {product.imageUrl ? (
-                                    Array.isArray(product.imageUrl) ? (
-                                      <div className="w-full h-full flex">
-                                        {product.imageUrl.slice(0, 2).map((url, index) => (
-                                          <img 
-                                            key={index}
-                                            src={url} 
-                                            alt={`${product.name} ${index + 1}`}
-                                            className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
-                                            onError={(e) => {
-                                              const target = e.target as HTMLImageElement;
-                                              target.onerror = null;
-                                              target.src = "/placeholder-celebrity.jpg";
-                                            }}
-                                          />
-                                        ))}
-                                        {product.imageUrl.length > 2 && (
-                                          <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
-                                            +{product.imageUrl.length - 2} more
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <img 
-                                        src={product.imageUrl} 
-                                        alt={product.name}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                          const target = e.target as HTMLImageElement;
-                                          target.onerror = null;
-                                          target.src = "/placeholder-celebrity.jpg";
-                                        }}
-                                      />
-                                    )
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-white/50">
-                                      No Image
-                                    </div>
-                                  )}
+                      {/* Products sub-tabs navbar */}
+                      <Tabs value={productTab} onValueChange={(v) => setProductTab(v as any)}>
+                        <TabsList className="relative w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-1 overflow-x-auto scrollbar-hide whitespace-nowrap">
+                          <TabsTrigger value="personalFavourite" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Star className="w-4 h-4" />
+                              <span>Favourite</span>
+                            </div>
+                          </TabsTrigger>
+                          <TabsTrigger value="personalBrand" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Personal Brand</span>
+                            </div>
+                          </TabsTrigger>
+                          <TabsTrigger value="shoppingPlaylist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <ShoppingBag className="w-4 h-4" />
+                              <span>Shopping playlist</span>
+                            </div>
+                          </TabsTrigger>
+                          <TabsTrigger value="celeconnect" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Link2 className="w-4 h-4" />
+                              <span>Celeconnect</span>
+                            </div>
+                          </TabsTrigger>
+                          <TabsTrigger value="aiStylist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Wand2 className="w-4 h-4" />
+                              <span>AI Stylist</span>
+                            </div>
+                          </TabsTrigger>
+                          <TabsTrigger value="fashionEpisodes" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Video className="w-4 h-4" />
+                              <span>Fashion & Style episodes</span>
+                            </div>
+                          </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="personalFavourite" className="mt-4 space-y-6">
+
+                          {/* Moved accordions from Personal Brand to Favourite and beautified */}
+                          <Accordion type="multiple" defaultValue={["zulqadarExperiences", "luxuryBrandPreferences"]} className="w-full space-y-4">
+                            <AccordionItem value="zulqadarExperiences" className="group bg-gradient-to-r from-white/5 to-violet-500/10 backdrop-blur-xl border-white/10 rounded-2xl hover:border-violet-400/30 transition-colors">
+                              <AccordionTrigger className="px-4 text-white flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
+                                  <span className="font-medium">Zulqadar's Favorite Experiences</span>
                                 </div>
-                                <h3 className="text-white font-semibold mb-2">{product.name}</h3>
-                                <p className="text-white/70 text-sm mb-2 line-clamp-2">{product.description}</p>
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="text-amber-400 font-bold">${product.price}</span>
-                                  <span className="text-white/50 text-sm">{product.category}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingProduct(product);
-                                      setShowAddProduct(true);
-                                    }}
-                                    className="border-white/20 text-white hover:bg-white/10"
-                                  >
-                                    <Edit className="w-3 h-3" />
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="flex justify-end mb-3">
+                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('zulqadarExperiences'); setShowAddProduct(true); }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Product
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => deleteProduct(product.id)}
-                                    className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                  {product.purchaseLink && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => window.open(product.purchaseLink, '_blank')}
-                                      className="border-white/20 text-white hover:bg-white/10"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                    </Button>
-                                  )}
                                 </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
+                                {products.filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences').length === 0 ? (
+                                  <div className="text-white/70">No experiences added yet.</div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                                    {products
+                                      .filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences')
+                                      .map((product) => (
+                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                          {product.isFeatured && (
+                                            <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
+                                          )}
+                                          <CardContent className="p-5">
+                                            <div className="w-full h-44 bg-white/10 rounded-lg mb-4 overflow-hidden">
+                                              {product.imageUrl ? (
+                                                Array.isArray(product.imageUrl) ? (
+                                                  <div className="w-full h-full flex">
+                                                    {product.imageUrl.slice(0, 2).map((url, index) => (
+                                                      <img
+                                                        key={index}
+                                                        src={url}
+                                                        alt={`${product.name} ${index + 1}`}
+                                                        className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
+                                                        onError={(e) => {
+                                                          const target = e.target as HTMLImageElement;
+                                                          target.onerror = null;
+                                                          target.src = "/placeholder-celebrity.jpg";
+                                                        }}
+                                                      />
+                                                    ))}
+                                                    {product.imageUrl.length > 2 && (
+                                                      <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
+                                                        +{product.imageUrl.length - 2} more
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <img
+                                                    src={product.imageUrl as string}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      const target = e.target as HTMLImageElement;
+                                                      target.onerror = null;
+                                                      target.src = "/placeholder-celebrity.jpg";
+                                                    }}
+                                                  />
+                                                )
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                              )}
+                                            </div>
+                                            <h3 className="text-violet-200 font-playfair font-semibold mb-2">{product.name}</h3>
+                                            <div className="text-sky-400 font-medium mb-2">{product.category}</div>
+                                            <div className="flex items-center gap-3 mb-3">
+                                              <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                            </div>
+                                            <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex gap-2">
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                  className="border-white/20 text-white hover:bg-white/10"
+                                                >
+                                                  <Edit className="w-3 h-3" />
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => deleteProduct(product.id)}
+                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                              </div>
+                                              {product.purchaseLink && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                                                >
+                                                  Shop Now
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      ))}
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+
+                            <AccordionItem value="luxuryBrandPreferences" className="group bg-gradient-to-r from-white/5 to-fuchsia-500/10 backdrop-blur-xl border-white/10 rounded-2xl hover:border-fuchsia-400/30 transition-colors">
+                              <AccordionTrigger className="px-4 text-white flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
+                                  <span className="font-medium">Luxury Brand Preferences</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="flex justify-end mb-3">
+                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('luxuryBrandPreferences'); setShowAddProduct(true); }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Product
+                                  </Button>
+                                </div>
+                                {products.filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences').length === 0 ? (
+                                  <div className="text-white/70">No luxury brand items yet.</div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                                    {products
+                                      .filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences')
+                                      .map((product) => (
+                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                          {product.isFeatured && (
+                                            <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
+                                          )}
+                                          <CardContent className="p-5">
+                                            <div className="w-full h-44 bg-white/10 rounded-lg mb-4 overflow-hidden">
+                                              {product.imageUrl ? (
+                                                Array.isArray(product.imageUrl) ? (
+                                                  <div className="w-full h-full flex">
+                                                    {product.imageUrl.slice(0, 2).map((url, index) => (
+                                                      <img
+                                                        key={index}
+                                                        src={url}
+                                                        alt={`${product.name} ${index + 1}`}
+                                                        className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
+                                                        onError={(e) => {
+                                                          const target = e.target as HTMLImageElement;
+                                                          target.onerror = null;
+                                                          target.src = "/placeholder-celebrity.jpg";
+                                                        }}
+                                                      />
+                                                    ))}
+                                                    {product.imageUrl.length > 2 && (
+                                                      <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
+                                                        +{product.imageUrl.length - 2} more
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <img
+                                                    src={product.imageUrl as string}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      const target = e.target as HTMLImageElement;
+                                                      target.onerror = null;
+                                                      target.src = "/placeholder-celebrity.jpg";
+                                                    }}
+                                                  />
+                                                )
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                              )}
+                                            </div>
+                                            <h3 className="text-violet-200 font-playfair font-semibold mb-2">{product.name}</h3>
+                                            <div className="text-sky-400 font-medium mb-2">{product.category}</div>
+                                            <div className="flex items-center gap-3 mb-3">
+                                              <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                            </div>
+                                            <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex gap-2">
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => {
+                                                    setEditingProduct(product);
+                                                    setShowAddProduct(true);
+                                                  }}
+                                                  className="border-white/20 text-white hover:bg-white/10"
+                                                >
+                                                  <Edit className="w-3 h-3" />
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => deleteProduct(product.id)}
+                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                              </div>
+                                              {product.purchaseLink && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                                                >
+                                                  Shop Now
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      ))}
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </TabsContent>
+
+                        <TabsContent value="personalBrand" className="mt-4 space-y-6">
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="brandProducts" className="group bg-gradient-to-r from-white/5 to-amber-500/10 backdrop-blur-xl border-white/10 rounded-2xl hover:border-amber-400/30 transition-colors">
+                              <AccordionTrigger className="px-4 text-white flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
+                                  <span className="font-medium">Personal Brand Products</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="flex justify-end mb-3">
+                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('personalBrandProducts'); setShowAddProduct(true); }} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black rounded-full px-4 py-2 shadow">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Product
+                                  </Button>
+                                </div>
+                                {products.filter(p => (p.category || '').toLowerCase() === 'personal brand products').length === 0 ? (
+                                  <div className="text-white/70">No personal brand products yet.</div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                                    {products
+                                      .filter(p => (p.category || '').toLowerCase() === 'personal brand products')
+                                      .map((product) => (
+                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                          {product.isFeatured && (
+                                            <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
+                                          )}
+                                          <CardContent className="p-5">
+                                            <div className="w-full h-44 bg-white/10 rounded-lg mb-4 overflow-hidden">
+                                              {product.imageUrl ? (
+                                                Array.isArray(product.imageUrl) ? (
+                                                  <div className="w-full h-full flex">
+                                                    {product.imageUrl.slice(0, 2).map((url, index) => (
+                                                      <img
+                                                        key={index}
+                                                        src={url}
+                                                        alt={`${product.name} ${index + 1}`}
+                                                        className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
+                                                        onError={(e) => {
+                                                          const target = e.target as HTMLImageElement;
+                                                          target.onerror = null;
+                                                          target.src = "/placeholder-celebrity.jpg";
+                                                        }}
+                                                      />
+                                                    ))}
+                                                    {product.imageUrl.length > 2 && (
+                                                      <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
+                                                        +{product.imageUrl.length - 2} more
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <img
+                                                    src={product.imageUrl as string}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      const target = e.target as HTMLImageElement;
+                                                      target.onerror = null;
+                                                      target.src = "/placeholder-celebrity.jpg";
+                                                    }}
+                                                  />
+                                                )
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                              )}
+                                            </div>
+                                            <h3 className="text-violet-200 font-playfair font-semibold mb-2">{product.name}</h3>
+                                            <div className="text-sky-400 font-medium mb-2">{product.category}</div>
+                                            <div className="flex items-center gap-3 mb-3">
+                                              <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                            </div>
+                                            <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex gap-2">
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                  className="border-white/20 text-white hover:bg-white/10"
+                                                >
+                                                  <Edit className="w-3 h-3" />
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="outline"
+                                                  onClick={() => deleteProduct(product.id)}
+                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                              </div>
+                                              {product.purchaseLink && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                                                >
+                                                  Shop Now
+                                                </Button>
+                                              )}
+                                            </div>
+                                          </CardContent>
+                                        </Card>
+                                      ))}
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </TabsContent>
+
+                        <TabsContent value="shoppingPlaylist" className="mt-4">
+                          <div className="text-white/80">Build shopping playlists with curated products.</div>
+                        </TabsContent>
+                        <TabsContent value="celeconnect" className="mt-4">
+                          <div className="text-white/80">Connect with fans and brands through product links.</div>
+                        </TabsContent>
+                        <TabsContent value="aiStylist" className="mt-4">
+                          <div className="text-white/80">AI stylist recommendations will appear here.</div>
+                        </TabsContent>
+                        <TabsContent value="fashionEpisodes" className="mt-4">
+                          <div className="text-white/80">Fashion & Style episodes will be listed here.</div>
+                        </TabsContent>
+                      </Tabs>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -792,7 +1086,15 @@ export default function Profile() {
           onClose={() => {
             setShowAddProduct(false);
             setEditingProduct(null);
+            setAddProductContext(null);
           }}
+          initialCategory={addProductContext === 'zulqadarExperiences' 
+            ? 'Zulqadar Experiences' 
+            : addProductContext === 'luxuryBrandPreferences' 
+              ? 'Luxury Brand Preferences' 
+              : addProductContext === 'personalBrandProducts' 
+                ? 'Personal Brand Products' 
+                : undefined}
         />
       )}
     </div>
@@ -803,17 +1105,19 @@ export default function Profile() {
 function ProductModal({ 
   product, 
   onSave, 
-  onClose 
+  onClose,
+  initialCategory
 }: { 
   product: CelebrityProduct | null; 
   onSave: (data: Partial<CelebrityProduct>) => Promise<void>; 
   onClose: () => void; 
+  initialCategory?: string;
 }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
-    category: product?.category || '',
+    category: product?.category || initialCategory || '',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     price: product?.price || '',
     location: product?.location || '',
@@ -823,21 +1127,22 @@ function ProductModal({
     isActive: product?.isActive ?? true,
     isFeatured: product?.isFeatured ?? false
   });
+  const formRef = useRef(formData);
+  useEffect(() => { formRef.current = formData; }, [formData]);
 
   const handleImagesChange = async (imageUrls: string[]) => {
-    const updatedFormData = {...formData, imageUrls};
-    setFormData(updatedFormData);
-    
+    setFormData(prev => ({ ...prev, imageUrls }));
+
     // Auto-save the product when images are uploaded (only for existing products)
     if (product && imageUrls.length > 0) {
-      const submitData = {
-        ...updatedFormData,
+      const submitData: any = {
+        ...formRef.current,
         imageUrl: imageUrls
-      } as any;
+      };
       // Remove imageUrls since backend expects imageUrl
       delete submitData.imageUrls;
       console.log('Auto-saving product with new images:', submitData.imageUrl);
-      
+
       try {
         await onSave(submitData);
         toast({ 
@@ -886,7 +1191,7 @@ function ProductModal({
                 <Label className="text-white/70">Product Name</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter product name"
                   className="bg-white/5 border-white/20 text-white"
                   required
@@ -896,7 +1201,7 @@ function ProductModal({
                 <Label className="text-white/70">Category</Label>
                 <Input
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   placeholder="e.g., Restaurant, Lounge, City"
                   className="bg-white/5 border-white/20 text-white"
                   required
@@ -908,7 +1213,7 @@ function ProductModal({
               <Label className="text-white/70">Description</Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Describe your product or experience"
                 rows={3}
                 className="bg-white/5 border-white/20 text-white"
@@ -921,7 +1226,7 @@ function ProductModal({
                 <Label className="text-white/70">Price ($)</Label>
                 <Input
                   value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                   placeholder="0.00"
                   className="bg-white/5 border-white/20 text-white"
                   required
@@ -931,7 +1236,7 @@ function ProductModal({
                 <Label className="text-white/70">Location</Label>
                 <Input
                   value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                   placeholder="City, Country"
                   className="bg-white/5 border-white/20 text-white"
                 />
@@ -952,7 +1257,7 @@ function ProductModal({
                 <Label className="text-white/70">Website</Label>
                 <Input
                   value={formData.website}
-                  onChange={(e) => setFormData({...formData, website: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                   placeholder="https://website.com"
                   className="bg-white/5 border-white/20 text-white"
                 />
@@ -961,7 +1266,7 @@ function ProductModal({
                 <Label className="text-white/70">Purchase Link</Label>
                 <Input
                   value={formData.purchaseLink}
-                  onChange={(e) => setFormData({...formData, purchaseLink: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, purchaseLink: e.target.value }))}
                   placeholder="https://buy-link.com"
                   className="bg-white/5 border-white/20 text-white"
                 />
@@ -976,7 +1281,7 @@ function ProductModal({
                   min="1"
                   max="5"
                   value={formData.rating}
-                  onChange={(e) => setFormData({...formData, rating: parseInt(e.target.value) || 5})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) || 5 }))}
                   className="bg-white/5 border-white/20 text-white"
                 />
               </div>
@@ -985,7 +1290,7 @@ function ProductModal({
                   type="checkbox"
                   id="isActive"
                   checked={formData.isActive}
-                  onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                   className="rounded"
                 />
                 <Label htmlFor="isActive" className="text-white/70">Active</Label>
@@ -995,7 +1300,7 @@ function ProductModal({
                   type="checkbox"
                   id="isFeatured"
                   checked={formData.isFeatured}
-                  onChange={(e) => setFormData({...formData, isFeatured: e.target.checked})}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))}
                   className="rounded"
                 />
                 <Label htmlFor="isFeatured" className="text-white/70">Featured</Label>

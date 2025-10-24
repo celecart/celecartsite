@@ -8,8 +8,9 @@ import { AIFeaturesTabs } from "@/components/AIFeatures";
 import { Celebrity, Brand, CelebrityBrand } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus, Package } from "lucide-react";
+import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus, Package, ExternalLink, MapPin } from "lucide-react";
 import FashionStyleEpisodes from "@/components/FashionStyleEpisodes";
 import { useState } from "react";
 import BrandModal from "@/components/BrandModal";
@@ -102,6 +103,37 @@ export default function CelebrityProfile() {
       }
       const data = await response.json();
       return data;
+    },
+    enabled: !!celebrityId,
+  });
+
+  // Celebrity products type and query for filtered sections
+  interface CelebrityProduct {
+    id: number;
+    celebrityId: number;
+    name: string;
+    description: string;
+    category: string;
+    imageUrl: string | string[];
+    price: string;
+    location?: string;
+    website?: string;
+    purchaseLink?: string;
+    rating?: number;
+    isActive?: boolean;
+    isFeatured?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
+  const { data: products, isLoading: productsLoading, error: productsError } = useQuery<CelebrityProduct[]>({
+    queryKey: ['celebrity-products', celebrityId],
+    queryFn: async () => {
+      const res = await fetch(`/api/celebrity-products?celebrityId=${celebrityId}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch products');
+      return res.json() as CelebrityProduct[];
     },
     enabled: !!celebrityId,
   });
@@ -455,7 +487,7 @@ export default function CelebrityProfile() {
                     </div>
                   </div>
                 
-                  {celebrity.stylingDetails && (
+                  {celebrity.stylingDetails && celebrity.id !== 100 && (
                     <div className="mt-8">
                       <h3 className="text-3xl font-playfair font-bold mb-8 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">Luxury Brand Preferences</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1188,6 +1220,448 @@ export default function CelebrityProfile() {
                   )}
                 </div>
               </div>
+
+              {/* Favourite Products from celebrity products (filtered) */}
+              <div className="mt-12">
+                {celebrity.id === 100 ? (
+                  <>
+                    {/* Zulqadar's Favorite (Experiences) Section */}
+                    <h3 className="text-3xl font-playfair font-bold mb-6 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">{`${celebrity.name}'s Favorite Experiences`}</h3>
+                    {productsLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="h-48 bg-gray-200 animate-pulse"></div>
+                            <div className="p-4 space-y-3">
+                              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                              <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      (() => {
+                        const favExperiences = (products || []).filter(p => ((p.category || '').toLowerCase().includes('experiences')));
+                        if (!favExperiences.length) {
+                          const experienceLooks = (celebrity.stylingDetails || []).filter(look => 
+                            look.occasion === 'Favorite Restaurant' ||
+                            look.occasion === 'Favorite Lounge' ||
+                            look.occasion === 'Favorite Cities' ||
+                            look.occasion === 'Executive Fashion'
+                          );
+                          if (!experienceLooks.length) {
+                            return (
+                              <div className="text-center py-8 text-gray-600">No favourites added yet.</div>
+                            );
+                          }
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {experienceLooks.map((look, index) => {
+                                const purchaseUrl = look.outfit?.purchaseLink || '';
+                                return (
+                                  <div key={index} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                    <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                      <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    </div>
+                                    <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                      <h4 className="text-lg font-playfair font-semibold text-purple-900">{look.occasion}</h4>
+                                      <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                      <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{look.outfit?.designer}</div>
+                                      {look.outfit?.price && (
+                                        <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{look.outfit.price}</Badge></div>
+                                      )}
+                                      {look.outfit?.details && (
+                                        <p className="text-gray-600 text-sm">{look.outfit.details}</p>
+                                      )}
+                                      <div className="flex gap-3 pt-3">
+                                        {purchaseUrl && (
+                                          <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                            <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {favExperiences.map((product) => {
+                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                              const purchaseUrl = product.purchaseLink || product.website || '';
+                              return (
+                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                  {product.isFeatured ? (
+                                    <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                                  ) : null}
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                  </div>
+                                  <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                    <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
+                                    <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
+                                    {typeof product.rating === 'number' && product.rating > 0 && (
+                                      <div className="flex items-center gap-1 text-xs">
+                                        {Array.from({length: 5}).map((_, i) => (
+                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
+                                        ))}
+                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
+                                      </div>
+                                    )}
+                                    {product.location && (
+                                      <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
+                                    )}
+                                    {product.price && (
+                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                    )}
+                                    {product.description && (
+                                      <p className="text-gray-600 text-sm">{product.description}</p>
+                                    )}
+                                    <div className="flex gap-3 pt-3">
+                                      {purchaseUrl && (
+                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                        </Button>
+                                      )}
+                                      {product.website && (
+                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                          <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
+                    )}
+
+                    {/* Luxury Brand Preferences Section */}
+                    <h3 className="text-3xl font-playfair font-bold mb-6 mt-12 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">Luxury Brand Preferences</h3>
+                    {productsLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="h-48 bg-gray-200 animate-pulse"></div>
+                            <div className="p-4 space-y-3">
+                              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                              <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      (() => {
+                        const luxuryPrefs = (products || []).filter(p => ((p.category || '').toLowerCase() === 'luxury brand preferences'));
+                        if (!luxuryPrefs.length) {
+                          const luxuryLooks = (celebrity.stylingDetails || []).filter(look => 
+                            look.occasion !== 'Favorite Restaurant' &&
+                            look.occasion !== 'Favorite Lounge' &&
+                            look.occasion !== 'Favorite Cities' &&
+                            look.occasion !== 'Executive Fashion'
+                          );
+                          if (!luxuryLooks.length) {
+                            return (
+                              <div className="text-center py-8 text-gray-600">No luxury preferences added yet.</div>
+                            );
+                          }
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {luxuryLooks.map((look, index) => (
+                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="p-6 space-y-3">
+                                    <h4 className="text-lg font-playfair font-semibold text-amber-900">{look.occasion}</h4>
+                                    <div className="bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent font-medium">{look.outfit?.designer}</div>
+                                    {look.outfit?.price && (
+                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-700 rounded-full px-2 ring-1 ring-amber-200">{look.outfit.price}</Badge></div>
+                                    )}
+                                    {look.outfit?.details && (
+                                      <p className="text-gray-600 text-sm">{look.outfit.details}</p>
+                                    )}
+                                    {look.outfit?.purchaseLink && (
+                                      <div className="pt-3">
+                                        <Button asChild size="sm" className="rounded-full bg-amber-600 hover:bg-amber-700 text-white">
+                                          <a href={look.outfit.purchaseLink} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Explore</a>
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {luxuryPrefs.map((product) => {
+                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                              const purchaseUrl = product.purchaseLink || product.website || '';
+                              return (
+                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                  {product.isFeatured ? (
+                                    <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                                  ) : null}
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                  </div>
+                                  <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                    <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
+                                    <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
+                                    {typeof product.rating === 'number' && product.rating > 0 && (
+                                      <div className="flex items-center gap-1 text-xs">
+                                        {Array.from({length: 5}).map((_, i) => (
+                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
+                                        ))}
+                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
+                                      </div>
+                                    )}
+                                    {product.location && (
+                                      <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
+                                    )}
+                                    {product.price && (
+                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                    )}
+                                    {product.description && (
+                                      <p className="text-gray-600 text-sm">{product.description}</p>
+                                    )}
+                                    <div className="flex gap-3 pt-3">
+                                      {purchaseUrl && (
+                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                        </Button>
+                                      )}
+                                      {product.website && (
+                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                          <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-3xl font-playfair font-bold mb-6 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">{`${celebrity.name}'s Favorite Experiences`}</h3>
+                    {productsLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="h-48 bg-gray-200 animate-pulse"></div>
+                            <div className="p-4 space-y-3">
+                              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                              <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      (() => {
+                        const favExperiences = (products || []).filter(p => ((p.category || '').toLowerCase().includes('experiences')));
+                        if (!favExperiences.length) {
+                          const experienceLooks = (celebrity.stylingDetails || []).filter(look => 
+                            look.occasion === 'Favorite Restaurant' ||
+                            look.occasion === 'Favorite Lounge' ||
+                            look.occasion === 'Favorite Cities' ||
+                            look.occasion === 'Executive Fashion'
+                          );
+                          if (!experienceLooks.length) {
+                            return (
+                              <div className="text-center py-8 text-gray-600">No experiences added yet.</div>
+                            );
+                          }
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {experienceLooks.map((look, index) => {
+                                const purchaseUrl = look.outfit?.purchaseLink || '';
+                                return (
+                                  <div key={index} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                    <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                      <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                      <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                    </div>
+                                    <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                      <h4 className="text-lg font-playfair font-semibold text-purple-900">{look.occasion}</h4>
+                                      <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                      <div className="text-sm text-gray-600">{look.outfit?.designer || 'Premium Experience'}</div>
+                                      {purchaseUrl && (
+                                        <div className="flex gap-3 pt-3">
+                                          <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                            <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden">
+                                              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
+                                              <ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Explore</span>
+                                            </a>
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {favExperiences.map((product) => {
+                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                              const purchaseUrl = product.purchaseLink || product.website || '';
+                              return (
+                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                  {product.isFeatured ? (
+                                    <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                                  ) : null}
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                  </div>
+                                  <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                    <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
+                                    <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
+                                    {typeof product.rating === 'number' && product.rating > 0 && (
+                                      <div className="flex items-center gap-1 text-xs">
+                                        {Array.from({length: 5}).map((_, i) => (
+                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
+                                        ))}
+                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
+                                      </div>
+                                    )}
+                                    {product.location && (
+                                      <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
+                                    )}
+                                    {product.price && (
+                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                    )}
+                                    {product.description && (
+                                      <p className="text-gray-600 text-sm">{product.description}</p>
+                                    )}
+                                    <div className="flex gap-3 pt-3">
+                                      {purchaseUrl && (
+                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                        </Button>
+                                      )}
+                                      {product.website && (
+                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                          <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
+                    )}
+                    <h3 className="text-3xl font-playfair font-bold mb-6 mt-10 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">Luxury Brand Preferences</h3>
+                    {productsLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="h-48 bg-gray-200 animate-pulse"></div>
+                            <div className="p-4 space-y-3">
+                              <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                              <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      (() => {
+                        const luxuryPrefs = (products || []).filter(p => ((p.category || '').toLowerCase() === 'luxury brand preferences'));
+                        if (!luxuryPrefs.length) {
+                          const luxuryLooks = (celebrity.stylingDetails || []).filter(look => 
+                            look.occasion !== 'Favorite Restaurant' &&
+                            look.occasion !== 'Favorite Lounge' &&
+                            look.occasion !== 'Favorite Cities' &&
+                            look.occasion !== 'Executive Fashion'
+                          );
+                          if (!luxuryLooks.length) {
+                            return (
+                              <div className="text-center py-8 text-gray-600">No luxury preferences added yet.</div>
+                            );
+                          }
+                          return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {luxuryLooks.map((look, index) => (
+                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="p-4 space-y-2">
+                                    <h4 className="text-lg font-playfair font-semibold">{look.occasion}</h4>
+                                    {look.outfit?.designer && (
+                                      <div className="text-sm text-neutral-600">{look.outfit.designer}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {luxuryPrefs.map((product) => {
+                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                              const purchaseUrl = product.purchaseLink || product.website || '';
+                              return (
+                                <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="p-4 space-y-2">
+                                    <h4 className="text-lg font-playfair font-semibold">{product.name}</h4>
+                                    <div className="text-sm text-neutral-600">{product.category}</div>
+                                    {product.price && (
+                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                    )}
+                                    {purchaseUrl && (
+                                      <div className="pt-2">
+                                        <Button asChild size="sm">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Buy</a>
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </>
+                )}
+              </div>
             </TabsContent>
             
             <TabsContent value="tournaments">
@@ -1331,6 +1805,88 @@ export default function CelebrityProfile() {
                         </div>
                       ))}
                   </div>
+                )}
+              </div>
+
+              {/* Personal Brand Products from celebrity products (filtered) */}
+              <div className="mt-12">
+                <h3 className="text-3xl font-playfair font-bold mb-6 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">Personal Brand Products</h3>
+                {productsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="h-48 bg-gray-200 animate-pulse"></div>
+                        <div className="p-4 space-y-3">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  (() => {
+                    const personalBrandProducts = (products || []).filter(p => (p.category || '').toLowerCase() === 'personal brand products');
+                    if (!personalBrandProducts.length) {
+                      return (
+                        <div className="text-center py-8 text-gray-600">No personal brand products added yet.</div>
+                      );
+                    }
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {personalBrandProducts.map((product) => {
+                          const img = Array.isArray(product.imageUrl) ? (product.imageUrl[0] || '') : (product.imageUrl || '');
+                          const purchaseUrl = product.purchaseLink || product.website || '';
+                          return (
+                            <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                              {product.isFeatured ? (
+                                <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                              ) : null}
+                              <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                                <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                              </div>
+                              <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
+                                <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
+                                <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
+                                {typeof product.rating === 'number' && product.rating > 0 && (
+                                  <div className="flex items-center gap-1 text-xs">
+                                    {Array.from({length: 5}).map((_, i) => (
+                                      <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
+                                    ))}
+                                    <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
+                                  </div>
+                                )}
+                                {product.location && (
+                                  <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
+                                )}
+                                {product.price && (
+                                  <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                )}
+                                {product.description && (
+                                  <p className="text-gray-600 text-sm">{product.description}</p>
+                                )}
+                                <div className="flex gap-3 pt-3">
+                                  {purchaseUrl && (
+                                    <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                      <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                    </Button>
+                                  )}
+                                  {product.website && (
+                                    <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                      <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
                 )}
               </div>
             </TabsContent>
