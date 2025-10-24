@@ -23,12 +23,19 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Session configuration
+// Ensure cookies work on local builds running over HTTP.
+// Set COOKIE_SECURE=true only when serving over HTTPS.
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.COOKIE_SECURE === 'true',
+    sameSite: (process.env.COOKIE_SAMESITE as any) || 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
