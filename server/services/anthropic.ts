@@ -6,6 +6,47 @@ const anthropic = new Anthropic({
 });
 
 export async function analyzeImageForFashion(imageBase64: string) {
+  // Early fallback when Anthropic API key is missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return {
+      items: [
+        {
+          type: "Top",
+          name: "Stub Cotton T-Shirt",
+          brand: "Stub Brand",
+          confidence: 0.9,
+          similarToCelebrity: "Stub Celebrity",
+          price: "$100",
+          whereToBuy: "example.com"
+        }
+      ],
+      makeup: [
+        {
+          type: "Lipstick",
+          brand: "Stub Cosmetics",
+          product: "Classic Red",
+          shade: "Red",
+          price: "$20",
+          whereToBuy: "example.com"
+        }
+      ],
+      accessories: [
+        {
+          type: "Sunglasses",
+          name: "Aviator",
+          brand: "Stub Eyewear",
+          confidence: 0.85,
+          price: "$150",
+          whereToBuy: "example.com"
+        }
+      ],
+      overallStyle: "Local stub: Modern Classic",
+      similarToCelebrities: [
+        "Stub Celebrity - 90% match"
+      ],
+      stylistNotes: "Anthropic disabled locally. Provide ANTHROPIC_API_KEY to enable real analysis."
+    };
+  }
   try {
     const response = await anthropic.messages.create({
       model: 'claude-3-7-sonnet-20250219',
@@ -111,6 +152,14 @@ export async function generatePersonalizedOutfitSuggestions(
   ageGroup?: string,
   budget?: string
 ) {
+  // Early fallback when Anthropic API key is missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return [
+      `⚡ Stub outfit 1 for ${celebrityName} on ${occasion} (prefs: ${userPreferences})`,
+      `⚡ Stub outfit 2 for ${celebrityName}`,
+      `⚡ Stub outfit 3 (local mode)`
+    ];
+  }
   try {
     let prompt = `Generate personalized outfit recommendations inspired by ${celebrityName}'s style for a user who is attending a ${occasion}.`;
     
@@ -182,6 +231,10 @@ export async function generatePersonalizedOutfitSuggestions(
 }
 
 export async function getCelebrityStyleAnalysis(celebrityProfile: any): Promise<string> {
+  // Early fallback when Anthropic API key is missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return `⚡ Stub style analysis: ${celebrityProfile.name} (profession: ${celebrityProfile.profession})`;
+  }
   try {
     const prompt = `Perform a comprehensive style analysis for ${celebrityProfile.name}, who is a ${celebrityProfile.profession}.
     
@@ -221,6 +274,10 @@ export async function getCelebrityStyleAnalysis(celebrityProfile: any): Promise<
 }
 
 export async function getAIFashionChatResponse(question: string, conversationHistory: any[]): Promise<string> {
+  // Early fallback when Anthropic API key is missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return `⚡ Stub chatbot response to: "${question}" (history length: ${conversationHistory.length})`;
+  }
   try {
     // Format the conversation history for Claude
     const formattedMessages = conversationHistory.map(msg => ({
@@ -272,6 +329,18 @@ export async function findMatchingCelebrityStyles(
   occasionContext?: string, 
   weatherSeason?: string
 ): Promise<any[]> {
+  // Early fallback when Anthropic API key is missing
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return [
+      {
+        celebrityName: "⚡ Stub Celebrity",
+        confidence: 0.95,
+        matchingElements: ["stub element 1", "stub element 2"],
+        recommendedItems: ["stub item A", "stub item B"],
+        occasionSuggestion: "Perfect for casual chic"
+      }
+    ];
+  }
   try {
     let prompt = `Find celebrity styles that match this outfit description: "${outfitDescription}"`;
     

@@ -1113,7 +1113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create celebrity
-  app.post("/api/celebrities", async (req: Request, res: Response) => {
+  app.post("/api/celebrities", requireAdmin, async (req: Request, res: Response) => {
     try {
       const validatedData = insertCelebritySchema.parse(req.body);
       const celebrity = await storage.createCelebrity(validatedData);
@@ -1127,7 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update celebrity
-  app.put("/api/celebrities/:id", async (req: Request, res: Response) => {
+  app.put("/api/celebrities/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1151,7 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete celebrity
-  app.delete("/api/celebrities/:id", async (req: Request, res: Response) => {
+  app.delete("/api/celebrities/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1869,7 +1869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/celebrity-image", celebrityImageUpload.single('image'), (req: Request, res: Response) => {
+  app.post("/api/upload/celebrity-image", requireAdmin, celebrityImageUpload.single('image'), (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
