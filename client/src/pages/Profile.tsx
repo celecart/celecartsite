@@ -14,6 +14,7 @@ import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, 
 import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { logger } from "@/lib/logger";
 
 interface ProfileData {
   displayName: string;
@@ -112,7 +113,7 @@ export default function Profile() {
         celebrityId: user.id
       };
       
-      console.log('Sending product data to backend:', formattedData);
+      logger.debug('Sending product data to backend:', formattedData);
       
       const res = await fetch(url, {
         method,

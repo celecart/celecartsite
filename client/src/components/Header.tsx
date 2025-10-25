@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { logger } from "@/lib/logger";
 // removed GoogleSignIn import
 import { 
   DropdownMenu,
@@ -83,7 +84,8 @@ export default function Header() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    console.log("Search query changed to:", value);
+    // Debug: log only in dev via logger
+    logger.debug("Search query changed:", value);
   };
   
   const handleSelectCelebrity = (id: number) => {

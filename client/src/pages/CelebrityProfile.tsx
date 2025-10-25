@@ -82,6 +82,10 @@ export default function CelebrityProfile() {
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
 
+  // Allow deep linking to a specific tab via query string or hash
+  const initialTabFromUrl = new URLSearchParams(window.location.search).get('tab') || (window.location.hash ? window.location.hash.slice(1) : null);
+  const [activeTab, setActiveTab] = useState<string>(initialTabFromUrl || 'overview');
+
   const { data: celebrity, isLoading, error } = useQuery<Celebrity>({
     queryKey: ["/api/celebrities", celebrityId],
     queryFn: async () => {
@@ -302,7 +306,7 @@ export default function CelebrityProfile() {
       {/* Tournament and Equipment Data Section */}
       <div className="py-16 bg-white text-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="w-full">
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 p-1 mb-8 shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/20 animate-pulse"></div>
               <TabsList className="relative w-full bg-transparent border-none justify-start overflow-x-auto scrollbar-hide">
