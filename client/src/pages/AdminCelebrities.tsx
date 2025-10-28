@@ -498,6 +498,12 @@ export default function AdminCelebrities() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                  <Package />
+                  <span>Products</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
                   <FileText />
                   <span>Content</span>
@@ -715,7 +721,7 @@ export default function AdminCelebrities() {
                 </CardContent>
                 <CardFooter className="pt-2">
                   <div className="flex items-center justify-between w-full">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -735,12 +741,13 @@ export default function AdminCelebrities() {
                       </Button>
                       <Button
                         variant="destructive"
-                        size="sm"
+                        size="icon"
                         onClick={() => handleDeleteCelebrity(celebrity.id)}
                       className=""
+                        aria-label="Delete"
+                        title="Delete"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                     <div className="flex items-center gap-2">

@@ -98,15 +98,32 @@ export default function CelebrityProfile() {
     enabled: !!celebrityId,
   });
 
+  // Prefer the resolved celebrity.id from API; fall back to route param
+  const effectiveCelebrityId = celebrity?.id ?? celebrityId;
+
   const { data: celebrityBrands, isLoading: brandsLoading } = useQuery<CelebrityBrandWithDetails[]>({
-    queryKey: ["/api/celebritybrands", celebrityId],
+    queryKey: ["/api/celebritybrands", effectiveCelebrityId],
     queryFn: async () => {
-      const response = await fetch(`/api/celebritybrands/${celebrityId}`);
+      const response = await fetch(`/api/celebritybrands/${effectiveCelebrityId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch celebrity brands data');
       }
       const data = await response.json();
       return data;
+    },
+    enabled: !!effectiveCelebrityId,
+  });
+
+  // AI style analysis for Style Notes
+  const { data: styleAnalysis, isLoading: styleLoading } = useQuery<string>({
+    queryKey: ["/api/ai/style-analysis", celebrityId],
+    queryFn: async () => {
+      const response = await fetch(`/api/ai/style-analysis/${celebrityId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch style analysis');
+      }
+      const json = await response.json();
+      return json.analysis as string;
     },
     enabled: !!celebrityId,
   });
@@ -131,15 +148,15 @@ export default function CelebrityProfile() {
   }
 
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery<CelebrityProduct[]>({
-    queryKey: ['celebrity-products', celebrityId],
+    queryKey: ['celebrity-products', effectiveCelebrityId],
     queryFn: async () => {
-      const res = await fetch(`/api/celebrity-products?celebrityId=${celebrityId}`, {
+      const res = await fetch(`/api/celebrity-products?celebrityId=${effectiveCelebrityId}`, {
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch products');
       return res.json() as CelebrityProduct[];
     },
-    enabled: !!celebrityId,
+    enabled: !!effectiveCelebrityId,
   });
 
   const handleOpenBrandModal = (brand: Brand) => {
@@ -295,7 +312,9 @@ export default function CelebrityProfile() {
               <div className="mb-8">
                 <h2 className="text-gold font-semibold mb-3 uppercase tracking-wider text-sm">Style Notes</h2>
                 <p className="text-light/80">
-                  {celebrity.name}'s signature style features a mix of high-end designer pieces with unique personal touches that showcase their distinctive fashion sense.
+                  {styleLoading
+                    ? 'Analyzing style…'
+                    : (styleAnalysis ?? `${celebrity.name}'s signature style features a mix of high-end designer pieces with unique personal touches that showcase their distinctive fashion sense.`)}
                 </p>
               </div>
             </div>

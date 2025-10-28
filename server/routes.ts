@@ -665,6 +665,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
+      // If user has a celebrity profile, sync styleNotes to the celebrity record
+      try {
+        const celebrity = await storage.getCelebrityByUserId(userId);
+        if (celebrity && typeof profileData.styleNotes !== 'undefined') {
+          const merged = {
+            ...celebrity,
+            styleNotes: profileData.styleNotes ?? celebrity.styleNotes ?? null
+          };
+          const validatedCelebrity = insertCelebritySchema.parse(merged);
+          await storage.updateCelebrity(celebrity.id, validatedCelebrity);
+        }
+      } catch (celebSyncError) {
+        console.error('Failed to sync styleNotes to celebrity profile:', celebSyncError);
+        // Do not fail the entire request if celebrity sync fails
+      }
+
       // Log user activity for profile update
       try {
         await storage.logUserActivity({
@@ -2039,7 +2055,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isActive: true,
           isElite: false,
           managerInfo: null,
-          stylingDetails: null
+          stylingDetails: null,
+          styleNotes: null
         });
       }
 

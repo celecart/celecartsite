@@ -20,7 +20,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package } from "lucide-react";
 
 interface User {
   id: number;
@@ -179,6 +179,13 @@ export default function AdminDashboard() {
                   <span>Celebrities</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              // Add Products link for CRUD page
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/products')} tooltip="Products">
+                  <Package />
+                  <span>Products</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
                   <CreditCard />
@@ -270,9 +277,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="flex gap-2">
               <Button onClick={() => setLocation('/admin/users')} className="gap-2"><Users className="h-4 w-4" /> Manage Users</Button>
--              <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
-+              <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
-+              <Button onClick={() => setLocation('/admin/categories')} variant="outline" className="gap-2"><Tags className="h-4 w-4" /> Manage Categories</Button>
+              <Button onClick={() => setLocation('/admin/roles')} variant="outline" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage Roles</Button>
+              <Button onClick={() => setLocation('/admin/categories')} variant="outline" className="gap-2"><Tags className="h-4 w-4" /> Manage Categories</Button>
             </CardContent>
           </Card>
         </div>

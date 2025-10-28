@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star, CreditCard } from "lucide-react";
 import UserActivityFeed from "@/components/UserActivityFeed";
+import { Package } from "lucide-react";
 
 interface User {
   id: number;
@@ -227,6 +228,18 @@ export default function AdminUserActivities() {
                   <Star />
                   <span>Celebrities</span>
                 </SidebarMenuButton>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                    <Package />
+                    <span>Products</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                    <CreditCard />
+                    <span>Plans</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">

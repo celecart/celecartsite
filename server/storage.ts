@@ -790,8 +790,8 @@ export class MemStorage implements IStorage {
 
       managerInfo,
 
-      stylingDetails
-
+      stylingDetails,
+      styleNotes: insertCelebrity.styleNotes ?? null
     };
 
     
@@ -894,8 +894,8 @@ export class MemStorage implements IStorage {
 
       managerInfo,
 
-      stylingDetails
-
+      stylingDetails,
+      styleNotes: insertCelebrity.styleNotes ?? null
     };
 
     
@@ -994,8 +994,8 @@ export class MemStorage implements IStorage {
 
       managerInfo,
 
-      stylingDetails
-
+      stylingDetails,
+      styleNotes: insertCelebrity.styleNotes ?? null
     };
 
     
@@ -1879,7 +1879,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     }));
   }
 
@@ -1898,7 +1899,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     };
   }
 
@@ -1917,7 +1919,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     };
   }
 
@@ -1934,7 +1937,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     }));
   }
 
@@ -1949,7 +1953,8 @@ export class PgStorage implements IStorage {
       isActive: celebrity.isActive ?? true,
       isElite: celebrity.isElite ?? false,
       managerInfo: celebrity.managerInfo,
-      stylingDetails: celebrity.stylingDetails
+      stylingDetails: celebrity.stylingDetails,
+      styleNotes: celebrity.styleNotes ?? null
     }).returning();
     
     const row = rows[0];
@@ -1964,7 +1969,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     };
   }
 
@@ -1986,7 +1992,8 @@ export class PgStorage implements IStorage {
       isActive: celebrity.isActive ?? true,
       isElite: celebrity.isElite ?? false,
       managerInfo: celebrity.managerInfo,
-      stylingDetails: celebrity.stylingDetails
+      stylingDetails: celebrity.stylingDetails,
+      styleNotes: celebrity.styleNotes ?? null
     }).returning();
     
     const row = rows[0];
@@ -2001,7 +2008,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     };
   }
 
@@ -2017,8 +2025,9 @@ export class PgStorage implements IStorage {
         isActive: celebrity.isActive,
         isElite: celebrity.isElite,
         managerInfo: celebrity.managerInfo,
-        stylingDetails: celebrity.stylingDetails
-      })
+        stylingDetails: celebrity.stylingDetails,
+        styleNotes: celebrity.styleNotes ?? null
+    })
       .where(eq(celebrities.id, id))
       .returning();
     
@@ -2035,7 +2044,8 @@ export class PgStorage implements IStorage {
       isActive: row.isActive,
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
-      stylingDetails: row.stylingDetails as any
+      stylingDetails: row.stylingDetails as any,
+      styleNotes: row.styleNotes
     };
   }
 
@@ -2724,5 +2734,6 @@ export class PgStorage implements IStorage {
     }
   }
 }
+
 
 

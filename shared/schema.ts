@@ -12,6 +12,7 @@ export const celebrities = pgTable("celebrities", {
   category: text("category").notNull(), // e.g., "Red Carpet", "Street Style", etc.
   isActive: boolean("is_active").default(true).notNull(), // Active/Inactive status
   isElite: boolean("is_elite").default(false).notNull(), // Premium/Elite profile status
+  styleNotes: text("style_notes"),
   managerInfo: jsonb("manager_info").$type<{
     name: string;
     agency: string;
@@ -52,6 +53,7 @@ export const insertCelebritySchema = createInsertSchema(celebrities).pick({
   category: true,
   isActive: true,
   isElite: true,
+  styleNotes: true,
   managerInfo: true,
   stylingDetails: true,
 });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -59,6 +60,43 @@ export default function AdminProducts() {
     isFeatured: false,
     imageUrls: [] as string[],
   });
+
+  // Preview metadata (dimensions + file size)
+  const [imageMeta, setImageMeta] = useState<Record<string, { width: number; height: number; size?: string }>>({});
+
+  const formatBytes = (bytes: number) => {
+    const units = ['B','KB','MB','GB'];
+    let i = 0; let val = bytes;
+    while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+    return `${val.toFixed(val >= 100 ? 0 : 1)} ${units[i]}`;
+  };
+
+  const loadImageMeta = async (url: string): Promise<{ width: number; height: number; size?: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = async () => {
+        let size: string | undefined;
+        try {
+          const res = await fetch(url, { method: 'HEAD' });
+          const len = res.headers.get('content-length');
+          if (len) size = formatBytes(Number(len));
+        } catch {}
+        resolve({ width: img.naturalWidth, height: img.naturalHeight, size });
+      };
+      img.onerror = () => resolve({ width: 0, height: 0 });
+      img.src = url;
+    });
+  };
+
+  useEffect(() => {
+    const missing = form.imageUrls.filter((url: string) => !imageMeta[url]);
+    if (missing.length > 0) {
+      missing.forEach(async (url: string) => {
+        const meta = await loadImageMeta(url);
+        setImageMeta((prev) => ({ ...prev, [url]: meta }));
+      });
+    }
+  }, [form.imageUrls]);
 
   const loadUser = async () => {
     try {
@@ -147,6 +185,21 @@ export default function AdminProducts() {
     } catch (e) {
       toast({ title: "Upload error", description: "Images failed to upload", variant: "destructive" });
     }
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((prev: any) => {
+      const nextUrls = [...prev.imageUrls];
+      const [removed] = nextUrls.splice(idx, 1);
+      if (removed) {
+        setImageMeta((m) => {
+          const n = { ...m };
+          delete n[removed];
+          return n;
+        });
+      }
+      return { ...prev, imageUrls: nextUrls };
+    });
   };
 
   const saveProduct = async () => {
@@ -291,37 +344,74 @@ export default function AdminProducts() {
               <CardHeader>
                 <CardTitle>Products</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Table>
+              <CardContent className="overflow-x-auto">
+                <Table className="table-fixed">
+                  <colgroup>
+                    <col style={{ width: '4rem' }} />
+                    <col style={{ width: '45%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '9%' }} />
+                    <col style={{ width: '9%' }} />
+                  </colgroup>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Celebrity</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell>{celebName(p.celebrityId)}</TableCell>
-                        <TableCell>{p.category}</TableCell>
-                        <TableCell>{p.price || '—'}</TableCell>
-                        <TableCell>{p.rating ?? '—'}</TableCell>
-                        <TableCell>
-                          {p.isActive ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => deleteProduct(p.id)}><Trash2 className="h-4 w-4" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                  <TableHead className="w-16 whitespace-nowrap">Thumbnail</TableHead>
+                   <TableHead className="w-[45%] whitespace-nowrap">Name</TableHead>
+                   <TableHead>Celebrity</TableHead>
+                   <TableHead>Category</TableHead>
+                   <TableHead>Price</TableHead>
+                   <TableHead>Rating</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead className="text-right">Actions</TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {products.map((p) => (
+                   <TableRow key={p.id}>
+                    <TableCell className="w-16">
+                      {(() => {
+                        let raw = (p as any).imageUrl as any;
+                        // Support imageUrl being a JSON string array or array
+                        let url: string | undefined;
+                        try {
+                          if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+                            const parsed = JSON.parse(raw);
+                            if (Array.isArray(parsed) && parsed.length > 0) url = parsed[0];
+                          }
+                        } catch {}
+                        if (!url) {
+                          url = Array.isArray(raw) ? raw[0] : raw;
+                        }
+                        return url ? (
+                          <FallbackImage
+                            src={url}
+                            alt="Product"
+                            fallbackSrc="/assets/product-placeholder.svg"
+                            className="w-12 h-12 rounded object-cover border border-muted/30 overflow-hidden"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded border border-muted/30 bg-muted/20 flex items-center justify-center text-xs text-muted-foreground">—</div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className="w-[45%] font-medium truncate">{p.name}</TableCell>
+                    <TableCell className="truncate w-[14%]">{celebName(p.celebrityId)}</TableCell>
+                    <TableCell className="truncate w-[18%]">{p.category}</TableCell>
+                    <TableCell>{p.price || '—'}</TableCell>
+                    <TableCell>{p.rating ?? '—'}</TableCell>
+                    <TableCell>
+                       {p.isActive ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Edit className="h-4 w-4" /></Button>
+                       <Button variant="ghost" size="sm" onClick={() => deleteProduct(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </TableCell>
+                  </TableRow>
+                 ))}
+               </TableBody>
                 </Table>
               </CardContent>
             </Card>
@@ -330,7 +420,7 @@ export default function AdminProducts() {
       </SidebarProvider>
     
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Product' : 'Add Product'}</DialogTitle>
           </DialogHeader>
@@ -399,7 +489,37 @@ export default function AdminProducts() {
                 <Upload className="h-4 w-4" />
               </div>
               {form.imageUrls.length > 0 && (
-                <div className="mt-2 text-xs text-muted-foreground">{form.imageUrls.length} image(s) uploaded</div>
+                <>
+                  <div className="mt-2 text-xs text-muted-foreground">{form.imageUrls.length} image(s) uploaded</div>
+                  <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {form.imageUrls.map((url: string, idx: number) => (
+                      <div key={idx} className="relative group overflow-hidden rounded-md border border-muted/30">
+                        <img
+                          src={url}
+                          alt={`Image ${idx + 1}`}
+                          className="w-full h-24 md:h-32 object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                        <div className="absolute bottom-1 left-1 rounded bg-black/60 text-[10px] text-white px-2 py-1">
+                          {imageMeta[url]
+                            ? `${imageMeta[url].width}×${imageMeta[url].height}${imageMeta[url].size ? ` • ${imageMeta[url].size}` : ''}`
+                            : '…'}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+                          onClick={() => removeImage(idx)}
+                          aria-label="Remove image"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                
+                </>
               )}
             </div>
           </div>

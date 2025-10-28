@@ -4,7 +4,7 @@ import passport from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import dotenv from 'dotenv';
-import { verifyDbConnection } from "./db";
+import { verifyDbConnection, pool } from "./db";
 import { storage, setUseDbStorage } from "./storage";
 
 // Load environment variables
@@ -79,6 +79,13 @@ app.use((req, res, next) => {
   if (dbOk) {
     setUseDbStorage(true);
     log('Using Postgres-backed storage');
+    // Ensure required columns exist to avoid runtime SELECT errors
+    try {
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "style_notes" text');
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "user_id" integer');
+    } catch (e) {
+      console.error('Failed to ensure style_notes column:', e);
+    }
   } else {
     setUseDbStorage(false);
     log('Using in-memory storage');

@@ -30,6 +30,7 @@ interface ProfileData {
   twitter: string;
   youtube: string;
   tiktok: string;
+  styleNotes?: string;
 }
 
 interface CelebrityProduct {
@@ -50,6 +51,39 @@ interface CelebrityProduct {
   updatedAt: string;
 }
 
+// Normalize image URL values returned from backend
+// Handles: string, string[], and JSON-stringified arrays
+const normalizeImageUrl = (val: string | string[] | undefined | null): string => {
+  if (!val) return '';
+  let url = '';
+  if (Array.isArray(val)) {
+    url = val[0] || '';
+  } else if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr) && arr.length > 0 && typeof arr[0] === 'string') {
+          url = arr[0];
+        }
+      } catch {
+        url = trimmed;
+      }
+    } else {
+      url = trimmed;
+    }
+  }
+
+  if (!url) return '';
+
+  // Ensure absolute path for server-served uploads
+  if (url.startsWith('/uploads/')) {
+    return `${window.location.origin}${url}`;
+  }
+
+  return url;
+};
+
 export default function Profile() {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +92,7 @@ export default function Profile() {
   const [isCelebrity, setIsCelebrity] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<CelebrityProduct[]>([]);
+  const [celebrityId, setCelebrityId] = useState<number | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<CelebrityProduct | null>(null);
   // Add nested products tab state
@@ -79,7 +114,8 @@ export default function Profile() {
     instagram: '',
     twitter: '',
     youtube: '',
-    tiktok: ''
+    tiktok: '',
+    styleNotes: ''
   });
   const { toast } = useToast();
 
@@ -110,8 +146,12 @@ export default function Profile() {
       // Ensure imageUrl is properly formatted for the backend
       const formattedData = {
         ...productData,
-        celebrityId: user.id
+        celebrityId: celebrityId ?? undefined
       };
+      if (!formattedData.celebrityId) {
+        toast({ title: "Error", description: "Missing celebrity profile. Unable to save product.", variant: "destructive" });
+        return;
+      }
       
       logger.debug('Sending product data to backend:', formattedData);
       
@@ -132,7 +172,7 @@ export default function Profile() {
         setShowAddProduct(false);
         setEditingProduct(null);
         // Refresh products data to ensure we have the latest
-        await loadProducts(user.id);
+        await loadProducts(formattedData.celebrityId as number);
         toast({ title: "Success", description: `Product ${editingProduct ? 'updated' : 'created'} successfully` });
       }
     } catch (error) {
@@ -188,10 +228,7 @@ export default function Profile() {
           const hasCelebrityRole = userRoles.some((ur: any) => ur.roleId === celebrityRole.id);
           setIsCelebrity(hasCelebrityRole);
           
-          // Load products if user is celebrity
-          if (hasCelebrityRole && userId) {
-            loadProducts(userId);
-          }
+          // Product loading will occur after celebrity profile is resolved
         }
         }
       }
@@ -214,8 +251,19 @@ export default function Profile() {
           // Check celebrity role
           if (data.user?.id) {
             await checkCelebrityRole(data.user.id);
-            // Load products for celebrity users
-            await loadProducts(data.user.id);
+            // Load celebrity profile to prefill style notes
+            try {
+              const celebRes = await fetch(`/api/celebrities/${data.user.id}`, { credentials: 'include' });
+              if (celebRes.ok) {
+                const celeb = await celebRes.json();
+                setCelebrityId(celeb.id);
+                // Load products for celebrity users using real celebrity ID
+                await loadProducts(celeb.id);
+                setProfileData(prev => ({ ...prev, styleNotes: celeb.styleNotes || '' }));
+              }
+            } catch (err) {
+              // Ignore celeb fetch errors
+            }
           }
           
           // Initialize profile data with user data
@@ -232,7 +280,8 @@ export default function Profile() {
             instagram: data.user.instagram || '',
             twitter: data.user.twitter || '',
             youtube: data.user.youtube || '',
-            tiktok: data.user.tiktok || ''
+            tiktok: data.user.tiktok || '',
+            styleNotes: ''
           });
         } else {
           setUser(null);
@@ -276,8 +325,18 @@ export default function Profile() {
           instagram: updatedUser.instagram || '',
           twitter: updatedUser.twitter || '',
           youtube: updatedUser.youtube || '',
-          tiktok: updatedUser.tiktok || ''
+          tiktok: updatedUser.tiktok || '',
+          styleNotes: profileData.styleNotes || ''
         });
+        // Refresh celebrity profile to reflect updated style notes
+        try {
+          const celebRes = await fetch(`/api/celebrities/${user.id}`, { credentials: 'include' });
+          if (celebRes.ok) {
+            await celebRes.json();
+          }
+        } catch (err) {
+          // Ignore celeb refresh errors
+        }
         
         setIsEditing(false);
         toast({
@@ -318,7 +377,8 @@ export default function Profile() {
       instagram: user.instagram || '',
       twitter: user.twitter || '',
       youtube: user.youtube || '',
-      tiktok: user.tiktok || ''
+      tiktok: user.tiktok || '',
+      styleNotes: profileData.styleNotes || ''
     });
     setIsEditing(false);
   };
@@ -574,6 +634,21 @@ export default function Profile() {
                           <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{user.description || '—'}</div>
                         )}
                       </div>
+
+                      <div>
+                        <Label className="text-white/70">Style Notes</Label>
+                        {isEditing ? (
+                          <Textarea
+                            value={profileData.styleNotes || ''}
+                            onChange={(e) => setProfileData({ ...profileData, styleNotes: e.target.value })}
+                            placeholder="Your personal stylist notes, preferences, and guidance"
+                            rows={4}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        ) : (
+                          <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{profileData.styleNotes || '—'}</div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -731,13 +806,13 @@ export default function Profile() {
                                                     {product.imageUrl.slice(0, 2).map((url, index) => (
                                                       <img
                                                         key={index}
-                                                        src={url}
+                                                        src={normalizeImageUrl(url)}
                                                         alt={`${product.name} ${index + 1}`}
                                                         className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
                                                         onError={(e) => {
                                                           const target = e.target as HTMLImageElement;
                                                           target.onerror = null;
-                                                          target.src = "/placeholder-celebrity.jpg";
+                                                          target.src = "/assets/product-placeholder.svg";
                                                         }}
                                                       />
                                                     ))}
@@ -749,13 +824,13 @@ export default function Profile() {
                                                   </div>
                                                 ) : (
                                                   <img
-                                                    src={product.imageUrl as string}
+                                                    src={normalizeImageUrl(product.imageUrl as string)}
                                                     alt={product.name}
                                                     className="w-full h-full object-cover"
                                                     onError={(e) => {
                                                       const target = e.target as HTMLImageElement;
                                                       target.onerror = null;
-                                                      target.src = "/placeholder-celebrity.jpg";
+                                                      target.src = "/assets/product-placeholder.svg";
                                                     }}
                                                   />
                                                 )
@@ -839,13 +914,13 @@ export default function Profile() {
                                                     {product.imageUrl.slice(0, 2).map((url, index) => (
                                                       <img
                                                         key={index}
-                                                        src={url}
+                                                        src={normalizeImageUrl(url)}
                                                         alt={`${product.name} ${index + 1}`}
                                                         className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
                                                         onError={(e) => {
                                                           const target = e.target as HTMLImageElement;
                                                           target.onerror = null;
-                                                          target.src = "/placeholder-celebrity.jpg";
+                                                          target.src = "/assets/product-placeholder.svg";
                                                         }}
                                                       />
                                                     ))}
@@ -857,13 +932,13 @@ export default function Profile() {
                                                   </div>
                                                 ) : (
                                                   <img
-                                                    src={product.imageUrl as string}
+                                                    src={normalizeImageUrl(product.imageUrl as string)}
                                                     alt={product.name}
                                                     className="w-full h-full object-cover"
                                                     onError={(e) => {
                                                       const target = e.target as HTMLImageElement;
                                                       target.onerror = null;
-                                                      target.src = "/placeholder-celebrity.jpg";
+                                                      target.src = "/assets/product-placeholder.svg";
                                                     }}
                                                   />
                                                 )
@@ -954,13 +1029,13 @@ export default function Profile() {
                                                     {product.imageUrl.slice(0, 2).map((url, index) => (
                                                       <img
                                                         key={index}
-                                                        src={url}
+                                                        src={normalizeImageUrl(url)}
                                                         alt={`${product.name} ${index + 1}`}
                                                         className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
                                                         onError={(e) => {
                                                           const target = e.target as HTMLImageElement;
                                                           target.onerror = null;
-                                                          target.src = "/placeholder-celebrity.jpg";
+                                                          target.src = "/assets/product-placeholder.svg";
                                                         }}
                                                       />
                                                     ))}
@@ -972,13 +1047,13 @@ export default function Profile() {
                                                   </div>
                                                 ) : (
                                                   <img
-                                                    src={product.imageUrl as string}
+                                                    src={normalizeImageUrl(product.imageUrl as string)}
                                                     alt={product.name}
                                                     className="w-full h-full object-cover"
                                                     onError={(e) => {
                                                       const target = e.target as HTMLImageElement;
                                                       target.onerror = null;
-                                                      target.src = "/placeholder-celebrity.jpg";
+                                                      target.src = "/assets/product-placeholder.svg";
                                                     }}
                                                   />
                                                 )
@@ -1066,7 +1141,7 @@ export default function Profile() {
                     </Button>
                   </Link>
                   {isCelebrity && (
-                    <Link href={`/celebrity/${user.id}`}>
+                    <Link href={celebrityId ? `/celebrity/${celebrityId}` : `/celebrity/${user.id}`}>
                       <Button className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
                         View Public Profile
                       </Button>
