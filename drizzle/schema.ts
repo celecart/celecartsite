@@ -205,6 +205,13 @@ export const users = pgTable("users", {
 	firstName: text("first_name"),
 	lastName: text("last_name"),
 	phone: text(),
+\tprofession: text(),
+\tdescription: text(),
+\tcategory: text(),
+\tinstagram: text(),
+\ttwitter: text(),
+\tyoutube: text(),
+\ttiktok: text(),
 	accountStatus: text("account_status").default('Active').notNull(),
 	source: text().default('local').notNull(),
 	resetToken: text("reset_token"),
@@ -218,3 +225,4 @@ export const users = pgTable("users", {
 	check("users_account_status_not_null", sql`NOT NULL account_status`),
 	check("users_source_not_null", sql`NOT NULL source`),
 ]);
+

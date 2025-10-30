@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Plus, Edit, Trash2, Upload, X, Star, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package } from "lucide-react";
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -453,19 +453,19 @@ export default function AdminPlans() {
                   <Star />
                   <span>Celebrities</span>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
-                  <FileText />
-                  <span>Content</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                  <CreditCard />
-                  <span>Plans</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                    <Package />
+                    <span>Products</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={true} tooltip="Plans">
+                    <CreditCard />
+                    <span>Plans</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
                   <Settings />

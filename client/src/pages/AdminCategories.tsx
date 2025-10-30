@@ -24,6 +24,7 @@ import {
 import { LayoutDashboard, Users, ShieldCheck, Settings, Moon, Sun, Tags, Trash2, Pencil, CreditCard, Star, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Package } from "lucide-react";
 
 interface Category {
   id: number;
@@ -219,6 +220,18 @@ export default function AdminCategories() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
                   <Star />
                   <span>Celebrities</span>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                    <Package />
+                    <span>Products</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/products')} tooltip="Products">
+                  <Package />
+                  <span>Products</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

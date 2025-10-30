@@ -108,7 +108,7 @@ export default function CelebritySignUp() {
       formData.append("accountStatus", "Pending Verification");
       if (profileFile) formData.append("profilePicture", profileFile);
 
-      const signupRes = await fetch("/auth/signup", { method: "POST", body: formData });
+      const signupRes = await fetch("/auth/signup", { method: "POST", body: formData, credentials: "include" });
       if (!signupRes.ok) {
         const errorData = await signupRes.json().catch(() => ({ message: "Signup failed" }));
         toast({ title: "Signup failed", description: errorData.message || "Please check your information and try again.", variant: "destructive" });
@@ -138,9 +138,10 @@ export default function CelebritySignUp() {
         stylingDetails: null,
       };
 
-      const celebRes = await fetch("/api/celebrities", {
+      const celebRes = await fetch("/api/my/celebrity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(celebrityPayload),
       });
       if (!celebRes.ok) {

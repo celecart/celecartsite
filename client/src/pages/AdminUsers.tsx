@@ -21,7 +21,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, Activity, ExternalLink, CreditCard, Star, Edit, Trash2, Eye, EyeOff, Upload } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, Activity, ExternalLink, CreditCard, Star, Edit, Trash2, Eye, EyeOff, Upload, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
@@ -487,29 +487,36 @@ export default function AdminUsers() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
-                  <FileText />
-                  <span>Content</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                   <Tags />
                   <span>Categories</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
+                <SidebarMenuButton onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
                   <Star />
                   <span>Celebrities</span>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                  <CreditCard />
-                  <span>Plans</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                    <Package />
+                    <span>Products</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
+                    <FileText />
+                    <span>Content</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/plans')} tooltip="Plans">
+                    <CreditCard />
+                    <span>Plans</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
                   <Settings />
@@ -642,17 +649,17 @@ export default function AdminUsers() {
                         <TableCell>
                           <Badge
                             variant={
-                              u.roles && u.roles.length > 0 && u.roles.some(role => role.name === "Celebrity")
+                              u.roles && u.roles.length > 0 && u.roles.some(role => role.name?.toLowerCase() === "celebrity")
                                 ? "default"
                                 : "secondary"
                             }
                             className={`px-2 py-1 rounded-full ${
-                              u.roles && u.roles.length > 0 && u.roles.some(role => role.name === "Celebrity")
+                              u.roles && u.roles.length > 0 && u.roles.some(role => role.name?.toLowerCase() === "celebrity")
                                 ? "bg-purple-600 hover:bg-purple-700 text-white"
                                 : "bg-gray-200 text-gray-700"
                             }`}
                           >
-                            {u.roles && u.roles.length > 0 && u.roles.some(role => role.name === "Celebrity") 
+                            {u.roles && u.roles.length > 0 && u.roles.some(role => role.name?.toLowerCase() === "celebrity") 
                               ? "Approved Celebrity" 
                               : "Not Celebrity"}
                           </Badge>
@@ -662,7 +669,7 @@ export default function AdminUsers() {
                             <Button size="sm" variant="outline" onClick={() => openEditDialog(u)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {u.accountStatus === "Pending Verification" && (
+                            {!(u.roles && u.roles.length > 0 && u.roles.some(role => role.name?.toLowerCase() === "celebrity")) && (
                               <Button 
                                 size="sm" 
                                 variant="default" 

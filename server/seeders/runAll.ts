@@ -4,11 +4,14 @@ import { seedBrands } from './brands';
 import { seedCategories } from './categories';
 import { seedCelebrityProducts } from './celebrity_products';
 import { seedBlogs } from './blogs';
+import { seedRolesAndUsers } from './roles_users';
 
 dotenv.config();
 
 async function runAll() {
   console.log('🌱 Running module seeders...');
+  // Seed roles and users first so other data can link to them
+  await seedRolesAndUsers();
   await seedCategories();
   await seedCelebrities();
   await seedBrands();

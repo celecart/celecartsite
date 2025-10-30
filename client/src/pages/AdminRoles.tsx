@@ -47,6 +47,7 @@ import {
   Grid,
   List
 } from "lucide-react";
+import { Package } from "lucide-react";
 
 interface User {
   id: number;
@@ -480,6 +481,12 @@ export default function AdminRoles() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                    <Package />
+                    <span>Products</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => setLocation('/admin')} tooltip="Content">
                     <FileText />
                     <span>Content</span>
@@ -489,6 +496,12 @@ export default function AdminRoles() {
                   <SidebarMenuButton onClick={() => setLocation('/admin/plans')} tooltip="Plans">
                     <CreditCard />
                     <span>Plans</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin')} tooltip="Settings">
+                    <Settings />
+                    <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

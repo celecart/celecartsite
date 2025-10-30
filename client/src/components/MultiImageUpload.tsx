@@ -18,6 +18,8 @@ interface MultiImageUploadProps {
   onImagesChange: (imageUrls: string[]) => void;
   initialImages?: string[];
   maxFiles?: number;
+  minFiles?: number;
+  sizeLimitMB?: number;
   disabled?: boolean;
 }
 
@@ -25,6 +27,8 @@ export default function MultiImageUpload({
   onImagesChange, 
   initialImages = [], 
   maxFiles = 10,
+  minFiles = 1,
+  sizeLimitMB = 10,
   disabled = false 
 }: MultiImageUploadProps) {
   const [imageFiles, setImageFiles] = useState<ImageFile[]>(() => {
@@ -64,6 +68,14 @@ export default function MultiImageUpload({
         });
         return null;
       }
+      if (file.size > sizeLimitMB * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `Each image must be ≤ ${sizeLimitMB}MB`,
+          variant: "destructive"
+        });
+        return null;
+      }
       
       return {
         file,
@@ -75,11 +87,21 @@ export default function MultiImageUpload({
 
     setImageFiles(prev => {
       const updated = [...prev, ...newImageFiles];
-      // Automatically upload the new images
-      setTimeout(() => uploadNewImages(newImageFiles), 100);
+      // Automatically upload only when meeting min image count
+      setTimeout(() => {
+        if (newImageFiles.length >= minFiles) {
+          uploadNewImages(newImageFiles);
+        } else if (newImageFiles.length > 0) {
+          toast({
+            title: "Need more images",
+            description: `Please select at least ${minFiles} ${minFiles === 1 ? 'image' : 'images'} to upload together.`,
+            variant: "destructive"
+          });
+        }
+      }, 100);
       return updated;
     });
-  }, [imageFiles.length, maxFiles, disabled, toast]);
+  }, [imageFiles.length, maxFiles, minFiles, sizeLimitMB, disabled, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -87,11 +109,20 @@ export default function MultiImageUpload({
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
     multiple: true,
+    maxSize: sizeLimitMB * 1024 * 1024,
     disabled
   });
 
   const uploadNewImages = async (filesToUpload: ImageFile[]) => {
     if (filesToUpload.length === 0) return;
+    if (filesToUpload.length < minFiles) {
+      toast({
+        title: "Select more images",
+        description: `Upload at least ${minFiles} ${minFiles === 1 ? 'image' : 'images'} at once (max ${maxFiles}).`,
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Mark files as uploading
     setImageFiles(prev => prev.map(img => 
@@ -110,7 +141,8 @@ export default function MultiImageUpload({
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const text = await response.text().catch(() => '');
+        throw new Error(text || 'Upload failed');
       }
 
       const result = await response.json();
@@ -155,7 +187,7 @@ export default function MultiImageUpload({
 
       toast({
         title: "Upload failed",
-        description: "Failed to upload images. Please try again.",
+        description: "Ensure you select 2–3 images and each ≤ 10MB.",
         variant: "destructive"
       });
     }
@@ -165,6 +197,14 @@ export default function MultiImageUpload({
     const filesToUpload = imageFiles.filter(img => !img.uploaded && !img.uploading);
     
     if (filesToUpload.length === 0) return;
+    if (filesToUpload.length < minFiles) {
+      toast({
+        title: "Need more images",
+        description: `Please select at least ${minFiles} ${minFiles === 1 ? 'image' : 'images'} to upload together.`,
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Mark files as uploading
     setImageFiles(prev => prev.map(img => 
@@ -183,7 +223,8 @@ export default function MultiImageUpload({
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const text = await response.text().catch(() => '');
+        throw new Error(text || 'Upload failed');
       }
 
       const result = await response.json();
@@ -228,7 +269,7 @@ export default function MultiImageUpload({
 
       toast({
         title: "Upload failed",
-        description: "Failed to upload images. Please try again.",
+        description: "Ensure you select 2–3 images and each ≤ 10MB.",
         variant: "destructive"
       });
     }

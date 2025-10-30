@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Celebrity } from "@shared/schema";
@@ -150,12 +150,29 @@ export default function Celebrities() {
               <Link href={`/celebrity/${celebrity.id}`}>
                 <Card className="bg-gray-800/50 border-gray-700 hover:border-purple-500/50 transition-colors duration-200 cursor-pointer group overflow-hidden">
                   <div className="relative overflow-hidden">
-                    <FallbackImage
-                      src={celebrity.imageUrl}
-                      alt={celebrity.name}
-                      className="w-full h-64 object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                      fallbackSrc="/placeholder-celebrity.jpg"
-                    />
+                    {(() => {
+                      const slug = celebrity.name.toLowerCase().replace(/\s+/g, '-');
+                      const primary = `/assets/${slug}/profile.jpg`;
+                      const backups = [
+                        `/assets/${slug}/profile.png`,
+                        `/assets/${slug}.jpg`,
+                        `/assets/${slug}.png`,
+                        `/assets/celebrities/${slug}.jpg`,
+                        `/assets/celebrities/${slug}.png`,
+                        `/assets/profiles/${slug}.jpg`,
+                        `/assets/profiles/${slug}.png`,
+                        celebrity.imageUrl,
+                      ];
+                      return (
+                        <FallbackImage
+                          src={primary}
+                          backupSrc={backups}
+                          alt={celebrity.name}
+                          className="w-full h-64 object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                          fallbackSrc="/assets/placeholder-celebrity.svg"
+                        />
+                      );
+                    })()}
                     
                     {/* Elite Badge */}
                     {celebrity.isElite && (

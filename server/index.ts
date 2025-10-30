@@ -4,7 +4,7 @@ import passport from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import dotenv from 'dotenv';
-import { verifyDbConnection } from "./db";
+import { verifyDbConnection, pool } from "./db";
 import { storage, setUseDbStorage } from "./storage";
 
 // Load environment variables
@@ -86,6 +86,22 @@ app.use((req, res, next) => {
   if (dbOk) {
     setUseDbStorage(true);
     log('Using Postgres-backed storage');
+    // Ensure required columns exist to avoid runtime SELECT errors
+    try {
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "style_notes" text');
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "brands_worn" text');
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "user_id" integer');
+      // Ensure new user social/professional columns exist
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profession" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "description" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "category" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "instagram" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "twitter" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "youtube" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "tiktok" text');
+    } catch (e) {
+      console.error('Failed to ensure style_notes column:', e);
+    }
   } else {
     setUseDbStorage(false);
     log('Using in-memory storage');
@@ -175,3 +191,4 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+

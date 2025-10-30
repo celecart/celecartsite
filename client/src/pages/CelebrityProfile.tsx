@@ -10,16 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus, Package, ExternalLink, MapPin } from "lucide-react";
+import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus,  ExternalLink, MapPin, Instagram, Twitter, Youtube, Music2 } from "lucide-react";
 import FashionStyleEpisodes from "@/components/FashionStyleEpisodes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BrandModal from "@/components/BrandModal";
 import BrandImage from "@/components/BrandImage";
 import { toast } from "@/hooks/use-toast";
-import SignatureEquipment from "@/components/SignatureEquipment";
-import ApparelAccessories from "@/components/ApparelAccessories";
-import CelebrityProducts from "@/components/CelebrityProducts";
-
 import OccasionPricing from "@/components/OccasionPricing";
 import StylingDetails from "@/components/StylingDetails";
 
@@ -81,6 +77,7 @@ export default function CelebrityProfile() {
   const celebrityId = params?.id ? parseInt(params.id) : 0;
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   // Allow deep linking to a specific tab via query string or hash
   const initialTabFromUrl = new URLSearchParams(window.location.search).get('tab') || (window.location.hash ? window.location.hash.slice(1) : null);
@@ -98,15 +95,150 @@ export default function CelebrityProfile() {
     enabled: !!celebrityId,
   });
 
-  const { data: celebrityBrands, isLoading: brandsLoading } = useQuery<CelebrityBrandWithDetails[]>({
-    queryKey: ["/api/celebritybrands", celebrityId],
+  // Prefer the resolved celebrity.id from API; fall back to route param
+  const effectiveCelebrityId = celebrity?.id ?? celebrityId;
+
+  // Fetch linked user to display social media links
+  const { data: celebrityUser } = useQuery<any>({
+    queryKey: ["/api/users", celebrity?.userId ?? 0],
     queryFn: async () => {
-      const response = await fetch(`/api/celebritybrands/${celebrityId}`);
+      if (!celebrity?.userId) return null;
+      const response = await fetch(`/api/users/${celebrity.userId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!celebrity?.userId,
+  });
+
+  const toSocialUrl = (platform: "instagram" | "twitter" | "youtube" | "tiktok", value: string) => {
+    if (!value) return "";
+    if (/^https?:\/\//i.test(value)) return value;
+    const handle = value.replace(/^@/, "");
+    switch (platform) {
+      case "instagram":
+        return `https://instagram.com/${handle}`;
+      case "twitter":
+        return `https://twitter.com/${handle}`;
+      case "youtube":
+        return `https://youtube.com/@${handle}`;
+      case "tiktok":
+        return `https://tiktok.com/@${handle}`;
+      default:
+        return value;
+    }
+  };
+
+  const platformStyles = {
+    instagram: {
+      color: "text-pink-400",
+      bg: "bg-pink-500/10",
+      ring: "ring-pink-400/40",
+      Icon: Instagram,
+    },
+    twitter: {
+      color: "text-sky-400",
+      bg: "bg-sky-500/10",
+      ring: "ring-sky-400/40",
+      Icon: Twitter,
+    },
+    youtube: {
+      color: "text-red-500",
+      bg: "bg-red-500/10",
+      ring: "ring-red-500/40",
+      Icon: Youtube,
+    },
+    tiktok: {
+      color: "text-fuchsia-400",
+      bg: "bg-fuchsia-500/10",
+      ring: "ring-fuchsia-400/40",
+      Icon: Music2,
+    },
+  } as const;
+
+  const SocialBadge = (
+    { platform, value }: { platform: "instagram" | "twitter" | "youtube" | "tiktok"; value: string }
+  ) => {
+    if (!value) return null;
+    const href = toSocialUrl(platform, value);
+    const label = formatSocialLabel(platform, value);
+    const { Icon, color, bg, ring } = platformStyles[platform];
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${platform} ${label}`}
+        title={`${platform} ${label}`}
+        className="inline-flex items-center justify-center p-1 rounded-full hover:bg-white/10 transition"
+      >
+        <span className={`inline-flex items-center justify-center rounded-full ${bg} ${ring} ring-1 w-9 h-9`}>
+          <Icon className={`w-5 h-5 ${color}`} />
+        </span>
+      </a>
+    );
+  };
+
+  const formatSocialLabel = (
+    platform: "instagram" | "twitter" | "youtube" | "tiktok",
+    value: string
+  ) => {
+    if (!value) return "";
+    // If a handle or simple string, normalize to @handle
+    if (!/^https?:\/\//i.test(value)) {
+      const handle = value.replace(/^@/, "");
+      return `@${handle}`;
+    }
+    // For URLs, try to extract a friendly handle; otherwise show platform name
+    try {
+      const url = new URL(value);
+      const path = url.pathname.replace(/^\/+/, "");
+      const parts = path.split("/").filter(Boolean);
+      if (platform === "instagram") {
+        const handle = parts[0];
+        return handle ? `@${handle}` : "Instagram";
+      }
+      if (platform === "twitter") {
+        const handle = parts[0];
+        return handle ? `@${handle}` : "Twitter";
+      }
+      if (platform === "youtube") {
+        const m = path.match(/@([^\/]+)/);
+        return m ? `@${m[1]}` : "YouTube";
+      }
+      if (platform === "tiktok") {
+        const m = path.match(/@([^\/]+)/);
+        const handle = m ? m[1] : parts[0];
+        return handle ? `@${handle}` : "TikTok";
+      }
+      return value;
+    } catch {
+      return value;
+    }
+  };
+
+  const { data: celebrityBrands, isLoading: brandsLoading } = useQuery<CelebrityBrandWithDetails[]>({
+    queryKey: ["/api/celebritybrands", effectiveCelebrityId],
+    queryFn: async () => {
+      const response = await fetch(`/api/celebritybrands/${effectiveCelebrityId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch celebrity brands data');
       }
       const data = await response.json();
       return data;
+    },
+    enabled: !!effectiveCelebrityId,
+  });
+
+  // AI style analysis for Style Notes
+  const { data: styleAnalysis, isLoading: styleLoading } = useQuery<string>({
+    queryKey: ["/api/ai/style-analysis", celebrityId],
+    queryFn: async () => {
+      const response = await fetch(`/api/ai/style-analysis/${celebrityId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch style analysis');
+      }
+      const json = await response.json();
+      return json.analysis as string;
     },
     enabled: !!celebrityId,
   });
@@ -131,16 +263,34 @@ export default function CelebrityProfile() {
   }
 
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery<CelebrityProduct[]>({
-    queryKey: ['celebrity-products', celebrityId],
+    queryKey: ['celebrity-products', effectiveCelebrityId],
     queryFn: async () => {
-      const res = await fetch(`/api/celebrity-products?celebrityId=${celebrityId}`, {
+      const res = await fetch(`/api/celebrity-products?celebrityId=${effectiveCelebrityId}`, {
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to fetch products');
       return res.json() as CelebrityProduct[];
     },
-    enabled: !!celebrityId,
+    enabled: !!effectiveCelebrityId,
   });
+
+  // Load the currently logged-in user for personalized headings
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/auth/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.user);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleOpenBrandModal = (brand: Brand) => {
     setSelectedBrand(brand);
@@ -221,9 +371,10 @@ export default function CelebrityProfile() {
             <div className="md:w-1/2">
               <div className="aspect-[3/4] overflow-hidden rounded-lg relative max-w-[400px] mx-auto">
                 <FallbackImage 
-                  src={celebrity.imageUrl} 
+                  src={celebrity.imageUrl || ""} 
+                  backupSrc={celebrityUser?.profilePicture || celebrityUser?.imageUrl || undefined}
                   alt={`${celebrity.name} fashion`}
-                  fallbackSrc="/assets/celebrity-placeholder.jpg"
+                  fallbackSrc="/assets/product-placeholder.svg"
                   fallbackText={celebrity.name}
                   className="w-full h-full"
                   imgClassName="w-full h-full object-cover"
@@ -274,6 +425,26 @@ export default function CelebrityProfile() {
                 <h2 className="text-gold font-semibold mb-3 uppercase tracking-wider text-sm">About</h2>
                 <p className="text-light/80">{celebrity.description}</p>
               </div>
+
+              {celebrityUser && (celebrityUser.instagram || celebrityUser.twitter || celebrityUser.youtube || celebrityUser.tiktok) && (
+                <div className="mb-8">
+                  <h2 className="text-gold font-semibold mb-3 uppercase tracking-wider text-sm">Social</h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {celebrityUser.instagram && (
+                      <SocialBadge platform="instagram" value={celebrityUser.instagram} />
+                    )}
+                    {celebrityUser.twitter && (
+                      <SocialBadge platform="twitter" value={celebrityUser.twitter} />
+                    )}
+                    {celebrityUser.youtube && (
+                      <SocialBadge platform="youtube" value={celebrityUser.youtube} />
+                    )}
+                    {celebrityUser.tiktok && (
+                      <SocialBadge platform="tiktok" value={celebrityUser.tiktok} />
+                    )}
+                  </div>
+                </div>
+              )}
               
               {!brandsLoading && celebrityBrands && Array.isArray(celebrityBrands) && (
                 <div className="mb-8">
@@ -295,7 +466,9 @@ export default function CelebrityProfile() {
               <div className="mb-8">
                 <h2 className="text-gold font-semibold mb-3 uppercase tracking-wider text-sm">Style Notes</h2>
                 <p className="text-light/80">
-                  {celebrity.name}'s signature style features a mix of high-end designer pieces with unique personal touches that showcase their distinctive fashion sense.
+                  {styleLoading
+                    ? 'Analyzing style…'
+                    : (celebrity.styleNotes ?? styleAnalysis ?? `${celebrity.name}'s signature style features a mix of high-end designer pieces with unique personal touches that showcase their distinctive fashion sense.`)}
                 </p>
               </div>
             </div>
@@ -335,18 +508,7 @@ export default function CelebrityProfile() {
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
                   <ShoppingBag className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
                   <span className="relative z-10 font-medium whitespace-nowrap">Shopping playlist</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="products" 
-                  className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-                  <Package className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
-                  <span className="relative z-10 font-medium whitespace-nowrap">Products</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
+                </TabsTrigger><TabsTrigger 
                   value="media" 
                   className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
                 >
@@ -377,7 +539,12 @@ export default function CelebrityProfile() {
             <TabsContent value="overview" className="mt-6">
               {celebrity.id === 100 ? (
                 <div className="mb-8">
-                  <h3 className="text-3xl font-playfair font-bold mb-8 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">Zulqadar's Favorite Experiences</h3>
+                  <h3 className="text-3xl font-playfair font-bold mb-8 text-center bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">
+                    {(() => {
+                      const disp = (currentUser?.displayName || currentUser?.firstName || currentUser?.username || (currentUser?.email ? currentUser.email.split('@')[0] : '') || '').trim();
+                      return disp ? `${disp}'s Favorite Experiences` : `${celebrity.name}'s Favorite Experiences`;
+                    })()}
+                  </h3>
                   <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 p-8 rounded-lg shadow-md mb-8 border border-amber-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                       {/* Favorite Restaurant */}
@@ -1196,34 +1363,7 @@ export default function CelebrityProfile() {
                 </div>
               ) : null}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-2xl font-bold mb-4">{celebrity.id === 15 ? "Signature Brands" : "Signature Equipment"}</h3>
-                  <p className="text-gray-700 mb-4">
-                    {celebrity.id === 15 
-                      ? `${celebrity.name} is known for her influential brand partnerships and business ventures. Her carefully curated portfolio includes beauty, fashion, and lifestyle brands that reflect her personal aesthetic and entrepreneurial vision.`
-                      : `${celebrity.name} is known for using premium equipment tailored to their precise specifications. Each piece of gear is carefully selected to match their playing style and performance needs.`
-                    }
-                  </p>
-                  
-                  {!brandsLoading && celebrityBrands && Array.isArray(celebrityBrands) && (
-                    <SignatureEquipment items={celebrityBrands} />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold mb-4">{celebrity.id === 15 ? "Luxury & Lifestyle" : "Apparel & Accessories"}</h3>
-                  <p className="text-gray-700 mb-4">
-                    {celebrity.id === 15 
-                      ? `${celebrity.name}'s influence extends beyond fashion into luxury lifestyle categories including fragrances, cosmetics, automobiles, and home decor. Her carefully curated selections reflect her sophisticated aesthetic and trendsetting vision.`
-                      : `Beyond functional equipment, ${celebrity.name}'s personal style is complemented by carefully selected apparel and luxury accessories that enhance their professional image both on and off the court.`
-                    }
-                  </p>
-                  
-                  {!brandsLoading && celebrityBrands && Array.isArray(celebrityBrands) && (
-                    <ApparelAccessories items={celebrityBrands} />
-                  )}
-                </div>
-              </div>
+              
 
               {/* Favourite Products from celebrity products (filtered) */}
               <div className="mt-12">
@@ -1264,7 +1404,7 @@ export default function CelebrityProfile() {
                               {experienceLooks.map((look, index) => {
                                 const purchaseUrl = look.outfit?.purchaseLink || '';
                                 return (
-                                  <div key={index} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                  <div key={index} className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden">
                                     <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                       <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                       <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1274,14 +1414,11 @@ export default function CelebrityProfile() {
                                       <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
                                       <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{look.outfit?.designer}</div>
                                       {look.outfit?.price && (
-                                        <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{look.outfit.price}</Badge></div>
+                                        <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{look.outfit.price}</Badge></div>
                                       )}
-                                      {look.outfit?.details && (
-                                        <p className="text-gray-600 text-sm">{look.outfit.details}</p>
-                                      )}
-                                      <div className="flex gap-3 pt-3">
+                                      <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
                                         {purchaseUrl && (
-                                          <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                          <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
                                             <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
                                           </Button>
                                         )}
@@ -1312,31 +1449,21 @@ export default function CelebrityProfile() {
                                     <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
                                     <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
                                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
-                                    {typeof product.rating === 'number' && product.rating > 0 && (
-                                      <div className="flex items-center gap-1 text-xs">
-                                        {Array.from({length: 5}).map((_, i) => (
-                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
-                                        ))}
-                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
-                                      </div>
-                                    )}
-                                    {product.location && (
+                                    {/* Location hidden per request */}
+                                    {/* {product.location && (
                                       <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
-                                    )}
+                                    )} */}
                                     {product.price && (
-                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{product.price}</Badge></div>
                                     )}
-                                    {product.description && (
-                                      <p className="text-gray-600 text-sm">{product.description}</p>
-                                    )}
-                                    <div className="flex gap-3 pt-3">
+                                    <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
                                       {purchaseUrl && (
-                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                        <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
                                           <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
                                         </Button>
                                       )}
                                       {product.website && (
-                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                        <Button asChild size="sm" variant="outline" className="w-full sm:flex-1 rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
                                           <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
                                         </Button>
                                       )}
@@ -1393,9 +1520,6 @@ export default function CelebrityProfile() {
                                     {look.outfit?.price && (
                                       <div className="mt-1"><Badge className="bg-amber-100 text-amber-700 rounded-full px-2 ring-1 ring-amber-200">{look.outfit.price}</Badge></div>
                                     )}
-                                    {look.outfit?.details && (
-                                      <p className="text-gray-600 text-sm">{look.outfit.details}</p>
-                                    )}
                                     {look.outfit?.purchaseLink && (
                                       <div className="pt-3">
                                         <Button asChild size="sm" className="rounded-full bg-amber-600 hover:bg-amber-700 text-white">
@@ -1428,31 +1552,21 @@ export default function CelebrityProfile() {
                                     <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
                                     <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
                                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
-                                    {typeof product.rating === 'number' && product.rating > 0 && (
-                                      <div className="flex items-center gap-1 text-xs">
-                                        {Array.from({length: 5}).map((_, i) => (
-                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
-                                        ))}
-                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
-                                      </div>
-                                    )}
-                                    {product.location && (
+                                    {/* Location hidden per request */}
+                                    {/* {product.location && (
                                       <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
-                                    )}
+                                    )} */}
                                     {product.price && (
-                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{product.price}</Badge></div>
                                     )}
-                                    {product.description && (
-                                      <p className="text-gray-600 text-sm">{product.description}</p>
-                                    )}
-                                    <div className="flex gap-3 pt-3">
+                                    <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
                                       {purchaseUrl && (
-                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                        <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
                                           <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
                                         </Button>
                                       )}
                                       {product.website && (
-                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                        <Button asChild size="sm" variant="outline" className="w-full sm:flex-1 rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
                                           <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
                                         </Button>
                                       )}
@@ -1505,16 +1619,16 @@ export default function CelebrityProfile() {
                                   <div key={index} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
                                     <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                       <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                      <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-amber-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                      <Sparkles className="absolute top-3 right-3 w-5 h-5 text-amber-400/70 drop-shadow" />
                                     </div>
                                     <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
-                                      <h4 className="text-lg font-playfair font-semibold text-purple-900">{look.occasion}</h4>
-                                      <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                      <h4 className="text-lg font-playfair font-semibold text-amber-900">{look.occasion}</h4>
+                                      <div className="h-1 w-12 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full mb-1"></div>
                                       <div className="text-sm text-gray-600">{look.outfit?.designer || 'Premium Experience'}</div>
                                       {purchaseUrl && (
-                                        <div className="flex gap-3 pt-3">
-                                          <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                        <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
+                                          <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 shadow-md hover:shadow-lg">
                                             <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden">
                                               <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
                                               <ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Explore</span>
@@ -1535,44 +1649,37 @@ export default function CelebrityProfile() {
                               const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                               const purchaseUrl = product.purchaseLink || product.website || '';
                               return (
-                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                <div key={product.id} className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden">
                                   {product.isFeatured ? (
-                                    <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                                    <div className="absolute top-3 left-3"><Badge className="bg-amber-600 text-white">Most Popular</Badge></div>
                                   ) : null}
                                   <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                     <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-amber-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-amber-400/70 drop-shadow" />
                                   </div>
                                   <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
-                                    <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
-                                    <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
-                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
-                                    {typeof product.rating === 'number' && product.rating > 0 && (
-                                      <div className="flex items-center gap-1 text-xs">
-                                        {Array.from({length: 5}).map((_, i) => (
-                                          <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
-                                        ))}
-                                        <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
-                                      </div>
-                                    )}
-                                    {product.location && (
+                                    <h4 className="text-lg font-playfair font-semibold text-amber-900">{product.name}</h4>
+                                    <div className="h-1 w-12 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full mb-1"></div>
+                                    <div className="bg-gradient-to-r from-amber-700 to-yellow-600 bg-clip-text text-transparent font-medium">{product.category}</div>
+                                    {/* Location hidden per request */}
+                                    {/* {product.location && (
                                       <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
-                                    )}
+                                    )} */}
                                     {product.price && (
-                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{product.price}</Badge></div>
                                     )}
-                                    {product.description && (
+                                   {/* {product.description && (
                                       <p className="text-gray-600 text-sm">{product.description}</p>
-                                    )}
-                                    <div className="flex gap-3 pt-3">
+                                    )}*/}
+                                    <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
                                       {purchaseUrl && (
-                                        <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                        <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 shadow-md hover:shadow-lg">
                                           <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
                                         </Button>
                                       )}
                                       {product.website && (
-                                        <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                        <Button asChild size="sm" variant="outline" className="w-full sm:flex-1 rounded-full border-amber-300 text-amber-700 hover:bg-amber-50">
                                           <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
                                         </Button>
                                       )}
@@ -1615,17 +1722,18 @@ export default function CelebrityProfile() {
                             );
                           }
                           return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
                               {luxuryLooks.map((look, index) => (
-                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
                                   <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                     <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover" />
                                   </div>
-                                  <div className="p-4 space-y-2">
-                                    <h4 className="text-lg font-playfair font-semibold">{look.occasion}</h4>
+                                  <div className="p-4 space-y-2 flex flex-col h-full">
+                                    <h4 className="text-lg font-playfair font-semibold line-clamp-2">{look.occasion}</h4>
                                     {look.outfit?.designer && (
-                                      <div className="text-sm text-neutral-600">{look.outfit.designer}</div>
+                                      <div className="text-sm text-neutral-600 line-clamp-1 min-h-[1.25rem]">{look.outfit.designer}</div>
                                     )}
+                                    <div className="mt-auto"></div>
                                   </div>
                                 </div>
                               ))}
@@ -1633,23 +1741,23 @@ export default function CelebrityProfile() {
                           );
                         }
                         return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
                             {luxuryPrefs.map((product) => {
                               const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                               const purchaseUrl = product.purchaseLink || product.website || '';
                               return (
-                                <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
                                   <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                     <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover" />
                                   </div>
-                                  <div className="p-4 space-y-2">
-                                    <h4 className="text-lg font-playfair font-semibold">{product.name}</h4>
-                                    <div className="text-sm text-neutral-600">{product.category}</div>
+                                  <div className="p-4 space-y-2 flex flex-col h-full">
+                                    <h4 className="text-lg font-playfair font-semibold line-clamp-2">{product.name}</h4>
+                                    <div className="text-sm text-neutral-600 line-clamp-1 min-h-[1.25rem]">{product.category}</div>
                                     {product.price && (
-                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{product.price}</Badge></div>
                                     )}
                                     {purchaseUrl && (
-                                      <div className="pt-2">
+                                      <div className="pt-2 mt-auto">
                                         <Button asChild size="sm">
                                           <a href={purchaseUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Buy</a>
                                         </Button>
@@ -1837,58 +1945,48 @@ export default function CelebrityProfile() {
                       );
                     }
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {personalBrandProducts.map((product) => {
                           const img = Array.isArray(product.imageUrl) ? (product.imageUrl[0] || '') : (product.imageUrl || '');
                           const purchaseUrl = product.purchaseLink || product.website || '';
                           return (
-                            <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
-                              {product.isFeatured ? (
-                                <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
-                              ) : null}
-                              <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
-                                <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
-                              </div>
-                              <div className="p-6 space-y-3 bg-white/60 backdrop-blur-md">
-                                <h4 className="text-lg font-playfair font-semibold text-purple-900">{product.name}</h4>
-                                <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
-                                <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">{product.category}</div>
-                                {typeof product.rating === 'number' && product.rating > 0 && (
-                                  <div className="flex items-center gap-1 text-xs">
-                                    {Array.from({length: 5}).map((_, i) => (
-                                      <Star key={i} className={`${i < Math.round(product.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} w-4 h-4`} />
-                                    ))}
-                                    <span className="ml-1 text-purple-700 font-medium">{product.rating?.toFixed(1)}</span>
+                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden flex flex-col">
+                                  {product.isFeatured ? (
+                                    <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
+                                  ) : null}
+                                  <div className="relative aspect-[6/5] bg-neutral-100 overflow-hidden">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    <Sparkles className="absolute top-3 right-3 w-5 h-5 text-purple-400/70 drop-shadow" />
                                   </div>
-                                )}
-                                {product.location && (
-                                  <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
-                                )}
-                                {product.price && (
-                                  <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
-                                )}
-                                {product.description && (
-                                  <p className="text-gray-600 text-sm">{product.description}</p>
-                                )}
-                                <div className="flex gap-3 pt-3">
-                                  {purchaseUrl && (
-                                    <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
-                                      <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
-                                    </Button>
-                                  )}
-                                  {product.website && (
-                                    <Button asChild size="sm" variant="outline" className="rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
-                                      <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
-                                    </Button>
-                                  )}
+                                  <div className="p-3 space-y-2 bg-white/60 backdrop-blur-md">
+                                    <h4 className="text-lg font-playfair font-semibold text-purple-900 line-clamp-2 leading-tight">{product.name}</h4>
+                                    <div className="h-1 w-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-1"></div>
+                                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium line-clamp-1">{product.category}</div>
+                                    {/* Location hidden per request */}
+                                    {/* {product.location && (
+                                      <div className="flex items-center text-xs text-gray-500"><MapPin className="w-3 h-3 mr-1" />{product.location}</div>
+                                    )} */}
+                                    {product.price && (
+                                      <div className="mt-1"><Badge className="bg-emerald-100 text-emerald-700 rounded-full px-2 ring-1 ring-emerald-200">{product.price}</Badge></div>
+                                    )}
+                                    <div className="flex flex-col sm:flex-row items-stretch gap-2 pt-3">
+                                      {purchaseUrl && (
+                                        <Button asChild size="sm" className="w-full sm:flex-1 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-md hover:shadow-lg">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer" className="relative overflow-hidden"><span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span><ExternalLink className="w-4 h-4 mr-1 relative z-10" /> <span className="relative z-10">Shop Now</span></a>
+                                        </Button>
+                                      )}
+                                      {product.website && (
+                                        <Button asChild size="sm" variant="outline" className="w-full sm:flex-1 rounded-full border-purple-300 text-purple-700 hover:bg-purple-50">
+                                          <a href={product.website} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Website</a>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                              );
+                            })}
+                          </div>
                     );
                   })()
                 )}
@@ -2369,12 +2467,7 @@ export default function CelebrityProfile() {
                   </div>
                 </div>
               </div>
-            </TabsContent>
-            
-            <TabsContent value="products" className="mt-6">
-              <CelebrityProducts celebrityId={celebrity.id} />
-            </TabsContent>
-          </Tabs>
+            </TabsContent></Tabs>
         </div>
       </div>
       
