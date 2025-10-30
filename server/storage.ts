@@ -791,7 +791,8 @@ export class MemStorage implements IStorage {
       managerInfo,
 
       stylingDetails,
-      styleNotes: insertCelebrity.styleNotes ?? null
+      styleNotes: insertCelebrity.styleNotes ?? null,
+      brandsWorn: insertCelebrity.brandsWorn ?? null
     };
 
     
@@ -895,7 +896,8 @@ export class MemStorage implements IStorage {
       managerInfo,
 
       stylingDetails,
-      styleNotes: insertCelebrity.styleNotes ?? null
+      styleNotes: insertCelebrity.styleNotes ?? null,
+      brandsWorn: insertCelebrity.brandsWorn ?? null
     };
 
     
@@ -1813,6 +1815,13 @@ export class PgStorage implements IStorage {
       firstName: insertUser.firstName,
       lastName: insertUser.lastName,
       phone: insertUser.phone,
+      profession: (insertUser as any).profession,
+      description: (insertUser as any).description,
+      category: (insertUser as any).category,
+      instagram: (insertUser as any).instagram,
+      twitter: (insertUser as any).twitter,
+      youtube: (insertUser as any).youtube,
+      tiktok: (insertUser as any).tiktok,
       accountStatus: insertUser.accountStatus ?? "Active",
       source: insertUser.source ?? "local",
       resetToken: (insertUser as any).resetToken,
@@ -1954,7 +1963,8 @@ export class PgStorage implements IStorage {
       isElite: celebrity.isElite ?? false,
       managerInfo: celebrity.managerInfo,
       stylingDetails: celebrity.stylingDetails,
-      styleNotes: celebrity.styleNotes ?? null
+      styleNotes: celebrity.styleNotes ?? null,
+      brandsWorn: celebrity.brandsWorn ?? null
     }).returning();
     
     const row = rows[0];
@@ -1970,7 +1980,8 @@ export class PgStorage implements IStorage {
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
       stylingDetails: row.stylingDetails as any,
-      styleNotes: row.styleNotes
+      styleNotes: row.styleNotes,
+      brandsWorn: (row as any).brandsWorn
     };
   }
 
@@ -1993,7 +2004,8 @@ export class PgStorage implements IStorage {
       isElite: celebrity.isElite ?? false,
       managerInfo: celebrity.managerInfo,
       stylingDetails: celebrity.stylingDetails,
-      styleNotes: celebrity.styleNotes ?? null
+      styleNotes: celebrity.styleNotes ?? null,
+      brandsWorn: celebrity.brandsWorn ?? null
     }).returning();
     
     const row = rows[0];
@@ -2009,7 +2021,8 @@ export class PgStorage implements IStorage {
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
       stylingDetails: row.stylingDetails as any,
-      styleNotes: row.styleNotes
+      styleNotes: row.styleNotes,
+      brandsWorn: (row as any).brandsWorn
     };
   }
 
@@ -2026,7 +2039,8 @@ export class PgStorage implements IStorage {
         isElite: celebrity.isElite,
         managerInfo: celebrity.managerInfo,
         stylingDetails: celebrity.stylingDetails,
-        styleNotes: celebrity.styleNotes ?? null
+        styleNotes: celebrity.styleNotes ?? null,
+        brandsWorn: celebrity.brandsWorn ?? null
     })
       .where(eq(celebrities.id, id))
       .returning();
@@ -2045,7 +2059,8 @@ export class PgStorage implements IStorage {
       isElite: row.isElite,
       managerInfo: row.managerInfo as any,
       stylingDetails: row.stylingDetails as any,
-      styleNotes: row.styleNotes
+      styleNotes: row.styleNotes,
+      brandsWorn: (row as any).brandsWorn
     };
   }
 
@@ -2541,18 +2556,16 @@ export class PgStorage implements IStorage {
           let processedImageUrl = product.imageUrl;
           
           // Handle empty array string case first
-          if (typeof product.imageUrl === 'string' && product.imageUrl === '[]') {
-            processedImageUrl = '';
-          }
+          if (typeof product.imageUrl === 'string' && product.imageUrl === '[]') { processedImageUrl = [] as any; }
           // If imageUrl is a JSON string, try to parse it
           else if (typeof product.imageUrl === 'string' && product.imageUrl.startsWith('[')) {
             try {
               const parsedUrls = JSON.parse(product.imageUrl);
               // For display purposes, use the first image URL or empty string if array is empty
-              processedImageUrl = Array.isArray(parsedUrls) && parsedUrls.length > 0 ? parsedUrls[0] : '';
+              processedImageUrl = Array.isArray(parsedUrls) ? parsedUrls : [];
             } catch (e) {
               console.error("Failed to parse imageUrl JSON:", product.imageUrl);
-              processedImageUrl = '';
+              processedImageUrl = [] as any;
             }
           }
           
@@ -2572,12 +2585,60 @@ export class PgStorage implements IStorage {
       // In-memory fallback
       if (celebrityId) {
         const result = Array.from(this.celebrityProducts.values()).filter(product => product.celebrityId === celebrityId);
-        console.log("In-memory filtered result:", result);
-        return result;
+        const processed = result.map((product) => {
+          const raw = product.imageUrl as unknown as string | string[];
+          let urls: string[] = [];
+          if (Array.isArray(raw)) {
+            urls = raw;
+          } else if (typeof raw === 'string') {
+            const trimmed = raw.trim();
+            if (trimmed === '' || trimmed === '[]') {
+              urls = [];
+            } else if (trimmed.startsWith('[')) {
+              try {
+                const parsed = JSON.parse(trimmed);
+                urls = Array.isArray(parsed) ? parsed : [];
+              } catch {
+                urls = [];
+              }
+            } else if (trimmed.includes(',')) {
+              urls = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+            } else {
+              urls = [trimmed];
+            }
+          }
+          return { ...product, imageUrl: urls } as any;
+        });
+        console.log("In-memory filtered result:", processed);
+        return processed as any;
       } else {
         const result = Array.from(this.celebrityProducts.values());
-        console.log("In-memory all products result:", result);
-        return result;
+        const processed = result.map((product) => {
+          const raw = product.imageUrl as unknown as string | string[];
+          let urls: string[] = [];
+          if (Array.isArray(raw)) {
+            urls = raw;
+          } else if (typeof raw === 'string') {
+            const trimmed = raw.trim();
+            if (trimmed === '' || trimmed === '[]') {
+              urls = [];
+            } else if (trimmed.startsWith('[')) {
+              try {
+                const parsed = JSON.parse(trimmed);
+                urls = Array.isArray(parsed) ? parsed : [];
+              } catch {
+                urls = [];
+              }
+            } else if (trimmed.includes(',')) {
+              urls = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+            } else {
+              urls = [trimmed];
+            }
+          }
+          return { ...product, imageUrl: urls } as any;
+        });
+        console.log("In-memory all products result:", processed);
+        return processed as any;
       }
     }
   }
@@ -2595,10 +2656,10 @@ export class PgStorage implements IStorage {
         try {
           const parsedUrls = JSON.parse(product.imageUrl);
           // For display purposes, use the first image URL or empty string if array is empty
-          processedImageUrl = Array.isArray(parsedUrls) && parsedUrls.length > 0 ? parsedUrls[0] : '';
+          processedImageUrl = Array.isArray(parsedUrls) ? parsedUrls : [];
         } catch (e) {
           console.error("Failed to parse imageUrl JSON:", product.imageUrl);
-          processedImageUrl = '';
+          processedImageUrl = [] as any;
         }
       }
       
@@ -2607,7 +2668,30 @@ export class PgStorage implements IStorage {
         imageUrl: processedImageUrl
       };
     } else {
-      return this.celebrityProducts.get(id) || null;
+      const product = this.celebrityProducts.get(id) || null;
+      if (!product) return null;
+      const raw = product.imageUrl as unknown as string | string[];
+      let urls: string[] = [];
+      if (Array.isArray(raw)) {
+        urls = raw;
+      } else if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (trimmed === '' || trimmed === '[]') {
+          urls = [];
+        } else if (trimmed.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            urls = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            urls = [];
+          }
+        } else if (trimmed.includes(',')) {
+          urls = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          urls = [trimmed];
+        }
+      }
+      return { ...product, imageUrl: urls } as any;
     }
   }
 
@@ -2734,6 +2818,7 @@ export class PgStorage implements IStorage {
     }
   }
 }
+
 
 
 

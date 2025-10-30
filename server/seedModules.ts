@@ -1,4 +1,4 @@
-import { db } from './db';
+import { db, initDbFromEnv } from './db';
 import { permissions, roles, rolePermissions } from '../shared/schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -153,4 +153,24 @@ export async function getModulesWithPermissions() {
     console.error('❌ Error getting modules with permissions:', error);
     throw error;
   }
+}
+
+// Allow running standalone from CLI
+import dotenv from 'dotenv';
+dotenv.config();
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const initialized = initDbFromEnv();
+  if (!initialized || !db) {
+    console.error('❌ DATABASE_URL not set or DB not initialized');
+    process.exit(1);
+  }
+  seedModulesAndPermissions()
+    .then(() => {
+      console.log('🎉 Standalone module/permission seeding completed');
+    })
+    .catch(err => {
+      console.error('❌ Error seeding modules/permissions:', err);
+      process.exit(1);
+    });
 }

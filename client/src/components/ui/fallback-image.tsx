@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 interface FallbackImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
+  backupSrc?: string | string[];
   fallbackSrc?: string;
   fallbackText?: string;
   fallbackClassName?: string;
@@ -13,6 +14,7 @@ interface FallbackImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 
 export function FallbackImage({
   src,
+  backupSrc,
   fallbackSrc,
   fallbackText,
   alt,
@@ -21,20 +23,44 @@ export function FallbackImage({
   fallbackClassName,
   ...props
 }: FallbackImageProps) {
-  const [imgSrc, setImgSrc] = useState<string>(src);
-  const [hasError, setHasError] = useState<boolean>(false);
+  const [imgSrc, setImgSrc] = useState<string>('');
   const [showFallback, setShowFallback] = useState<boolean>(false);
+  const [sourceIndex, setSourceIndex] = useState<number>(0);
+
+  // Build a prioritized list of sources: primary src -> backup(s) -> fallbackSrc
+  const buildSources = (): string[] => {
+    const backups = Array.isArray(backupSrc)
+      ? backupSrc.filter(Boolean)
+      : backupSrc
+        ? [backupSrc]
+        : [];
+    const sources: string[] = [];
+    if (src && src.trim() !== '') sources.push(src);
+    sources.push(...backups.filter(s => typeof s === 'string' && s.trim() !== ''));
+    if (fallbackSrc && fallbackSrc.trim() !== '') sources.push(fallbackSrc);
+    return sources;
+  };
 
   useEffect(() => {
-    setImgSrc(src);
-    setHasError(false);
+    const sources = buildSources();
+    if (sources.length === 0) {
+      setShowFallback(true);
+      setImgSrc('');
+      setSourceIndex(0);
+      return;
+    }
+    setImgSrc(sources[0]);
+    setSourceIndex(0);
     setShowFallback(false);
-  }, [src]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, backupSrc, fallbackSrc]);
 
   const handleError = () => {
-    if (!hasError && fallbackSrc) {
-      setImgSrc(fallbackSrc);
-      setHasError(true);
+    const sources = buildSources();
+    const nextIndex = sourceIndex + 1;
+    if (nextIndex < sources.length) {
+      setImgSrc(sources[nextIndex]);
+      setSourceIndex(nextIndex);
     } else if (!showFallback) {
       setShowFallback(true);
     }

@@ -153,14 +153,32 @@ export default function FeaturedCelebrity({ onBrandClick }: FeaturedCelebrityPro
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
                   <div className="aspect-[3/4] overflow-hidden relative">
-                    <FallbackImage
-                      src={celebrity.imageUrl}
-                      alt={`${celebrity.name} featured style portrait`}
-                      fallbackText={`${celebrity.name} photo unavailable`}
-                      className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    
+                    {(() => {
+                      const slug = celebrity.name.toLowerCase().replace(/\s+/g, '-');
+                      const primary = `/assets/${slug}/profile.jpg`;
+                      const backups = [
+                        `/assets/${slug}/profile.png`,
+                        `/assets/${slug}.jpg`,
+                        `/assets/${slug}.png`,
+                        `/assets/celebrities/${slug}.jpg`,
+                        `/assets/celebrities/${slug}.png`,
+                        `/assets/profiles/${slug}.jpg`,
+                        `/assets/profiles/${slug}.png`,
+                        celebrity.imageUrl,
+                      ];
+                      return (
+                        <FallbackImage
+                          src={primary}
+                          backupSrc={backups}
+                          alt={`${celebrity.name} featured style portrait`}
+                          fallbackSrc="/assets/placeholder-celebrity.svg"
+                          fallbackText={`${celebrity.name} photo unavailable`}
+                          className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      );
+                    })()}
+                  
                     {/* Enhanced overlay gradient with hover effect */}
                     <div className="absolute inset-0 bg-gradient-to-t from-dark/40 via-transparent to-dark/10 group-hover:from-dark/20 transition-all duration-500"></div>
                     

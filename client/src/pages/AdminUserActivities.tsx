@@ -206,7 +206,7 @@ export default function AdminUserActivities() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin/users')} tooltip="Users">
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/users')} tooltip="Users">
                   <Users />
                   <span>Users</span>
                 </SidebarMenuButton>
@@ -228,21 +228,15 @@ export default function AdminUserActivities() {
                   <Star />
                   <span>Celebrities</span>
                 </SidebarMenuButton>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
-                    <Package />
-                    <span>Products</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                    <CreditCard />
-                    <span>Plans</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
+                <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
+                  <Package />
+                  <span>Products</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={true} onClick={() => setLocation('/admin')} tooltip="Content">
                   <FileText />
                   <span>Content</span>
                 </SidebarMenuButton>

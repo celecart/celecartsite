@@ -31,6 +31,7 @@ interface ProfileData {
   youtube: string;
   tiktok: string;
   styleNotes?: string;
+  brandsWorn?: string;
 }
 
 interface CelebrityProduct {
@@ -85,6 +86,46 @@ const normalizeImageUrl = (val: string | string[] | undefined | null): string =>
 };
 
 export default function Profile() {
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handleChangePhotoClick = () => {
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch('/api/upload/profile-picture', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const imageUrl = data.imageUrl || data.profilePicture || data.url;
+        if (imageUrl) {
+          setUser((prev: any) => prev ? { ...prev, profilePicture: imageUrl } : prev);
+          toast({ title: 'Photo updated', description: 'Your profile photo has been changed.' });
+        } else {
+          toast({ title: 'Upload succeeded but no URL returned', description: 'Please try again.', variant: 'destructive' });
+        }
+      } else {
+        const err = await res.json().catch(() => ({ message: 'Failed to upload' }));
+        toast({ title: 'Upload failed', description: err.message || 'Could not upload image.', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Network error', description: 'Could not upload image.', variant: 'destructive' });
+    } finally {
+      setUploadingPhoto(false);
+      // Reset input to allow re-uploading the same file if needed
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -115,9 +156,32 @@ export default function Profile() {
     twitter: '',
     youtube: '',
     tiktok: '',
-    styleNotes: ''
+    styleNotes: '',
+    brandsWorn: ''
   });
   const { toast } = useToast();
+
+  // Helpers for proper capitalization and possessive formatting
+  const toTitleCaseName = (name: string) => {
+    return name
+      .split(/\s+/)
+      .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+      .join(' ');
+  };
+
+  const toPossessive = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+    const cased = toTitleCaseName(trimmed);
+    return /s$/i.test(cased) ? `${cased}'` : `${cased}'s`;
+  };
+
+  // Compute a friendly display name for possessive heading
+  const displayNameBase = (
+    (user?.displayName || user?.firstName || user?.username || (user?.email ? user.email.split('@')[0] : '') || '')
+  ).trim();
+
+  const possessiveName = toPossessive(displayNameBase);
 
   // Check if user can access celebrity details (super admin or celebrity user)
   const canAccessCelebrityDetails = () => {
@@ -281,7 +345,8 @@ export default function Profile() {
             twitter: data.user.twitter || '',
             youtube: data.user.youtube || '',
             tiktok: data.user.tiktok || '',
-            styleNotes: ''
+            styleNotes: '',
+            brandsWorn: ''
           });
         } else {
           setUser(null);
@@ -293,6 +358,39 @@ export default function Profile() {
       }
     };
     fetchUser();
+  }, []);
+
+  // Listen for authentication state changes to update header in near real-time
+  useEffect(() => {
+    let intervalId: any;
+    let visibilityHandler: any;
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/auth/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data?.user || null);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        // Swallow network errors; keep last known state
+      }
+    };
+
+    intervalId = setInterval(checkAuth, 3000);
+    const onFocus = () => checkAuth();
+    window.addEventListener('focus', onFocus);
+    visibilityHandler = () => {
+      if (!document.hidden) checkAuth();
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', visibilityHandler);
+    };
   }, []);
 
   const handleSave = async () => {
@@ -326,7 +424,8 @@ export default function Profile() {
           twitter: updatedUser.twitter || '',
           youtube: updatedUser.youtube || '',
           tiktok: updatedUser.tiktok || '',
-          styleNotes: profileData.styleNotes || ''
+          styleNotes: profileData.styleNotes || '',
+          brandsWorn: profileData.brandsWorn || ''
         });
         // Refresh celebrity profile to reflect updated style notes
         try {
@@ -476,10 +575,24 @@ export default function Profile() {
                         </AvatarFallback>
                       </Avatar>
                       {isEditing && (
-                        <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                          <Camera className="w-4 h-4 mr-2" />
-                          Change Photo
-                        </Button>
+                        <div className="flex items-center gap-3">
+                          <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handlePhotoSelected}
+                          />
+                          <Button
+                            onClick={handleChangePhotoClick}
+                            disabled={uploadingPhoto}
+                            variant="outline"
+                            className="border-white/20 text-white hover:bg-white/10"
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            {uploadingPhoto ? 'Uploading...' : 'Change Photo'}
+                          </Button>
+                        </div>
                       )}
                     </div>
 
@@ -621,7 +734,7 @@ export default function Profile() {
                       </div>
 
                       <div>
-                        <Label className="text-white/70">Description</Label>
+                        <Label className="text-white/70">About</Label>
                         {isEditing ? (
                           <Textarea
                             value={profileData.description}
@@ -647,6 +760,21 @@ export default function Profile() {
                           />
                         ) : (
                           <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{profileData.styleNotes || '—'}</div>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-white/70">Brands Worn</Label>
+                        {isEditing ? (
+                          <Textarea
+                            value={profileData.brandsWorn || ''}
+                            onChange={(e) => setProfileData({ ...profileData, brandsWorn: e.target.value })}
+                            placeholder="List brands you frequently wear or are associated with"
+                            rows={4}
+                            className="bg-white/5 border-white/20 text-white"
+                          />
+                        ) : (
+                          <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{profileData.brandsWorn || '—'}</div>
                         )}
                       </div>
                     </CardContent>
@@ -777,7 +905,7 @@ export default function Profile() {
                               <AccordionTrigger className="px-4 text-white flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Sparkles className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
-                                  <span className="font-medium">Zulqadar's Favorite Experiences</span>
+                                  <span className="font-medium">{possessiveName ? `${possessiveName} Favorite Experiences` : 'Your Favorite Experiences'}</span>
                                 </div>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
@@ -1324,7 +1452,9 @@ function ProductModal({
               <MultiImageUpload
                 onImagesChange={handleImagesChange}
                 initialImages={formData.imageUrls}
-                maxFiles={10}
+                maxFiles={3}
+                minFiles={1}
+                sizeLimitMB={10}
               />
             </div>
 

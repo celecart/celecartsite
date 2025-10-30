@@ -445,6 +445,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to log signup activity:', activityError);
       }
 
+      // Automatically authenticate the user after successful signup
+      try {
+        await new Promise<void>((resolve, reject) => {
+          (req as any).login(newUser, (err: any) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+      } catch (loginError) {
+        console.error('Auto-login after signup failed:', loginError);
+      }
+
       // Return sanitized user
       const { id } = newUser;
       return res.status(201).json({
@@ -538,6 +550,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ipAddress: (u as any).ipAddress,
       registrationDate: (u as any).registrationDate,
       googleId: (u as any).googleId,
+      profession: (u as any).profession,
+      description: (u as any).description,
+      category: (u as any).category,
+      instagram: (u as any).instagram,
+      twitter: (u as any).twitter,
+      youtube: (u as any).youtube,
+      tiktok: (u as any).tiktok,
     };
     res.json(safe);
   });
@@ -665,19 +684,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // If user has a celebrity profile, sync styleNotes to the celebrity record
+      // If user has a celebrity profile, sync relevant fields to the celebrity record
       try {
         const celebrity = await storage.getCelebrityByUserId(userId);
-        if (celebrity && typeof profileData.styleNotes !== 'undefined') {
+        if (celebrity) {
           const merged = {
             ...celebrity,
-            styleNotes: profileData.styleNotes ?? celebrity.styleNotes ?? null
+            // Keep existing values unless new ones are explicitly provided
+            description: typeof profileData.description !== 'undefined'
+              ? (profileData.description ?? celebrity.description ?? null)
+              : celebrity.description ?? null,
+            profession: typeof profileData.profession !== 'undefined'
+              ? (profileData.profession ?? celebrity.profession)
+              : celebrity.profession,
+            category: typeof profileData.category !== 'undefined'
+              ? (profileData.category ?? celebrity.category)
+              : celebrity.category,
+            styleNotes: typeof profileData.styleNotes !== 'undefined'
+              ? (profileData.styleNotes ?? celebrity.styleNotes ?? null)
+              : celebrity.styleNotes ?? null,
+            brandsWorn: typeof profileData.brandsWorn !== 'undefined'
+              ? (profileData.brandsWorn ?? (celebrity as any).brandsWorn ?? null)
+              : (celebrity as any).brandsWorn ?? null,
           };
           const validatedCelebrity = insertCelebritySchema.parse(merged);
           await storage.updateCelebrity(celebrity.id, validatedCelebrity);
         }
       } catch (celebSyncError) {
-        console.error('Failed to sync styleNotes to celebrity profile:', celebSyncError);
+        console.error('Failed to sync fields to celebrity profile:', celebSyncError);
         // Do not fail the entire request if celebrity sync fails
       }
 
@@ -1120,6 +1154,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(celebrities);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch celebrities by category" });
+    }
+  });
+
+  // Create celebrity profile for the current authenticated user
+  app.post('/api/my/celebrity', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    try {
+      const currentUser = req.user as any;
+      const existing = await storage.getCelebrityByUserId(currentUser.id);
+      if (existing) {
+        return res.status(409).json({ message: 'Celebrity profile already exists', celebrity: existing });
+      }
+
+      const merged = {
+        userId: currentUser.id,
+        name: req.body.name || currentUser.displayName || currentUser.username || currentUser.email || 'Celebrity',
+        profession: req.body.profession || currentUser.profession || 'Celebrity',
+        imageUrl: req.body.imageUrl || currentUser.profilePicture || '/assets/placeholder-celebrity.svg',
+        description: typeof req.body.description !== 'undefined' ? req.body.description : (currentUser.description ?? null),
+        category: req.body.category || currentUser.category || 'general',
+        isActive: true,
+        isElite: false,
+        managerInfo: null,
+        stylingDetails: null,
+        styleNotes: typeof req.body.styleNotes !== 'undefined' ? req.body.styleNotes : null,
+        brandsWorn: typeof req.body.brandsWorn !== 'undefined' ? req.body.brandsWorn : null,
+      };
+
+      const validated = insertCelebritySchema.parse(merged);
+      const celeb = await storage.createCelebrity(validated);
+
+      try {
+        await storage.logUserActivity({
+          userId: currentUser.id,
+          activityType: 'create',
+          entityType: 'celebrity',
+          entityId: celeb.id,
+          entityName: celeb.name,
+          metadata: JSON.stringify({ timestamp: new Date().toISOString(), userAgent: req.get('User-Agent') || null })
+        });
+      } catch (activityError) {
+        console.error('Failed to log celebrity creation activity:', activityError);
+      }
+
+      return res.status(201).json(celeb);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid celebrity data', errors: error.errors });
+      }
+      console.error('Error creating self celebrity profile:', error);
+      return res.status(500).json({ message: 'Failed to create celebrity profile' });
     }
   });
   
@@ -1855,8 +1942,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     limits: { 
       fileSize: 10 * 1024 * 1024, // 10MB per file
-      files: 10 // Maximum 10 files per upload
+      files: 3 // Maximum 10 files per upload
     },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  // File upload endpoint for user profile pictures
+  const profileImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadsDir = path.join(__dirname, '../uploads/profiles/');
+        try {
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+        } catch (e) {
+          // fallback: use current working directory if path resolution fails
+        }
+        cb(null, uploadsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `profile-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     fileFilter: (req, file, cb) => {
       if (file.mimetype.startsWith('image/')) {
         cb(null, true);
@@ -1894,19 +2011,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload multiple product images
-  app.post("/api/upload/product-images", celebrityProductImageUpload.array('images', 10), (req: Request, res: Response) => {
+  // Upload and save current user's profile picture
+  app.post("/api/upload/profile-picture", profileImageUpload.single('image'), async (req: Request, res: Response) => {
     try {
-      if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        return res.status(400).json({ message: "No image files provided" });
+      if (!req.isAuthenticated?.()) {
+        return res.status(401).json({ message: 'Not authenticated' });
       }
-      
-      const imageUrls = req.files.map(file => `/uploads/products/${file.filename}`);
-      res.json({ imageUrls });
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const imageUrl = `/uploads/profiles/${req.file.filename}`;
+
+      const user = req.user as any;
+      const updated = await storage.updateUser(user.id, { profilePicture: imageUrl });
+
+      // Return URL and sanitized user data
+      const safe = {
+        id: updated.id,
+        username: (updated as any).username,
+        email: (updated as any).email,
+        displayName: (updated as any).displayName,
+        profilePicture: (updated as any).profilePicture,
+        firstName: (updated as any).firstName,
+        lastName: (updated as any).lastName,
+        phone: (updated as any).phone,
+        accountStatus: (updated as any).accountStatus,
+        source: (updated as any).source,
+      };
+      res.json({ imageUrl, user: safe });
     } catch (error) {
-      console.error('Product images upload error:', error);
-      res.status(500).json({ message: "Failed to upload product images" });
+      console.error('Profile picture upload error:', error);
+      res.status(500).json({ message: "Failed to upload profile picture" });
     }
+  });
+
+  // Upload multiple product images
+  app.post("/api/upload/product-images", (req: Request, res: Response) => {
+    celebrityProductImageUpload.array('images', 3)(req, res, (err: any) => {
+      if (err) {
+        // Provide clearer error messages for common multer errors
+        if (err instanceof multer.MulterError) {
+          switch (err.code) {
+            case 'LIMIT_FILE_SIZE':
+              return res.status(400).json({ message: 'Each image must be ≤ 10MB.' });
+            case 'LIMIT_FILE_COUNT':
+            case 'LIMIT_UNEXPECTED_FILE':
+              return res.status(400).json({ message: 'Please upload at most 3 images.' });
+            default:
+              return res.status(400).json({ message: err.message });
+          }
+        }
+        return res.status(400).json({ message: err.message || 'Upload failed' });
+      }
+
+      try {
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+          return res.status(400).json({ message: "No image files provided" });
+        }
+
+        if (files.length < 1) {
+          return res.status(400).json({ message: 'Please upload 1–3 images.' });
+        }
+
+        const imageUrls = files.map(file => `/uploads/products/${file.filename}`);
+        return res.json({ imageUrls });
+      } catch (error) {
+        console.error('Product images upload error:', error);
+        return res.status(500).json({ message: "Failed to upload product images" });
+      }
+    });
   });
 
   // Plans endpoints
@@ -2019,16 +2195,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user exists
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Find or create celebrity role
-      let celebrityRole = (await storage.getRoles()).find(role => role.name === 'celebrity');
+      // Find or create Celebrity role (case-insensitive lookup, canonical name 'Celebrity')
+      const allRoles = await storage.getRoles();
+      let celebrityRole = allRoles.find(role => role.name?.toLowerCase() === 'celebrity');
       if (!celebrityRole) {
         celebrityRole = await storage.createRole({
-          name: 'celebrity',
+          name: 'Celebrity',
           description: 'Celebrity user with special privileges'
         });
       }

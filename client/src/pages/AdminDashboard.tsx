@@ -179,11 +179,16 @@ export default function AdminDashboard() {
                   <span>Celebrities</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              // Add Products link for CRUD page
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/products')} tooltip="Products">
                   <Package />
                   <span>Products</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
+                  <FileText />
+                  <span>Content</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

@@ -498,6 +498,12 @@ export default function AdminRoles() {
                     <span>Plans</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin')} tooltip="Settings">
+                    <Settings />
+                    <span>Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>

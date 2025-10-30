@@ -82,7 +82,16 @@ app.use((req, res, next) => {
     // Ensure required columns exist to avoid runtime SELECT errors
     try {
       await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "style_notes" text');
+      await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "brands_worn" text');
       await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "user_id" integer');
+      // Ensure new user social/professional columns exist
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profession" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "description" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "category" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "instagram" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "twitter" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "youtube" text');
+      await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "tiktok" text');
     } catch (e) {
       console.error('Failed to ensure style_notes column:', e);
     }
@@ -175,3 +184,4 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+

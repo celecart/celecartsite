@@ -228,12 +228,12 @@ export default function AdminCategories() {
                     <span>Products</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
-                    <CreditCard />
-                    <span>Plans</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/products')} tooltip="Products">
+                  <Package />
+                  <span>Products</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
                   <FileText />

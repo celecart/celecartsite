@@ -303,9 +303,21 @@ export default function AdminProducts() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                  <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Content">
+                    <FileText />
+                    <span>Content</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/plans')} tooltip="Plans">
                     <CreditCard />
                     <span>Plans</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
+                    <Settings />
+                    <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

@@ -515,6 +515,12 @@ export default function AdminCelebrities() {
                   <span>Plans</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
+                  <Settings />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -694,14 +700,31 @@ export default function AdminCelebrities() {
                 </CardHeader>
                 <CardContent className="pb-2">
                   <div className="aspect-square relative mb-2">
-                    <FallbackImage
-                      src={celebrity.imageUrl}
-                      alt={celebrity.name}
-                      className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
-                      fallbackSrc="/placeholder-celebrity.svg"
-                      fallbackText={`${celebrity.name} photo unavailable`}
-                      onClick={() => handleImagePreview(celebrity)}
-                    />
+                    {(() => {
+                      const slug = celebrity.name.toLowerCase().replace(/\s+/g, '-');
+                      const primary = `/assets/${slug}/profile.jpg`;
+                      const backups = [
+                        `/assets/${slug}/profile.png`,
+                        `/assets/${slug}.jpg`,
+                        `/assets/${slug}.png`,
+                        `/assets/celebrities/${slug}.jpg`,
+                        `/assets/celebrities/${slug}.png`,
+                        `/assets/profiles/${slug}.jpg`,
+                        `/assets/profiles/${slug}.png`,
+                        celebrity.imageUrl,
+                      ];
+                      return (
+                        <FallbackImage
+                          src={primary}
+                          backupSrc={backups}
+                          alt={celebrity.name}
+                          className="w-full h-full object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                          fallbackSrc="/assets/placeholder-celebrity.svg"
+                          fallbackText={`${celebrity.name} photo unavailable`}
+                          onClick={() => handleImagePreview(celebrity)}
+                        />
+                      );
+                    })()}
                   </div>
                   <div className="flex gap-2 mb-2">
                     <Badge variant="outline">
@@ -720,7 +743,7 @@ export default function AdminCelebrities() {
                   )}
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center justify-between w-full flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
@@ -750,12 +773,13 @@ export default function AdminCelebrities() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`active-${celebrity.id}`} className="text-xs">Active</Label>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <Label htmlFor={`active-${celebrity.id}`} className="text-sm">Active</Label>
                       <Switch
                         id={`active-${celebrity.id}`}
                         checked={celebrity.isActive}
                         onCheckedChange={() => handleToggleActive(celebrity)}
+                        className="shrink-0"
                       />
                     </div>
                   </div>
@@ -915,13 +939,30 @@ export default function AdminCelebrities() {
                 <div className="space-y-4">
                   <div className="flex justify-center">
                     <div className="relative max-w-2xl">
-                      <FallbackImage
-                        src={previewCelebrity.imageUrl}
-                        alt={previewCelebrity.name}
-                        className="w-full h-auto max-h-[60vh] object-contain rounded-lg border"
-                        fallbackSrc="/placeholder-celebrity.svg"
-                        fallbackText={`${previewCelebrity.name} photo unavailable`}
-                      />
+                      {(() => {
+                        const slug = previewCelebrity.name.toLowerCase().replace(/\s+/g, '-');
+                        const primary = `/assets/${slug}/profile.jpg`;
+                        const backups = [
+                          `/assets/${slug}/profile.png`,
+                          `/assets/${slug}.jpg`,
+                          `/assets/${slug}.png`,
+                          `/assets/celebrities/${slug}.jpg`,
+                          `/assets/celebrities/${slug}.png`,
+                          `/assets/profiles/${slug}.jpg`,
+                          `/assets/profiles/${slug}.png`,
+                          previewCelebrity.imageUrl,
+                        ];
+                        return (
+                          <FallbackImage
+                            src={primary}
+                            backupSrc={backups}
+                            alt={previewCelebrity.name}
+                            className="w-full h-auto max-h-[60vh] object-contain rounded-lg border"
+                            fallbackSrc="/assets/placeholder-celebrity.svg"
+                            fallbackText={`${previewCelebrity.name} photo unavailable`}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                   

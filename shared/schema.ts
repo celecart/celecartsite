@@ -13,6 +13,7 @@ export const celebrities = pgTable("celebrities", {
   isActive: boolean("is_active").default(true).notNull(), // Active/Inactive status
   isElite: boolean("is_elite").default(false).notNull(), // Premium/Elite profile status
   styleNotes: text("style_notes"),
+  brandsWorn: text("brands_worn"),
   managerInfo: jsonb("manager_info").$type<{
     name: string;
     agency: string;
@@ -54,6 +55,7 @@ export const insertCelebritySchema = createInsertSchema(celebrities).pick({
   isActive: true,
   isElite: true,
   styleNotes: true,
+  brandsWorn: true,
   managerInfo: true,
   stylingDetails: true,
 });
@@ -162,6 +164,14 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   phone: text("phone"),
+  // Social/professional fields
+  profession: text("profession"),
+  description: text("description"),
+  category: text("category"),
+  instagram: text("instagram"),
+  twitter: text("twitter"),
+  youtube: text("youtube"),
+  tiktok: text("tiktok"),
   accountStatus: text("account_status").notNull().default("Active"),
   source: text("source").notNull().default("local"),
   resetToken: text("reset_token"),
@@ -178,6 +188,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   phone: true,
+  profession: true,
+  description: true,
+  category: true,
+  instagram: true,
+  twitter: true,
+  youtube: true,
+  tiktok: true,
   accountStatus: true,
   source: true,
   resetToken: true,
@@ -1309,3 +1326,4 @@ export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect
+
