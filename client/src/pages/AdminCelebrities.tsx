@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Plus, Edit, Trash2, Sun, Moon, CreditCard, Upload, X, Star, FileText, Package } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Plus, Edit, Trash2, Sun, Moon, CreditCard, Upload, X, Star, FileText, Package, Tag } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 import { FallbackImage } from '@/components/ui/fallback-image';
@@ -489,6 +489,12 @@ export default function AdminCelebrities() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                   <Tags />
                   <span>Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/brands')} tooltip="Brands">
+                  <Tag />
+                  <span>Brands</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag } from "lucide-react";
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -446,6 +446,12 @@ export default function AdminPlans() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                   <Tags />
                   <span>Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/brands')} tooltip="Brands">
+                  <Tag />
+                  <span>Brands</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

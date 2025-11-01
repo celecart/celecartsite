@@ -21,7 +21,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star, CreditCard, Tag } from "lucide-react";
 import UserActivityFeed from "@/components/UserActivityFeed";
 import { Package } from "lucide-react";
 
@@ -221,6 +221,12 @@ export default function AdminUserActivities() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                   <Tags />
                   <span>Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/brands')} tooltip="Brands">
+                  <Tag />
+                  <span>Brands</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

@@ -68,15 +68,40 @@ export const brands = pgTable("brands", {
   name: text("name").notNull(),
   description: text("description"),
   imageUrl: text("image_url").notNull(),
+  websiteUrl: text("website_url"),
+  origins: jsonb("origins").$type<string[]>(),
+  categoryIds: jsonb("category_ids").$type<number[]>(),
+  sourceType: text("source_type"),
   celebWearers: jsonb("celeb_wearers").notNull().$type<string[]>(), // Array of celebrity initials
 });
 
-export const insertBrandSchema = createInsertSchema(brands).pick({
-  name: true,
-  description: true,
-  imageUrl: true,
-  celebWearers: true,
-});
+export const insertBrandSchema = createInsertSchema(brands)
+  .pick({
+    name: true,
+    description: true,
+    imageUrl: true,
+    websiteUrl: true,
+    origins: true,
+    categoryIds: true,
+    sourceType: true,
+    celebWearers: true,
+  })
+  .extend({
+    name: z.string().min(1, "Brand name is required").max(100, "Max 100 characters"),
+    description: z.string().optional(),
+    imageUrl: z.string().min(1, "Logo is required"),
+    websiteUrl: z.string().url("Invalid URL").optional(),
+    origins: z.array(z.string()).default([]).optional(),
+    categoryIds: z.array(z.number()).default([]).optional(),
+    sourceType: z.enum([
+      "Direct Marketing",
+      "Social Media",
+      "Influencer Partnerships",
+      "PR/Media Coverage",
+      "Event Sponsorship",
+    ]).optional(),
+    celebWearers: z.array(z.string()).default([]),
+  });
 
 export type InsertBrand = z.infer<typeof insertBrandSchema>;
 export type Brand = typeof brands.$inferSelect;

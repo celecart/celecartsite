@@ -27,7 +27,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Star, FileText, Package, Plus, Edit, Trash2, Upload } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Star, FileText, Package, Plus, Edit, Trash2, Upload, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { CelebrityProduct, Celebrity, Category } from "@shared/schema";
 
@@ -288,6 +288,12 @@ export default function AdminProducts() {
                   <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                     <Tags />
                     <span>Categories</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/brands')} tooltip="Brands">
+                    <Tag />
+                    <span>Brands</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

@@ -381,7 +381,6 @@ const BlogManagement: React.FC = () => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl h-12"
             placeholder="Enter an engaging blog title..."
             required
           />
@@ -393,7 +392,7 @@ const BlogManagement: React.FC = () => {
             <span>Category</span>
           </label>
           <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-            <SelectTrigger className="bg-white/5 border-white/20 text-white focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl h-12">
+            <SelectTrigger>
               <SelectValue placeholder="Choose a category..." />
             </SelectTrigger>
             <SelectContent className="bg-black/90 backdrop-blur-xl border-white/20 rounded-xl">
@@ -416,7 +415,6 @@ const BlogManagement: React.FC = () => {
           name="excerpt"
           value={formData.excerpt}
           onChange={handleInputChange}
-          className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl resize-none"
           placeholder="Write a compelling excerpt that captures the essence of your blog post..."
           rows={4}
         />
@@ -455,7 +453,6 @@ const BlogManagement: React.FC = () => {
             name="imageUrl"
             value={formData.imageUrl}
             onChange={handleInputChange}
-            className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl h-12"
             placeholder="https://example.com/featured-image.jpg"
           />
         </div>
@@ -466,7 +463,7 @@ const BlogManagement: React.FC = () => {
             <span>Celebrity (Optional)</span>
           </label>
           <Select value={formData.celebrityId} onValueChange={(value) => setFormData(prev => ({ ...prev, celebrityId: value }))}>
-            <SelectTrigger className="bg-white/5 border-white/20 text-white focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl h-12">
+            <SelectTrigger>
               <SelectValue placeholder="Associate with a celebrity..." />
             </SelectTrigger>
             <SelectContent className="bg-black/90 backdrop-blur-xl border-white/20 rounded-xl">
@@ -506,7 +503,6 @@ const BlogManagement: React.FC = () => {
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="bg-white/5 border-white/20 text-white placeholder:text-white/40 focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300 rounded-xl h-12"
             placeholder="Add a tag and press Enter..."
           />
           <Button
