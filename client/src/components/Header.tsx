@@ -181,16 +181,16 @@ export default function Header() {
                 Trending
               </a>
 
-              <a 
-                href="#brands" 
+              <Link 
+                href="/brands" 
                 className={cn(
                   "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10",
                   "text-white/90 hover:text-amber-400 uppercase tracking-wide",
-                  location === "/#brands" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                  location === "/brands" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
                 Brands
-              </a>
+              </Link>
               <Link 
                 href="/plans" 
                 className={cn(
@@ -592,13 +592,13 @@ export default function Header() {
                     Trending
                   </a>
 
-                  <a 
-                    href="#brands"
+                  <Link 
+                    href="/brands"
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
                     Brands
-                  </a>
+                  </Link>
                   
                   <Link 
                     href="/plans"

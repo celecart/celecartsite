@@ -1274,8 +1274,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all brands
   app.get("/api/brands", async (req: Request, res: Response) => {
     try {
-      const brands = await storage.getBrands();
-      res.json(brands);
+      const q = (req.query.q as string)?.toLowerCase()?.trim();
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      let brands = await storage.getBrands();
+
+      if (q) {
+        brands = brands.filter(b =>
+          b.name.toLowerCase().includes(q) ||
+          (b.description ? b.description.toLowerCase().includes(q) : false)
+        );
+      }
+
+      if (typeof categoryId === 'number' && !Number.isNaN(categoryId)) {
+        brands = brands.filter(b => (b.categoryIds ?? []).includes(categoryId));
+      }
+
+      const paged = brands.slice(offset, offset + limit);
+      res.set('X-Total-Count', brands.length.toString());
+      res.set('X-Limit', limit.toString());
+      res.set('X-Offset', offset.toString());
+      res.json(paged);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch brands" });
     }
@@ -1311,6 +1332,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create brand" });
+    }
+  });
+
+  // Update brand (secured)
+  app.put("/api/brands/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid brand ID" });
+      }
+
+      const existing = await storage.getBrandById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+
+      const updates = insertBrandSchema.partial().parse(req.body);
+      const updated = await storage.updateBrand(id, updates);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update brand" });
+    }
+  });
+
+  // Delete brand (secured)
+  app.delete("/api/brands/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid brand ID" });
+      }
+
+      const existing = await storage.getBrandById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Brand not found" });
+      }
+
+      const ok = await storage.deleteBrand(id);
+      if (!ok) {
+        return res.status(500).json({ message: "Failed to delete brand" });
+      }
+      res.json({ message: "Brand deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete brand" });
     }
   });
   
@@ -1958,6 +2026,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File upload endpoint for brand logos
+  const brandLogoUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadsDir = path.join(__dirname, '../uploads/brands/');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        cb(null, uploadsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `brand-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: (req, file, cb) => {
+      const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+      if (allowed.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PNG/JPG/SVG images are allowed'));
+      }
+    }
+  });
+
   // File upload endpoint for user profile pictures
   const profileImageUpload = multer({
     storage: multer.diskStorage({
@@ -2489,6 +2584,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching user blogs:', error);
       res.status(500).json({ message: 'Failed to fetch user blogs', error: error.message });
+    }
+  });
+
+  // Brand logo upload
+  app.post("/api/upload/brand-logo", requireAdmin, brandLogoUpload.single('logo'), (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No logo file provided" });
+      }
+
+      const imageUrl = `/uploads/brands/${req.file.filename}`;
+      return res.json({ imageUrl });
+    } catch (error) {
+      console.error('Brand logo upload error:', error);
+      return res.status(500).json({ message: "Failed to upload brand logo" });
     }
   });
 

@@ -1722,18 +1722,17 @@ export default function CelebrityProfile() {
                             );
                           }
                           return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {luxuryLooks.map((look, index) => (
-                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
-                                    <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover" />
+                                <div key={index} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col transition-shadow hover:shadow-md">
+                                  <div className="relative bg-white overflow-hidden flex items-center justify-center h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px]">
+                                    <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="max-h-full max-w-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-[1.03] will-change-transform" loading="lazy" />
                                   </div>
-                                  <div className="p-4 space-y-2 flex flex-col h-full">
+                                  <div className="p-4 sm:p-5 space-y-3 flex flex-col">
                                     <h4 className="text-lg font-playfair font-semibold line-clamp-2">{look.occasion}</h4>
                                     {look.outfit?.designer && (
-                                      <div className="text-sm text-neutral-600 line-clamp-1 min-h-[1.25rem]">{look.outfit.designer}</div>
+                                      <div className="text-sm text-neutral-600 line-clamp-1">{look.outfit.designer}</div>
                                     )}
-                                    <div className="mt-auto"></div>
                                   </div>
                                 </div>
                               ))}
@@ -1741,25 +1740,37 @@ export default function CelebrityProfile() {
                           );
                         }
                         return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {luxuryPrefs.map((product) => {
                               const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                               const purchaseUrl = product.purchaseLink || product.website || '';
+                              const discountedPrice = (product as any).discountedPrice || (product as any).salePrice || '';
                               return (
-                                <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col">
-                                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
-                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="w-full h-full object-cover" />
+                                <div key={product.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-md">
+                                  <div className="relative bg-white overflow-hidden flex items-center justify-center h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px]">
+                                    <img src={img || '/assets/placeholder.png'} alt={product.name} className="max-h-full max-w-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-[1.03] will-change-transform" loading="lazy" />
                                   </div>
-                                  <div className="p-4 space-y-2 flex flex-col h-full">
+                                  <div className="p-4 sm:p-5 space-y-3 flex flex-col">
                                     <h4 className="text-lg font-playfair font-semibold line-clamp-2">{product.name}</h4>
-                                    <div className="text-sm text-neutral-600 line-clamp-1 min-h-[1.25rem]">{product.category}</div>
-                                    {product.price && (
-                                      <div className="mt-1"><Badge className="bg-amber-100 text-amber-800 rounded-md px-2 py-0.5 ring-1 ring-amber-200 font-semibold">{product.price}</Badge></div>
+                                    <div className="text-sm text-neutral-600 line-clamp-1">{product.category}</div>
+                                    {(product.price || discountedPrice) && (
+                                      <div className="mt-1 flex items-baseline gap-3">
+                                        {discountedPrice ? (
+                                          <>
+                                            <span className="text-lg font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full ring-1 ring-amber-200" aria-label={`Discounted price ${discountedPrice}`}>{discountedPrice}</span>
+                                            {product.price && (
+                                              <span className="text-sm text-neutral-500 line-through" aria-label={`Original price ${product.price}`}>{product.price}</span>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <span className="text-base font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full ring-1 ring-amber-200" aria-label={`Price ${product.price}`}>{product.price}</span>
+                                        )}
+                                      </div>
                                     )}
                                     {purchaseUrl && (
-                                      <div className="pt-2 mt-auto">
-                                        <Button asChild size="sm">
-                                          <a href={purchaseUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4 mr-1" /> Buy</a>
+                                      <div className="pt-2 flex justify-center">
+                                        <Button asChild size="lg" className="w-full sm:w-auto rounded-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-[0.98] text-white px-8 sm:px-9 py-3.5 sm:py-4 text-base sm:text-lg font-semibold min-w-[160px] sm:min-w-[180px] shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200">
+                                          <a href={purchaseUrl} target="_blank" rel="noreferrer" aria-label={`Buy ${product.name}`}><ExternalLink className="w-5 h-5 mr-2" /> Buy</a>
                                         </Button>
                                       </div>
                                     )}

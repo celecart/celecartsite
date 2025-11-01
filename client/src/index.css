@@ -77,6 +77,66 @@
   ::selection {
     @apply bg-gold/40 text-light;
   }
+
+  /* Ensure caret (text cursor) is visible across inputs and contentEditable */
+  /* Use current text color to adapt automatically to dark/light themes */
+  input, textarea, [contenteditable="true"] {
+    caret-color: currentColor;
+  }
+  /* Strengthen readability by explicitly setting field text colors per theme */
+  html.dark input, html.dark textarea, html.dark [contenteditable="true"] {
+    color: #ffffff;
+    caret-color: currentColor; /* current color resolves to white */
+  }
+  html:not(.dark) input, html:not(.dark) textarea, html:not(.dark) [contenteditable="true"] {
+    color: #111111;
+    caret-color: currentColor; /* current color resolves to near-black */
+  }
+
+  /* Improve placeholder contrast across themes */
+  input::placeholder, textarea::placeholder {
+    color: rgba(17, 17, 17, 0.45);
+  }
+  html.dark input::placeholder, html.dark textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  /* Improve selection visibility */
+  input::selection, textarea::selection, [contenteditable="true"]::selection {
+    background-color: rgba(59, 130, 246, 0.25); /* blue-500/25 */
+  }
+
+  /* Softer selection highlight in dark mode for readability */
+  html.dark ::selection {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+
+  /* Ensure rich text content inherits container color even if pasted styles add inline colors */
+  .rte {
+    color: #111111;
+  }
+  html.dark .rte {
+    color: #ffffff !important;
+  }
+  .rte *,
+  [data-rte] *,
+  [contenteditable="true"] * {
+    color: inherit !important;
+  }
+
+  /* Placeholder styling for empty contentEditable fields */
+  [contenteditable="true"][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    pointer-events: none;
+    display: block;
+    opacity: 0.6;
+  }
+  html.dark [contenteditable="true"][data-placeholder]:empty::before {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  html:not(.dark) [contenteditable="true"][data-placeholder]:empty::before {
+    color: rgba(17, 17, 17, 0.6);
+  }
 }
 
 /* Custom utility classes */

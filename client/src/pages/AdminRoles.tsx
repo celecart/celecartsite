@@ -46,7 +46,7 @@ import {
   Filter,
   Grid,
   List
-} from "lucide-react";
+ , Tag } from "lucide-react";
 import { Package } from "lucide-react";
 
 interface User {
@@ -472,6 +472,12 @@ export default function AdminRoles() {
                   <SidebarMenuButton onClick={() => setLocation('/admin/categories')} tooltip="Categories">
                     <Tags />
                     <span>Categories</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/brands')} tooltip="Brands">
+                    <Tag />
+                    <span>Brands</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

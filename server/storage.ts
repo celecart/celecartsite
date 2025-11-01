@@ -152,9 +152,8 @@ export interface IStorage {
 
   createBrand(brand: InsertBrand): Promise<Brand>;
 
-  
-
-  // CelebrityBrand operations
+  updateBrand(id: number, brand: Partial<InsertBrand>): Promise<Brand | undefined>;
+  deleteBrand(id: number): Promise<boolean>;
 
   getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]>;
 
@@ -1065,8 +1064,42 @@ export class MemStorage implements IStorage {
 
   }
 
-  
+  async updateBrand(id: number, update: Partial<InsertBrand>): Promise<Brand | undefined> {
+    const existing = this.brands.get(id);
+    if (!existing) return undefined;
 
+    const merged: Brand = {
+      ...existing,
+      name: update.name ?? existing.name,
+      description: update.description ?? existing.description ?? null,
+      imageUrl: update.imageUrl ?? existing.imageUrl ?? null,
+      websiteUrl: update.websiteUrl ?? existing.websiteUrl ?? null,
+      origins: Array.isArray(update.origins)
+        ? update.origins.filter((v) => typeof v === 'string')
+        : existing.origins ?? null,
+      categoryIds: Array.isArray(update.categoryIds)
+        ? update.categoryIds.filter((v) => typeof v === 'number')
+        : existing.categoryIds ?? [],
+      sourceType: update.sourceType ?? existing.sourceType,
+      celebWearers: Array.isArray(update.celebWearers)
+        ? update.celebWearers.filter((v) => typeof v === 'string')
+        : existing.celebWearers ?? [],
+    };
+
+    this.brands.set(id, merged);
+    return merged;
+  }
+
+  async deleteBrand(id: number): Promise<boolean> {
+    if (!this.brands.has(id)) return false;
+    this.brands.delete(id);
+    for (const [cbId, cb] of Array.from(this.celebrityBrands.entries())) {
+      if (cb.brandId === id) {
+        this.celebrityBrands.delete(cbId);
+      }
+    }
+    return true;
+  }
   // CelebrityBrand operations
 
   async getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]> {
@@ -2075,9 +2108,15 @@ export class PgStorage implements IStorage {
   async getBrands(): Promise<Brand[]> { return this.mem.getBrands(); }
   async getBrandById(id: number): Promise<Brand | undefined> { return this.mem.getBrandById(id); }
   async createBrand(brand: InsertBrand): Promise<Brand> { return this.mem.createBrand(brand); }
-
-  // CelebrityBrand operations (delegate)
-  async getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]> { return this.mem.getCelebrityBrands(celebrityId); }
+  async updateBrand(id: number, update: Partial<InsertBrand>): Promise<Brand | undefined> {
+    return this.mem.updateBrand(id, update);
+  }
+  async deleteBrand(id: number): Promise<boolean> {
+    return this.mem.deleteBrand(id);
+  }
+  async getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]> {
+    return this.mem.getCelebrityBrands(celebrityId);
+  }
   async createCelebrityBrand(celebrityBrand: InsertCelebrityBrand): Promise<CelebrityBrand> { return this.mem.createCelebrityBrand(celebrityBrand); }
 
   // Category operations (delegate)

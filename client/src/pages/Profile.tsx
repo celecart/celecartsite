@@ -50,6 +50,12 @@ interface CelebrityProduct {
   isFeatured: boolean;
   createdAt: string;
   updatedAt: string;
+  metadata?: {
+    tags?: string[];
+    subtitle?: string;
+    placeName?: string;
+    [key: string]: any;
+  };
 }
 
 // Normalize image URL values returned from backend
@@ -603,7 +609,6 @@ export default function Profile() {
                           <Input
                             value={profileData.displayName}
                             onChange={(e) => setProfileData({...profileData, displayName: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.displayName || '—'}</div>
@@ -616,7 +621,6 @@ export default function Profile() {
                           <Input
                             value={profileData.email}
                             onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.email || '—'}</div>
@@ -629,7 +633,6 @@ export default function Profile() {
                           <Input
                             value={profileData.username}
                             onChange={(e) => setProfileData({...profileData, username: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.username || '—'}</div>
@@ -642,7 +645,6 @@ export default function Profile() {
                           <Input
                             value={profileData.phone}
                             onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.phone || '—'}</div>
@@ -655,7 +657,6 @@ export default function Profile() {
                           <Input
                             value={profileData.firstName}
                             onChange={(e) => setProfileData({...profileData, firstName: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.firstName || '—'}</div>
@@ -668,7 +669,6 @@ export default function Profile() {
                           <Input
                             value={profileData.lastName}
                             onChange={(e) => setProfileData({...profileData, lastName: e.target.value})}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2">{user.lastName || '—'}</div>
@@ -707,7 +707,6 @@ export default function Profile() {
                               value={profileData.profession}
                               onChange={(e) => setProfileData({...profileData, profession: e.target.value})}
                               placeholder="e.g., Actor, Singer, Athlete"
-                              className="bg-white/5 border-white/20 text-white"
                             />
                           ) : (
                             <div className="text-white font-medium p-2">{user.profession || '—'}</div>
@@ -718,7 +717,7 @@ export default function Profile() {
                           <Label className="text-white/70">Category</Label>
                           {isEditing ? (
                             <Select value={profileData.category} onValueChange={(value) => setProfileData({...profileData, category: value})}>
-                              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
@@ -741,7 +740,6 @@ export default function Profile() {
                             onChange={(e) => setProfileData({...profileData, description: e.target.value})}
                             placeholder="Brief description about yourself"
                             rows={4}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{user.description || '—'}</div>
@@ -756,7 +754,6 @@ export default function Profile() {
                             onChange={(e) => setProfileData({ ...profileData, styleNotes: e.target.value })}
                             placeholder="Your personal stylist notes, preferences, and guidance"
                             rows={4}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{profileData.styleNotes || '—'}</div>
@@ -771,7 +768,6 @@ export default function Profile() {
                             onChange={(e) => setProfileData({ ...profileData, brandsWorn: e.target.value })}
                             placeholder="List brands you frequently wear or are associated with"
                             rows={4}
-                            className="bg-white/5 border-white/20 text-white"
                           />
                         ) : (
                           <div className="text-white font-medium p-2 min-h-[100px] whitespace-pre-wrap">{profileData.brandsWorn || '—'}</div>
@@ -797,7 +793,6 @@ export default function Profile() {
                               value={profileData.instagram}
                               onChange={(e) => setProfileData({...profileData, instagram: e.target.value})}
                               placeholder="@username or full URL"
-                              className="bg-white/5 border-white/20 text-white"
                             />
                           ) : (
                             <div className="text-white font-medium p-2">{user.instagram || '—'}</div>
@@ -811,7 +806,6 @@ export default function Profile() {
                               value={profileData.twitter}
                               onChange={(e) => setProfileData({...profileData, twitter: e.target.value})}
                               placeholder="@username or full URL"
-                              className="bg-white/5 border-white/20 text-white"
                             />
                           ) : (
                             <div className="text-white font-medium p-2">{user.twitter || '—'}</div>
@@ -825,7 +819,6 @@ export default function Profile() {
                               value={profileData.youtube}
                               onChange={(e) => setProfileData({...profileData, youtube: e.target.value})}
                               placeholder="Channel URL"
-                              className="bg-white/5 border-white/20 text-white"
                             />
                           ) : (
                             <div className="text-white font-medium p-2">{user.youtube || '—'}</div>
@@ -839,7 +832,6 @@ export default function Profile() {
                               value={profileData.tiktok}
                               onChange={(e) => setProfileData({...profileData, tiktok: e.target.value})}
                               placeholder="@username or full URL"
-                              className="bg-white/5 border-white/20 text-white"
                             />
                           ) : (
                             <div className="text-white font-medium p-2">{user.tiktok || '—'}</div>
@@ -1284,22 +1276,33 @@ export default function Profile() {
 
       {/* Product Modal */}
       {showAddProduct && (
-        <ProductModal
-          product={editingProduct}
-          onSave={saveProduct}
-          onClose={() => {
-            setShowAddProduct(false);
-            setEditingProduct(null);
-            setAddProductContext(null);
-          }}
-          initialCategory={addProductContext === 'zulqadarExperiences' 
-            ? 'Zulqadar Experiences' 
-            : addProductContext === 'luxuryBrandPreferences' 
+        addProductContext === 'zulqadarExperiences' ? (
+          <FavoriteExperienceModal
+            product={editingProduct}
+            onSave={saveProduct}
+            onClose={() => {
+              setShowAddProduct(false);
+              setEditingProduct(null);
+              setAddProductContext(null);
+            }}
+            initialCategory={'Zulqadar Experiences'}
+          />
+        ) : (
+          <ProductModal
+            product={editingProduct}
+            onSave={saveProduct}
+            onClose={() => {
+              setShowAddProduct(false);
+              setEditingProduct(null);
+              setAddProductContext(null);
+            }}
+            initialCategory={addProductContext === 'luxuryBrandPreferences' 
               ? 'Luxury Brand Preferences' 
               : addProductContext === 'personalBrandProducts' 
                 ? 'Personal Brand Products' 
                 : undefined}
-        />
+          />
+        )
       )}
     </div>
   );
@@ -1397,7 +1400,6 @@ function ProductModal({
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter product name"
-                  className="bg-white/5 border-white/20 text-white"
                   required
                 />
               </div>
@@ -1407,7 +1409,6 @@ function ProductModal({
                   value={formData.category}
                   onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   placeholder="e.g., Restaurant, Lounge, City"
-                  className="bg-white/5 border-white/20 text-white"
                   required
                 />
               </div>
@@ -1420,7 +1421,6 @@ function ProductModal({
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Describe your product or experience"
                 rows={3}
-                className="bg-white/5 border-white/20 text-white"
                 required
               />
             </div>
@@ -1432,7 +1432,6 @@ function ProductModal({
                   value={formData.price}
                   onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                   placeholder="0.00"
-                  className="bg-white/5 border-white/20 text-white"
                   required
                 />
               </div>
@@ -1442,7 +1441,6 @@ function ProductModal({
                   value={formData.location}
                   onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                   placeholder="City, Country"
-                  className="bg-white/5 border-white/20 text-white"
                 />
               </div>
             </div>
@@ -1465,7 +1463,6 @@ function ProductModal({
                   value={formData.website}
                   onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                   placeholder="https://website.com"
-                  className="bg-white/5 border-white/20 text-white"
                 />
               </div>
               <div>
@@ -1474,7 +1471,6 @@ function ProductModal({
                   value={formData.purchaseLink}
                   onChange={(e) => setFormData(prev => ({ ...prev, purchaseLink: e.target.value }))}
                   placeholder="https://buy-link.com"
-                  className="bg-white/5 border-white/20 text-white"
                 />
               </div>
             </div>
@@ -1488,7 +1484,6 @@ function ProductModal({
                   max="5"
                   value={formData.rating}
                   onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) || 5 }))}
-                  className="bg-white/5 border-white/20 text-white"
                 />
               </div>
               <div className="flex items-center space-x-2 pt-6">
@@ -1520,6 +1515,194 @@ function ProductModal({
               <Button type="button" variant="outline" onClick={onClose} className="border-white/20 text-white">
                 Cancel
               </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Favourite Experience Modal Component
+function FavoriteExperienceModal({
+  product,
+  onSave,
+  onClose,
+  initialCategory
+}: {
+  product: CelebrityProduct | null;
+  onSave: (data: Partial<CelebrityProduct>) => Promise<void>;
+  onClose: () => void;
+  initialCategory?: string;
+}) {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: product?.name || '',
+    subheading: product?.metadata?.subtitle || '',
+    placeName: product?.metadata?.placeName || product?.location || '',
+    description: product?.description || '',
+    category: product?.category || initialCategory || 'Zulqadar Experiences',
+    imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
+    tags: Array.isArray(product?.metadata?.tags) ? (product?.metadata?.tags as string[]) : [],
+    price: product?.price || '',
+    isActive: product?.isActive ?? true,
+    isFeatured: product?.isFeatured ?? false
+  });
+  const [tagInput, setTagInput] = useState('');
+  const formRef = useRef(formData);
+  useEffect(() => { formRef.current = formData; }, [formData]);
+
+  const handleImagesChange = async (imageUrls: string[]) => {
+    setFormData(prev => ({ ...prev, imageUrls }));
+
+    // Auto-save only when editing existing experience and images changed
+    if (product && imageUrls.length > 0) {
+      const submitData: any = {
+        ...formRef.current,
+        imageUrl: imageUrls,
+        metadata: {
+          tags: formRef.current.tags,
+          subtitle: formRef.current.subheading,
+          placeName: formRef.current.placeName
+        }
+      };
+      delete submitData.imageUrls;
+      try {
+        await onSave(submitData);
+        toast({ title: 'Images Updated', description: 'Experience images saved successfully' });
+      } catch (error) {
+        toast({ title: 'Auto-save Failed', description: 'Images uploaded but failed to save. Please click Save.', variant: 'destructive' });
+      }
+    }
+  };
+
+  const addTag = () => {
+    const value = tagInput.trim();
+    if (!value) return;
+    if (formData.tags.includes(value)) {
+      setTagInput('');
+      return;
+    }
+    setFormData(prev => ({ ...prev, tags: [...prev.tags, value] }));
+    setTagInput('');
+  };
+
+  const removeTag = (t: string) => {
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== t) }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const submitData: Partial<CelebrityProduct> = {
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      imageUrl: formData.imageUrls,
+      location: formData.placeName || '',
+      price: formData.price || '',
+      isActive: formData.isActive,
+      isFeatured: formData.isFeatured,
+      metadata: {
+        tags: formData.tags,
+        subtitle: formData.subheading,
+        placeName: formData.placeName
+      }
+    };
+    onSave(submitData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <Card className="bg-gray-900 border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center justify-between">
+            {product ? 'Edit Favorite Experience' : 'Add Favorite Experience'}
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-white/70">Title</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Desert Safari at Dawn"
+                />
+              </div>
+              <div>
+                <Label className="text-white/70">Subheading</Label>
+                <Input
+                  value={formData.subheading}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subheading: e.target.value }))}
+                  placeholder="A short highlight"
+                />
+              </div>
+              <div>
+                <Label className="text-white/70">Place Name</Label>
+                <Input
+                  value={formData.placeName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, placeName: e.target.value }))}
+                  placeholder="e.g., Dubai, UAE"
+                />
+              </div>
+              <div>
+                <Label className="text-white/70">Category</Label>
+                <Input
+                  value={formData.category}
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-white/70">Description</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Describe the experience..."
+              />
+            </div>
+
+            <div>
+              <Label className="text-white/70">Images (up to 2)</Label>
+              <MultiImageUpload
+                onImagesChange={handleImagesChange}
+                initialImages={formData.imageUrls}
+                maxFiles={2}
+                sizeLimitMB={10}
+              />
+            </div>
+
+            <div>
+              <Label className="text-white/70">Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                  placeholder="Press Enter to add tag"
+                />
+                <Button type="button" variant="outline" className="border-white/20 text-white" onClick={addTag}>Add</Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.tags.map((t) => (
+                  <Badge key={t} className="bg-violet-600 text-white flex items-center gap-1">
+                    {t}
+                    <button type="button" className="ml-1" onClick={() => removeTag(t)}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={onClose} className="text-white">Cancel</Button>
+              <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">Save Experience</Button>
             </div>
           </form>
         </CardContent>

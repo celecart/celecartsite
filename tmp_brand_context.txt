@@ -1,0 +1,50 @@
+
+    const id = this.brandId++;
+
+    
+
+    // Ensure celebWearers is properly typed as string[]
+
+    const celebWearers = Array.isArray(insertBrand.celebWearers) 
+
+      ? insertBrand.celebWearers.filter(item => typeof item === 'string')
+
+      : [];
+
+      
+
+    const brand: Brand = { 
+
+      ...insertBrand, 
+
+      id,
+
+      description: insertBrand.description ?? null,
+
+      celebWearers: celebWearers
+
+    };
+
+    this.brands.set(id, brand);
+
+    return brand;
+
+  }
+
+  
+
+  // CelebrityBrand operations
+
+  async getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]> {
+
+    return Array.from(this.celebrityBrands.values()).filter(
+
+      (cb) => cb.celebrityId === celebrityId
+
+    );
+
+  }
+
+  
+
+  async createCelebrityBrand(insertCelebrityBrand: InsertCelebrityBrand): Promise<CelebrityBrand> {
