@@ -1324,7 +1324,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(brand);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
+        const errors = (error.errors || []).map((issue) => {
+          const field = Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : "root";
+          let rule = issue.code;
+          let tip = "Correct this field according to the indicated rule.";
+          switch (issue.code) {
+            case "too_small": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.type === "string" && anyIssue?.minimum === 1) {
+                rule = "required";
+                tip = field === "name"
+                  ? "Enter a brand name (at least 1 character)."
+                  : field === "imageUrl"
+                  ? "Upload a logo image for the brand."
+                  : "Provide a value for this field.";
+              } else {
+                rule = "min_length";
+                tip = "Increase the length to meet the minimum requirement.";
+              }
+              break;
+            }
+            case "too_big": {
+              rule = "max_length";
+              tip = field === "name"
+                ? "Shorten the brand name to 100 characters or fewer."
+                : "Shorten the value to meet the maximum length.";
+              break;
+            }
+            case "invalid_string": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.validation === "url") {
+                rule = "invalid_url";
+                tip = "Use a valid URL starting with http:// or https://.";
+              }
+              break;
+            }
+            case "invalid_type": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.expected === "array") {
+                rule = "type_array";
+                tip = "Provide an array of values (e.g., select multiple options).";
+              } else if (anyIssue?.expected === "number") {
+                rule = "type_number";
+                tip = "Use numeric IDs for categories.";
+              } else if (anyIssue?.expected === "string") {
+                rule = "type_string";
+                tip = "Provide text values for this field.";
+              } else {
+                rule = "invalid_type";
+                tip = `Expected ${String(anyIssue?.expected)}, received ${String(anyIssue?.received)}.`;
+              }
+              break;
+            }
+            case "invalid_enum_value": {
+              rule = "invalid_option";
+              tip = "Choose one of the allowed options from the list.";
+              break;
+            }
+            default:
+              break;
+          }
+          const message = issue.message || (rule === "required" ? "This field is required" : "Invalid value");
+          return { field, rule, message, tip };
+        });
+        return res.status(400).json({ message: "Validation failed", errors });
       }
       res.status(500).json({ message: "Failed to create brand" });
     }
@@ -1348,7 +1411,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
+        const errors = (error.errors || []).map((issue) => {
+          const field = Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : "root";
+          let rule = issue.code;
+          let tip = "Correct this field according to the indicated rule.";
+          switch (issue.code) {
+            case "too_small": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.type === "string" && anyIssue?.minimum === 1) {
+                rule = "required";
+                tip = field === "name"
+                  ? "Enter a brand name (at least 1 character)."
+                  : field === "imageUrl"
+                  ? "Upload a logo image for the brand."
+                  : "Provide a value for this field.";
+              } else {
+                rule = "min_length";
+                tip = "Increase the length to meet the minimum requirement.";
+              }
+              break;
+            }
+            case "too_big": {
+              rule = "max_length";
+              tip = field === "name"
+                ? "Shorten the brand name to 100 characters or fewer."
+                : "Shorten the value to meet the maximum length.";
+              break;
+            }
+            case "invalid_string": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.validation === "url") {
+                rule = "invalid_url";
+                tip = "Use a valid URL starting with http:// or https://.";
+              }
+              break;
+            }
+            case "invalid_type": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.expected === "array") {
+                rule = "type_array";
+                tip = "Provide an array of values (e.g., select multiple options).";
+              } else if (anyIssue?.expected === "number") {
+                rule = "type_number";
+                tip = "Use numeric IDs for categories.";
+              } else if (anyIssue?.expected === "string") {
+                rule = "type_string";
+                tip = "Provide text values for this field.";
+              } else {
+                rule = "invalid_type";
+                tip = `Expected ${String(anyIssue?.expected)}, received ${String(anyIssue?.received)}.`;
+              }
+              break;
+            }
+            case "invalid_enum_value": {
+              rule = "invalid_option";
+              tip = "Choose one of the allowed options from the list.";
+              break;
+            }
+            default:
+              break;
+          }
+          const message = issue.message || (rule === "required" ? "This field is required" : "Invalid value");
+          return { field, rule, message, tip };
+        });
+        return res.status(400).json({ message: "Validation failed", errors });
       }
       res.status(500).json({ message: "Failed to update brand" });
     }

@@ -86,8 +86,7 @@ export default function AdminCategories() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('theme');
-      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const next = stored ? stored === 'dark' : prefers;
+      const next = stored ? stored === 'dark' : false;
       setIsDark(next);
       applyTheme(next);
     } catch {

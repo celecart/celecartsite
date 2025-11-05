@@ -6,12 +6,12 @@ import "./index.css";
 (() => {
   try {
     const stored = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = stored ? stored === "dark" : prefersDark;
+    // Default to light mode (ignore system preference unless explicitly stored)
+    const isDark = stored ? stored === "dark" : false;
     document.documentElement.classList.toggle("dark", !!isDark);
   } catch {
-    // Fallback to dark appearance if storage or matchMedia is unavailable
-    document.documentElement.classList.add("dark");
+    // Fallback to light mode
+    document.documentElement.classList.remove("dark");
   }
 })();
 

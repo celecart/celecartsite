@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { logger } from "@/lib/logger";
+import type { Category } from "@shared/schema";
 
 interface ProfileData {
   displayName: string;
@@ -489,7 +490,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <div className="profile-page min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {loading ? (
@@ -964,35 +965,33 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
-                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
-                                                >
-                                                  Shop Now
-                                                </Button>
-                                              )}
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                              >
+                                                <Edit className="w-3 h-3" />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => deleteProduct(product.id)}
+                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
                                             </div>
+                                            {product.purchaseLink && (
+                                              <Button
+                                                size="sm"
+                                                onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                                              >
+                                                Shop Now
+                                              </Button>
+                                            )}
                                           </CardContent>
                                         </Card>
                                       ))}
@@ -1015,46 +1014,36 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences').length === 0 ? (
+                                {products.filter(p => { const c = (p.category || '').toLowerCase().trim(); return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences'; }).length === 0 ? (
                                   <div className="text-white/70">No luxury brand items yet.</div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                                     {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences')
+                                      .filter(p => { const c = (p.category || '').toLowerCase().trim(); return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences'; })
                                       .map((product) => (
-                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                        <Card key={product.id} className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
                                           {product.isFeatured && (
-                                            <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
+                                            <Badge className="absolute top-3 left-3 bg-amber-500 text-black shadow-md">Popular</Badge>
                                           )}
-                                          <CardContent className="p-5">
-                                            <div className="w-full h-44 bg-white/10 rounded-lg mb-4 overflow-hidden">
+                                          <CardContent className="p-0">
+                                            <div className="relative w-full h-64">
                                               {product.imageUrl ? (
                                                 Array.isArray(product.imageUrl) ? (
-                                                  <div className="w-full h-full flex">
-                                                    {product.imageUrl.slice(0, 2).map((url, index) => (
-                                                      <img
-                                                        key={index}
-                                                        src={normalizeImageUrl(url)}
-                                                        alt={`${product.name} ${index + 1}`}
-                                                        className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
-                                                        onError={(e) => {
-                                                          const target = e.target as HTMLImageElement;
-                                                          target.onerror = null;
-                                                          target.src = "/assets/product-placeholder.svg";
-                                                        }}
-                                                      />
-                                                    ))}
-                                                    {product.imageUrl.length > 2 && (
-                                                      <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
-                                                        +{product.imageUrl.length - 2} more
-                                                      </div>
-                                                    )}
-                                                  </div>
+                                                  <img
+                                                    src={normalizeImageUrl(product.imageUrl[0])}
+                                                    alt={product.name}
+                                                    className="absolute inset-0 w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      const target = e.target as HTMLImageElement;
+                                                      target.onerror = null;
+                                                      target.src = "/assets/product-placeholder.svg";
+                                                    }}
+                                                  />
                                                 ) : (
                                                   <img
                                                     src={normalizeImageUrl(product.imageUrl as string)}
                                                     alt={product.name}
-                                                    className="w-full h-full object-cover"
+                                                    className="absolute inset-0 w-full h-full object-cover"
                                                     onError={(e) => {
                                                       const target = e.target as HTMLImageElement;
                                                       target.onerror = null;
@@ -1063,25 +1052,16 @@ export default function Profile() {
                                                   />
                                                 )
                                               ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                                <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white/50">No Image</div>
                                               )}
-                                            </div>
-                                            <h3 className="text-violet-200 font-playfair font-semibold mb-2">{product.name}</h3>
-                                            <div className="text-sky-400 font-medium mb-2">{product.category}</div>
-                                            <div className="flex items-center gap-3 mb-3">
-                                              <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
-                                            </div>
-                                            <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
+                                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                                              <span className="absolute top-3 right-3 px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                              <div className="absolute bottom-3 right-3 flex gap-2 z-10">
                                                 <Button
                                                   size="sm"
                                                   variant="outline"
-                                                  onClick={() => {
-                                                    setEditingProduct(product);
-                                                    setShowAddProduct(true);
-                                                  }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
+                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                  className="border-white/20 text-white bg-black/30 hover:bg-black/40"
                                                 >
                                                   <Edit className="w-3 h-3" />
                                                 </Button>
@@ -1089,20 +1069,15 @@ export default function Profile() {
                                                   size="sm"
                                                   variant="outline"
                                                   onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                                                  className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
                                                 >
                                                   <Trash2 className="w-3 h-3" />
                                                 </Button>
                                               </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
-                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
-                                                >
-                                                  Shop Now
-                                                </Button>
-                                              )}
+                                              <div className="absolute bottom-3 left-3 right-3">
+                                                <h3 className="text-white font-playfair font-semibold">{product.name}</h3>
+                                                <div className="text-white/80 text-sm">{product.category}</div>
+                                              </div>
                                             </div>
                                           </CardContent>
                                         </Card>
@@ -1187,35 +1162,33 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                              >
+                                                <Edit className="w-3 h-3" />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => deleteProduct(product.id)}
+                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
+                                            </div>
+                                            {product.purchaseLink && (
+                                              <Button
+                                                size="sm"
                                                   onClick={() => window.open(product.purchaseLink, '_blank')}
                                                   className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
                                                 >
                                                   Shop Now
                                                 </Button>
                                               )}
-                                            </div>
                                           </CardContent>
                                         </Card>
                                       ))}
@@ -1321,10 +1294,12 @@ function ProductModal({
   initialCategory?: string;
 }) {
   const { toast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
     category: product?.category || initialCategory || '',
+    productCategory: (product as any)?.productCategory || '',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     price: product?.price || '',
     location: product?.location || '',
@@ -1336,6 +1311,27 @@ function ProductModal({
   });
   const formRef = useRef(formData);
   useEffect(() => { formRef.current = formData; }, [formData]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/categories', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load product categories', err);
+      }
+    })();
+  }, []);
+
+  // Default productCategory once categories load or when section changes
+  useEffect(() => {
+    if (!formData.productCategory && categories.length > 0) {
+      setFormData(prev => ({ ...prev, productCategory: prev.productCategory || categories[0].name }));
+    }
+  }, [categories]);
 
   const handleImagesChange = async (imageUrls: string[]) => {
     setFormData(prev => ({ ...prev, imageUrls }));
@@ -1404,14 +1400,38 @@ function ProductModal({
                 />
               </div>
               <div>
-                <Label className="text-white/70">Category</Label>
-                <Input
+                <Label className="text-white/70">Section</Label>
+                <Select
                   value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="e.g., Restaurant, Lounge, City"
-                  required
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Luxury Brand Preferences","Personal Brand Products","Zulqadar Experiences"].map((sec) => (
+                      <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            <div>
+              <Label className="text-white/70">Product Category</Label>
+              <Select
+                value={formData.productCategory}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, productCategory: value }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select product category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

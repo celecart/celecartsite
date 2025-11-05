@@ -73,8 +73,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('theme');
-      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const next = stored ? stored === 'dark' : prefers;
+      const next = stored ? stored === 'dark' : false;
       setIsDark(next);
       applyTheme(next);
     } catch {
@@ -204,7 +203,7 @@ export default function AdminDashboard() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/settings')} tooltip="Settings">
                   <Settings />
                   <span>Settings</span>
                 </SidebarMenuButton>

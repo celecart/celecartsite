@@ -27,6 +27,7 @@ import EditBlog from "@/pages/EditBlog";
 import AdminProducts from "@/pages/AdminProducts";
 import AdminBrands from "@/pages/AdminBrands";
 import Brands from "@/pages/Brands";
+import AdminSettings from "@/pages/AdminSettings";
 
 function Router() {
   return (
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/admin/plans" component={AdminPlans} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/brands" component={AdminBrands} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/brands" component={Brands} />
       <Route path="/cele-world" component={CeleWorld} />
       <Route path="/add-blog" component={AddBlog} />
