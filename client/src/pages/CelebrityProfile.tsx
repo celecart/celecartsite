@@ -21,6 +21,7 @@ import StylingDetails from "@/components/StylingDetails";
 
 import LiveEvents from "@/components/LiveEvents";
 import SKKNProducts from "@/components/SKKNProducts";
+// CelebrityProducts import removed during revert
 import MediaUpload from "@/components/MediaUpload";
 import { motion } from "framer-motion";
 import { FallbackImage } from "@/components/ui/fallback-image";
@@ -1393,7 +1394,8 @@ export default function CelebrityProfile() {
                       </div>
                     ) : (
                       (() => {
-                        const favExperiences = (products || []).filter(p => ((p.category || '').toLowerCase().includes('experiences')));
+                        // Filter products to only show 'Favorite Experiences' in this section
+                        const favExperiences = (products || []).filter(p => (p.category || '').toLowerCase() === 'favorite experiences');
                         if (!favExperiences.length) {
                           const experienceLooks = (celebrity.stylingDetails || []).filter(look => 
                             look.occasion === 'Favorite Restaurant' ||
@@ -1504,10 +1506,8 @@ export default function CelebrityProfile() {
                       </div>
                     ) : (
                       (() => {
-                        const luxuryPrefs = (products || []).filter(p => {
-                          const c = (p.category || '').toLowerCase().trim();
-                          return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences';
-                        });
+                        // Filter products to only show 'Luxury Brand Preferences' in this section
+                        const luxuryPrefs = (products || []).filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences');
                         if (!luxuryPrefs.length) {
                           const luxuryLooks = (celebrity.stylingDetails || []).filter(look => 
                             look.occasion !== 'Favorite Restaurant' &&
@@ -1598,7 +1598,8 @@ export default function CelebrityProfile() {
                       </div>
                     ) : (
                       (() => {
-                        const favExperiences = (products || []).filter(p => ((p.category || '').toLowerCase().includes('experiences')));
+                        // Filter products to only show 'Favorite Experiences' for non-Zulqadar celebrities
+                        const favExperiences = (products || []).filter(p => (p.category || '').toLowerCase() === 'favorite experiences');
                         if (!favExperiences.length) {
                           const experienceLooks = (celebrity.stylingDetails || []).filter(look => 
                             look.occasion === 'Favorite Restaurant' ||
@@ -1710,10 +1711,8 @@ export default function CelebrityProfile() {
                       </div>
                     ) : (
                       (() => {
-                        const luxuryPrefs = (products || []).filter(p => {
-                          const c = (p.category || '').toLowerCase().trim();
-                          return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences';
-                        });
+                        // Filter products to only show 'Luxury Brand Preferences' for non-Zulqadar celebrities
+                        const luxuryPrefs = (products || []).filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences');
                         if (!luxuryPrefs.length) {
                           const luxuryLooks = (celebrity.stylingDetails || []).filter(look => 
                             look.occasion !== 'Favorite Restaurant' &&
@@ -1958,6 +1957,7 @@ export default function CelebrityProfile() {
                   </div>
                 ) : (
                   (() => {
+                    // Filter products to only show 'Personal Brand Products' in this section
                     const personalBrandProducts = (products || []).filter(p => (p.category || '').toLowerCase() === 'personal brand products');
                     if (!personalBrandProducts.length) {
                       return (
@@ -2242,6 +2242,8 @@ export default function CelebrityProfile() {
                     </div>
                   </div>
                 </div>
+
+                {/* All Celebrity Products section removed during revert */}
               </div>
             </TabsContent>
             

@@ -69,8 +69,9 @@ export async function seedCelebrityProducts() {
   const [emma] = await db.select().from(celebrities).where(eq(celebrities.name, 'Emma Stone')).limit(1);
   const [messi] = await db.select().from(celebrities).where(eq(celebrities.name, 'Lionel Messi')).limit(1);
   const [taylor] = await db.select().from(celebrities).where(eq(celebrities.name, 'Taylor Swift')).limit(1);
+  const [celebrity1] = await db.select().from(celebrities).where(eq(celebrities.id, 1)).limit(1);
 
-  if (!emma || !messi || !taylor) {
+  if (!emma || !messi || !taylor || !celebrity1) {
     console.log('⚠️  Required celebrities not found. Ensure celebrities seeder ran first.');
     return;
   }
@@ -90,6 +91,22 @@ export async function seedCelebrityProducts() {
     'generated-icon.png',
     'test-upload.jpg'
   ], 'taylor-bodysuit.png');
+
+  // Prepare images for Favorite Experiences products
+  const favoriteExpImage1 = await ensureImage([
+    'test-upload.jpg',
+    path.join('public', 'assets', 'product-placeholder.svg')
+  ], 'favorite-restaurant.jpg');
+
+  const favoriteExpImage2 = await ensureImage([
+    'test-upload.jpg',
+    path.join('public', 'assets', 'product-placeholder.svg')
+  ], 'favorite-lounge.jpg');
+
+  const favoriteExpImage3 = await ensureImage([
+    'test-upload.jpg',
+    path.join('public', 'assets', 'product-placeholder.svg')
+  ], 'favorite-vacation.jpg');
 
   const rows: InsertCelebrityProduct[] = [
     {
@@ -149,11 +166,72 @@ export async function seedCelebrityProducts() {
       metadata: {
         tags: ['concert', 'versace']
       }
+    },
+    // Favorite Experiences products for celebrity ID 1
+    {
+      celebrityId: celebrity1.id,
+      name: 'Signature Restaurant Experience',
+      description: 'Exclusive dining experience at their favorite Michelin-starred restaurant.',
+      category: 'Favorite Experiences',
+      imageUrl: favoriteExpImage1,
+      price: '$350',
+      website: 'https://example.com/favorite-restaurant',
+      purchaseLink: 'https://example.com/book/favorite-restaurant',
+      rating: 5,
+      isActive: true,
+      isFeatured: true,
+      location: 'New York',
+      createdAt: 'now()',
+      updatedAt: 'now()',
+      metadata: {
+        tags: ['fine-dining', 'exclusive'],
+        placeName: 'Le Bernardin'
+      }
+    },
+    {
+      celebrityId: celebrity1.id,
+      name: 'Luxury Lounge Access',
+      description: 'VIP access to their preferred luxury lounge with premium amenities.',
+      category: 'Favorite Experiences',
+      imageUrl: favoriteExpImage2,
+      price: '$200',
+      website: 'https://example.com/luxury-lounge',
+      purchaseLink: 'https://example.com/book/luxury-lounge',
+      rating: 4,
+      isActive: true,
+      isFeatured: false,
+      location: 'Los Angeles',
+      createdAt: 'now()',
+      updatedAt: 'now()',
+      metadata: {
+        tags: ['vip', 'luxury'],
+        placeName: 'The Peninsula Lounge'
+      }
+    },
+    {
+      celebrityId: celebrity1.id,
+      name: 'Private Vacation Getaway',
+      description: 'Curated vacation package to their most cherished destination.',
+      category: 'Favorite Experiences',
+      imageUrl: favoriteExpImage3,
+      price: '$2500',
+      website: 'https://example.com/vacation-getaway',
+      purchaseLink: 'https://example.com/book/vacation-getaway',
+      rating: 5,
+      isActive: true,
+      isFeatured: true,
+      location: 'Maldives',
+      createdAt: 'now()',
+      updatedAt: 'now()',
+      metadata: {
+        tags: ['travel', 'luxury'],
+        placeName: 'Four Seasons Private Island'
+      }
     }
   ];
 
   await db.insert(celebrityProducts).values(rows);
-  console.log('✅ Seeded celebrity products (3 records)');
+  console.log('✅ Seeded celebrity products (6 records)');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

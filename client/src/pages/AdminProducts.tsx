@@ -462,7 +462,7 @@ export default function AdminProducts() {
               <Select value={form.category || ''} onValueChange={(v) => setForm((f:any) => ({ ...f, category: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
                 <SelectContent>
-                  {["Luxury Brand Preferences","Personal Brand Products","Zulqadar Experiences"].map(sec => (
+                  {["Favorite Experiences","Luxury Brand Preferences","Personal Brand Products","Zulqadar Experiences"].map(sec => (
                     <SelectItem key={sec} value={sec}>{sec}</SelectItem>
                   ))}
                 </SelectContent>

@@ -218,7 +218,7 @@ export default function Profile() {
       const formattedData = {
         ...productData,
         celebrityId: celebrityId ?? undefined
-      };
+      };products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0
       if (!formattedData.celebrityId) {
         toast({ title: "Error", description: "Missing celebrity profile. Unable to save product.", variant: "destructive" });
         return;
@@ -908,12 +908,12 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences').length === 0 ? (
+                                {products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0 ? (
                                   <div className="text-white/70">No experiences added yet.</div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                                     {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences')
+                                      .filter(p => (p.category || '').toLowerCase() === 'favorite experiences')
                                       .map((product) => (
                                         <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
                                           {product.isFeatured && (
@@ -1258,7 +1258,7 @@ export default function Profile() {
               setEditingProduct(null);
               setAddProductContext(null);
             }}
-            initialCategory={'Zulqadar Experiences'}
+            initialCategory={'Favorite Experiences'}
           />
         ) : (
           <ProductModal
@@ -1409,7 +1409,7 @@ function ProductModal({
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Luxury Brand Preferences","Personal Brand Products","Zulqadar Experiences"].map((sec) => (
+                    {["Favorite Experiences","Luxury Brand Preferences","Personal Brand Products"].map((sec) => (
                       <SelectItem key={sec} value={sec}>{sec}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1561,7 +1561,7 @@ function FavoriteExperienceModal({
     subheading: product?.metadata?.subtitle || '',
     placeName: product?.metadata?.placeName || product?.location || '',
     description: product?.description || '',
-    category: product?.category || initialCategory || 'Zulqadar Experiences',
+    category: product?.category || initialCategory || 'Favorite Experiences',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     tags: Array.isArray(product?.metadata?.tags) ? (product?.metadata?.tags as string[]) : [],
     price: product?.price || '',
