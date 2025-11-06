@@ -414,7 +414,8 @@ export const celebrityProducts = pgTable("celebrity_products", {
   celebrityId: integer("celebrity_id").notNull(), // Link to celebrity who owns this product
   name: text("name").notNull(),
   description: text("description"),
-  category: text("category").notNull(), // e.g., "Restaurant", "City", "Lounge", "Fashion", "Beauty", etc.
+  category: text("category").notNull(), // Section, e.g., "Luxury Brand Preferences", "Personal Brand Products"
+  productCategory: text("product_category"), // Product category, e.g., "Apparel", "Beauty", etc.
   imageUrl: text("image_url").notNull(),
   price: text("price"), // Optional price information
   location: text("location"), // For restaurants, cities, lounges
@@ -445,6 +446,7 @@ export const insertCelebrityProductSchema = createInsertSchema(celebrityProducts
   name: true,
   description: true,
   category: true,
+  productCategory: true,
   imageUrl: true,
   price: true,
   location: true,

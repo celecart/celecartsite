@@ -7,43 +7,28 @@ interface ApparelAccessoriesProps {
 
 export default function ApparelAccessories({ items }: ApparelAccessoriesProps) {
   return (
-    <div className="space-y-4 mt-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
       {items
         .filter((item) => 
           item.itemType !== 'Racquet' && 
           item.itemType !== 'Footwear' && 
-          item.itemType !== 'Football Boots' && 
-          item.itemType
+          item.itemType !== 'Football Boots'
         )
         .map((item) => (
-          <div key={item.id} className="flex items-start gap-4 border-b border-gray-200 pb-4">
-            <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-              <BrandImage 
-                imageUrl={item.brand?.imageUrl} 
-                brandName={item.brand?.name} 
-              />
-            </div>
-            <div>
-              <h4 className="font-medium text-lg">{item.description}</h4>
-              <p className="text-sm text-gray-500">{item.brand?.name}</p>
-              {item.equipmentSpecs?.price && (
-                <p className="text-sm text-gold font-medium mt-1">{item.equipmentSpecs.price}</p>
-              )}
-              <div className="flex gap-2 items-center mt-1">
-                {item.relationshipStartYear && (
-                  <p className="text-xs text-gray-400">Partnership since {item.relationshipStartYear}</p>
-                )}
-                {item.equipmentSpecs?.purchaseLink && (
-                  <a 
-                    href={item.equipmentSpecs.purchaseLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-gold hover:underline"
-                  >
-                    Buy Now
-                  </a>
-                )}
-              </div>
+          <div 
+            key={item.id} 
+            className="relative rounded-xl overflow-hidden border border-purple-200 bg-neutral-100 bg-cover bg-center h-80"
+            style={{ backgroundImage: `url(${item.brand?.imageUrl || '/placeholder.svg'})` }}
+          >
+            {item.relationshipStartYear && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">Popular</div>
+            )}
+            {item.equipmentSpecs?.price && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">${item.equipmentSpecs.price}</div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+              <h4 className="text-white font-medium text-lg">{item.brand?.name}</h4>
+              <p className="text-white/80 text-sm">{item.itemType}</p>
             </div>
           </div>
         ))}

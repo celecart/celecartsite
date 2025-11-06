@@ -500,6 +500,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return next();
   };
 
+  // Admin-only: DB table existence health endpoint
+  app.get('/api/db/health', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const storageType = (storage as any)?.constructor?.name || 'unknown';
+      if (!pool) {
+        return res.status(200).json({
+          connected: false,
+          message: 'DATABASE_URL not set or pool uninitialized',
+          storageType,
+          version: null,
+          tables: {
+            users: false,
+            user_roles: false,
+            brands: false,
+            celebrity_brands: false,
+          },
+          allTables: [],
+          otherTables: [],
+        });
+      }
+
+      // Verify connectivity and version
+      let version: string | null = null;
+      try {
+        await pool.query('SELECT 1');
+        const v = await pool.query('SELECT version()');
+        version = v.rows?.[0]?.version ?? null;
+      } catch (e) {
+        return res.status(200).json({
+          connected: false,
+          message: 'DB connection failed',
+          storageType,
+          version: null,
+          tables: {
+            users: false,
+            user_roles: false,
+            brands: false,
+            celebrity_brands: false,
+          },
+          error: (e as any)?.message ?? 'unknown error',
+          allTables: [],
+          otherTables: [],
+        });
+      }
+
+      // Check required tables by name
+      const required = ['users', 'user_roles', 'brands', 'celebrity_brands'];
+      // Fetch all public tables
+      let allTables: string[] = [];
+      try {
+        const { rows } = await pool.query(`SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' ORDER BY tablename`);
+        allTables = rows.map((r: any) => r.tablename).filter(Boolean);
+      } catch (listErr) {
+        console.warn('[Route:/api/db/health] Failed to list tables', listErr);
+      }
+      const tables: Record<string, boolean> = {};
+      for (const tbl of required) {
+        try {
+          const { rows } = await pool.query(`SELECT to_regclass('public.${tbl}') AS regclass`);
+          const exists = rows?.[0]?.regclass != null;
+          tables[tbl] = !!exists;
+        } catch {
+          tables[tbl] = false;
+        }
+      }
+
+      const otherTables = allTables.filter(t => !required.includes(t));
+      return res.json({ connected: true, version, storageType, tables, allTables, otherTables });
+    } catch (err) {
+      console.error('[Route:/api/db/health] Failed', err);
+      return res.status(500).json({ message: 'Failed to compute DB health' });
+    }
+  });
+
   // Users list (for assignments)
   app.get('/api/users', async (_req: Request, res: Response) => {
     try {
@@ -1324,14 +1398,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create brand
   app.post("/api/brands", async (req: Request, res: Response) => {
     try {
+      const bodyPreview = typeof req.body === 'object' ? { ...req.body, imageUrl: req.body?.imageUrl } : 'non-object';
+      console.log("[Route:/api/brands] Incoming create request", { storageType: (storage as any)?.constructor?.name, bodyPreview });
+
       const validatedData = insertBrandSchema.parse(req.body);
+      console.log("[Route:/api/brands] Validation passed", { name: validatedData.name });
+
       const brand = await storage.createBrand(validatedData);
+      console.log("[Route:/api/brands] Created brand", { id: (brand as any)?.id, name: brand.name });
       res.status(201).json(brand);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
+        console.warn("[Route:/api/brands] Validation error", { issues: error.errors });
+        const errors = (error.errors || []).map((issue) => {
+          const field = Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : "root";
+          let rule = issue.code;
+          let tip = "Correct this field according to the indicated rule.";
+          switch (issue.code) {
+            case "too_small": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.type === "string" && anyIssue?.minimum === 1) {
+                rule = "required";
+                tip = field === "name"
+                  ? "Enter a brand name (at least 1 character)."
+                  : field === "imageUrl"
+                  ? "Upload a logo image for the brand."
+                  : "Provide a value for this field.";
+              } else {
+                rule = "min_length";
+                tip = "Increase the length to meet the minimum requirement.";
+              }
+              break;
+            }
+            case "too_big": {
+              rule = "max_length";
+              tip = field === "name"
+                ? "Shorten the brand name to 100 characters or fewer."
+                : "Shorten the value to meet the maximum length.";
+              break;
+            }
+            case "invalid_string": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.validation === "url") {
+                rule = "invalid_url";
+                tip = "Use a valid URL starting with http:// or https://.";
+              }
+              break;
+            }
+            case "invalid_type": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.expected === "array") {
+                rule = "type_array";
+                tip = "Provide an array of values (e.g., select multiple options).";
+              } else if (anyIssue?.expected === "number") {
+                rule = "type_number";
+                tip = "Use numeric IDs for categories.";
+              } else if (anyIssue?.expected === "string") {
+                rule = "type_string";
+                tip = "Provide text values for this field.";
+              } else {
+                rule = "invalid_type";
+                tip = `Expected ${String(anyIssue?.expected)}, received ${String(anyIssue?.received)}.`;
+              }
+              break;
+            }
+            case "invalid_enum_value": {
+              rule = "invalid_option";
+              tip = "Choose one of the allowed options from the list.";
+              break;
+            }
+            default:
+              break;
+          }
+          const message = issue.message || (rule === "required" ? "This field is required" : "Invalid value");
+          return { field, rule, message, tip };
+        });
+        return res.status(400).json({ message: "Validation failed", errors });
       }
+      console.error("[Route:/api/brands] Create failed", { error: (error as any)?.message, storageType: (storage as any)?.constructor?.name });
       res.status(500).json({ message: "Failed to create brand" });
+    }
+  });
+
+  // Debug environment and storage info
+  app.get("/api/debug/env", async (req: Request, res: Response) => {
+    try {
+      const storageType = (storage as any)?.constructor?.name || "unknown";
+      const { db: drizzleDb, pool: pgPool } = await import("./db");
+      let pgVersion: string | null = null;
+      let connected = false;
+      if (pgPool) {
+        try {
+          await pgPool.query("SELECT 1");
+          connected = true;
+          const v = await pgPool.query("SELECT version()");
+          pgVersion = v.rows?.[0]?.version || null;
+        } catch {
+          connected = false;
+        }
+      }
+      res.json({
+        storageType,
+        env: {
+          DATABASE_URL: !!process.env.DATABASE_URL,
+          NODE_ENV: process.env.NODE_ENV || null,
+          RUN_SEEDERS: process.env.RUN_SEEDERS || null,
+        },
+        db: {
+          connected,
+          postgresVersion: pgVersion,
+          drizzleInitialized: !!drizzleDb,
+        },
+      });
+    } catch (err) {
+      console.error("[Route:/api/debug/env] Failed", err);
+      res.status(500).json({ message: "Failed to fetch env info" });
     }
   });
 
@@ -1353,7 +1534,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid brand data", errors: error.errors });
+        const errors = (error.errors || []).map((issue) => {
+          const field = Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : "root";
+          let rule = issue.code;
+          let tip = "Correct this field according to the indicated rule.";
+          switch (issue.code) {
+            case "too_small": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.type === "string" && anyIssue?.minimum === 1) {
+                rule = "required";
+                tip = field === "name"
+                  ? "Enter a brand name (at least 1 character)."
+                  : field === "imageUrl"
+                  ? "Upload a logo image for the brand."
+                  : "Provide a value for this field.";
+              } else {
+                rule = "min_length";
+                tip = "Increase the length to meet the minimum requirement.";
+              }
+              break;
+            }
+            case "too_big": {
+              rule = "max_length";
+              tip = field === "name"
+                ? "Shorten the brand name to 100 characters or fewer."
+                : "Shorten the value to meet the maximum length.";
+              break;
+            }
+            case "invalid_string": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.validation === "url") {
+                rule = "invalid_url";
+                tip = "Use a valid URL starting with http:// or https://.";
+              }
+              break;
+            }
+            case "invalid_type": {
+              const anyIssue: any = issue as any;
+              if (anyIssue?.expected === "array") {
+                rule = "type_array";
+                tip = "Provide an array of values (e.g., select multiple options).";
+              } else if (anyIssue?.expected === "number") {
+                rule = "type_number";
+                tip = "Use numeric IDs for categories.";
+              } else if (anyIssue?.expected === "string") {
+                rule = "type_string";
+                tip = "Provide text values for this field.";
+              } else {
+                rule = "invalid_type";
+                tip = `Expected ${String(anyIssue?.expected)}, received ${String(anyIssue?.received)}.`;
+              }
+              break;
+            }
+            case "invalid_enum_value": {
+              rule = "invalid_option";
+              tip = "Choose one of the allowed options from the list.";
+              break;
+            }
+            default:
+              break;
+          }
+          const message = issue.message || (rule === "required" ? "This field is required" : "Invalid value");
+          return { field, rule, message, tip };
+        });
+        return res.status(400).json({ message: "Validation failed", errors });
       }
       res.status(500).json({ message: "Failed to update brand" });
     }

@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { logger } from "@/lib/logger";
+import type { Category } from "@shared/schema";
 
 interface ProfileData {
   displayName: string;
@@ -148,6 +149,21 @@ export default function Profile() {
   >('personalFavourite');
   // Track where Add Product was triggered to prefill category and render placement
   const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
+  const [luxuryCategoryFilter, setLuxuryCategoryFilter] = useState<string>('All');
+  const [luxurySortOrder, setLuxurySortOrder] = useState<'default' | 'price_asc' | 'price_desc' | 'newest' | 'featured'>('default');
+  const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([
+    'Apparel','Accessories','Footwear','Technology','Vehicles','Fragrance','Beauty'
+  ]);
+  useEffect(() => {
+    // Fetch canonical categories from backend, fall back to defaults on error
+    fetch('/api/categories')
+      .then(res => res.ok ? res.json() : [])
+      .then((cats: Category[]) => {
+        const names = Array.from(new Set((cats || []).map(c => c?.name).filter(Boolean)));
+        if (names.length) setAvailableProductCategories(names as string[]);
+      })
+      .catch(() => {/* ignore errors, keep defaults */});
+  }, []);
   const [profileData, setProfileData] = useState<ProfileData>({
     displayName: '',
     email: '',
@@ -217,7 +233,7 @@ export default function Profile() {
       const formattedData = {
         ...productData,
         celebrityId: celebrityId ?? undefined
-      };
+      };products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0
       if (!formattedData.celebrityId) {
         toast({ title: "Error", description: "Missing celebrity profile. Unable to save product.", variant: "destructive" });
         return;
@@ -489,7 +505,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <div className="profile-page min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {loading ? (
@@ -907,12 +923,12 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences').length === 0 ? (
+                                {products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0 ? (
                                   <div className="text-white/70">No experiences added yet.</div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                                     {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'zulqadar experiences')
+                                      .filter(p => (p.category || '').toLowerCase() === 'favorite experiences')
                                       .map((product) => (
                                         <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
                                           {product.isFeatured && (
@@ -964,35 +980,33 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
-                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
-                                                >
-                                                  Shop Now
-                                                </Button>
-                                              )}
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                              >
+                                                <Edit className="w-3 h-3" />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => deleteProduct(product.id)}
+                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
                                             </div>
+                                            {product.purchaseLink && (
+                                              <Button
+                                                size="sm"
+                                                onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                                              >
+                                                Shop Now
+                                              </Button>
+                                            )}
                                           </CardContent>
                                         </Card>
                                       ))}
@@ -1015,100 +1029,230 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences').length === 0 ? (
-                                  <div className="text-white/70">No luxury brand items yet.</div>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                                    {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'luxury brand preferences')
-                                      .map((product) => (
-                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
-                                          {product.isFeatured && (
-                                            <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
-                                          )}
-                                          <CardContent className="p-5">
-                                            <div className="w-full h-44 bg-white/10 rounded-lg mb-4 overflow-hidden">
-                                              {product.imageUrl ? (
-                                                Array.isArray(product.imageUrl) ? (
-                                                  <div className="w-full h-full flex">
-                                                    {product.imageUrl.slice(0, 2).map((url, index) => (
-                                                      <img
-                                                        key={index}
-                                                        src={normalizeImageUrl(url)}
-                                                        alt={`${product.name} ${index + 1}`}
-                                                        className={`${product.imageUrl.length === 1 ? 'w-full' : 'w-1/2'} h-full object-cover ${index > 0 ? 'border-l border-white/20' : ''}`}
-                                                        onError={(e) => {
-                                                          const target = e.target as HTMLImageElement;
-                                                          target.onerror = null;
-                                                          target.src = "/assets/product-placeholder.svg";
-                                                        }}
-                                                      />
-                                                    ))}
-                                                    {product.imageUrl.length > 2 && (
-                                                      <div className="w-1/2 h-full bg-black/50 flex items-center justify-center text-white/70 text-sm border-l border-white/20">
-                                                        +{product.imageUrl.length - 2} more
+                                {(() => {
+                                  const KNOWN = availableProductCategories;
+                                  const luxuryProducts = products.filter(p => {
+                                    const c = (p.category || '').toLowerCase().trim();
+                                    return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences' || KNOWN.some(k => c === k.toLowerCase());
+                                  });
+
+                                  const getProductCategory = (p: any) => {
+                                    const normalize = (s: any) => (s ?? '').toString().trim();
+                                    const matchKnown = (val: string) => {
+                                      if (!val) return undefined;
+                                      const lower = val.toLowerCase();
+                                      const exact = KNOWN.find(k => k.toLowerCase() === lower);
+                                      if (exact) return exact;
+                                      const partial = KNOWN.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
+                                      return partial;
+                                    };
+
+                                    // Prefer explicit product category fields
+                                    const pcRaw = normalize(p.productCategory ?? p.product_category);
+                                    if (pcRaw) {
+                                      const rawLower = pcRaw.toLowerCase();
+                                      if (rawLower === 'uncategorized' || rawLower === 'uncategorised') {
+                                        return 'Other';
+                                      }
+                                      return matchKnown(pcRaw) ?? pcRaw;
+                                    }
+
+                                    // Parse metadata tags if present
+                                    let metadata: any = p.metadata;
+                                    if (typeof metadata === 'string') {
+                                      try { metadata = JSON.parse(metadata); } catch { /* ignore */ }
+                                    }
+                                    if (Array.isArray(metadata?.tags) && metadata.tags.length > 0) {
+                                      for (const t of metadata.tags) {
+                                        const m = matchKnown(normalize(t));
+                                        if (m) return m;
+                                      }
+                                      const firstTag = normalize(metadata.tags[0]);
+                                      if (firstTag) return firstTag;
+                                    }
+
+                                    // As a last resort, try matching the section name to known categories
+                                    const section = normalize(p.category);
+                                    const sectionMatch = matchKnown(section);
+                                    if (sectionMatch) return sectionMatch;
+
+                                    // Final fallback: categorize as Other (avoid Uncategorized)
+                                    return 'Other';
+                                  };
+
+                                  if (luxuryProducts.length === 0) {
+                                    return <div className="text-white/70">No luxury brand items yet.</div>;
+                                  }
+
+                                  const productCats = Array.from(new Set(luxuryProducts.map(getProductCategory)));
+                                  const allCategories = Array.from(new Set([...availableProductCategories, ...productCats]));
+                                  const categoriesWithProducts = allCategories.filter(cat => luxuryProducts.some(p => getProductCategory(p) === cat));
+                                  const visibleCategories = luxuryCategoryFilter === 'All'
+                                    ? (categoriesWithProducts.length ? categoriesWithProducts : productCats)
+                                    : [luxuryCategoryFilter];
+
+                                  const countVisible = luxuryCategoryFilter === 'All'
+                                    ? luxuryProducts.length
+                                    : luxuryProducts.filter(p => getProductCategory(p) === luxuryCategoryFilter).length;
+
+                                  const sortProducts = (arr: any[]) => {
+                                    const parsePrice = (p: any) => {
+                                      const s = (p.price || '').toString();
+                                      const n = parseFloat(s.replace(/[^0-9.]/g, ''));
+                                      return Number.isFinite(n) ? n : NaN;
+                                    };
+                                    const byDate = (p: any) => {
+                                      const d = new Date((p.updatedAt || p.createdAt || '') as string);
+                                      return isNaN(d.getTime()) ? 0 : d.getTime();
+                                    };
+                                    const byFeatured = (a: any, b: any) => (b.isFeatured === true ? 1 : 0) - (a.isFeatured === true ? 1 : 0);
+
+                                    switch (luxurySortOrder) {
+                                      case 'price_asc':
+                                        return [...arr].sort((a, b) => {
+                                          const pa = parsePrice(a), pb = parsePrice(b);
+                                          if (isNaN(pa) && isNaN(pb)) return 0;
+                                          if (isNaN(pa)) return 1;
+                                          if (isNaN(pb)) return -1;
+                                          return pa - pb;
+                                        });
+                                      case 'price_desc':
+                                        return [...arr].sort((a, b) => {
+                                          const pa = parsePrice(a), pb = parsePrice(b);
+                                          if (isNaN(pa) && isNaN(pb)) return 0;
+                                          if (isNaN(pa)) return 1;
+                                          if (isNaN(pb)) return -1;
+                                          return pb - pa;
+                                        });
+                                      case 'featured':
+                                        return [...arr].sort(byFeatured);
+                                      case 'newest':
+                                        return [...arr].sort((a, b) => byDate(b) - byDate(a));
+                                      default:
+                                        return arr;
+                                    }
+                                  };
+
+                                  return (
+                                    <div className="space-y-8 mt-4">
+                                      <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-white/80 text-sm mr-2">Filter by Category</span>
+                                          <Button
+                                            size="sm"
+                                            variant={luxuryCategoryFilter === 'All' ? 'default' : 'outline'}
+                                            className="rounded-full px-3"
+                                            onClick={() => setLuxuryCategoryFilter('All')}
+                                          >
+                                            All
+                                          </Button>
+                                          {allCategories.map((cat) => (
+                                            <Button
+                                              key={cat}
+                                              size="sm"
+                                              variant={luxuryCategoryFilter === cat ? 'default' : 'outline'}
+                                              className="rounded-full px-3"
+                                              onClick={() => setLuxuryCategoryFilter(cat)}
+                                            >
+                                              {cat}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                        <div className="flex items-center gap-3 text-white/70 text-sm">
+                                          <span>Showing {countVisible} of {luxuryProducts.length} products</span>
+                                          <span className="ml-4">Sort By</span>
+                                          <Select value={luxurySortOrder} onValueChange={(v) => setLuxurySortOrder(v as any)}>
+                                            <SelectTrigger className="w-40">
+                                              <SelectValue placeholder="Default Order" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="default">Default Order</SelectItem>
+                                              <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                                              <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                                              <SelectItem value="featured">Featured First</SelectItem>
+                                              <SelectItem value="newest">Newest</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+
+                                      {visibleCategories.map((cat) => (
+                                        <div key={cat}>
+                                          <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-white font-playfair font-semibold">{cat}</h3>
+                                            <div className="border-t border-white/10 flex-grow ml-4" />
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {sortProducts(luxuryProducts
+                                              .filter(p => getProductCategory(p) === cat))
+                                              .map((product) => (
+                                                <Card key={product.id} className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
+                                                  {product.isFeatured && (
+                                                    <Badge className="absolute top-3 left-3 bg-amber-500 text-black shadow-md">Popular</Badge>
+                                                  )}
+                                                  <CardContent className="p-0">
+                                                    <div className="relative w-full h-64">
+                                                      {product.imageUrl ? (
+                                                        Array.isArray(product.imageUrl) ? (
+                                                          <img
+                                                            src={normalizeImageUrl(product.imageUrl[0])}
+                                                            alt={product.name}
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                              const target = e.target as HTMLImageElement;
+                                                              target.onerror = null;
+                                                              target.src = "/assets/product-placeholder.svg";
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <img
+                                                            src={normalizeImageUrl(product.imageUrl as string)}
+                                                            alt={product.name}
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                              const target = e.target as HTMLImageElement;
+                                                              target.onerror = null;
+                                                              target.src = "/assets/product-placeholder.svg";
+                                                            }}
+                                                          />
+                                                        )
+                                                      ) : (
+                                                        <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                                      )}
+                                                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                                                      <span className="absolute top-3 right-3 px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                                      <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                          className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                                        >
+                                                          <Edit className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={() => deleteProduct(product.id)}
+                                                          className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                                        >
+                                                          <Trash2 className="w-3 h-3" />
+                                                        </Button>
                                                       </div>
-                                                    )}
-                                                  </div>
-                                                ) : (
-                                                  <img
-                                                    src={normalizeImageUrl(product.imageUrl as string)}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                      const target = e.target as HTMLImageElement;
-                                                      target.onerror = null;
-                                                      target.src = "/assets/product-placeholder.svg";
-                                                    }}
-                                                  />
-                                                )
-                                              ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-white/50">No Image</div>
-                                              )}
-                                            </div>
-                                            <h3 className="text-violet-200 font-playfair font-semibold mb-2">{product.name}</h3>
-                                            <div className="text-sky-400 font-medium mb-2">{product.category}</div>
-                                            <div className="flex items-center gap-3 mb-3">
-                                              <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
-                                            </div>
-                                            <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => {
-                                                    setEditingProduct(product);
-                                                    setShowAddProduct(true);
-                                                  }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
-                                                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
-                                                >
-                                                  Shop Now
-                                                </Button>
-                                              )}
-                                            </div>
-                                          </CardContent>
-                                        </Card>
+                                                      <div className="absolute bottom-3 left-3 right-3">
+                                                        <h3 className="text-white font-playfair font-semibold">{product.name}</h3>
+                                                        <div className="text-white/80 text-sm">{product.productCategory || product.category}</div>
+                                                      </div>
+                                                    </div>
+                                                  </CardContent>
+                                                </Card>
+                                              ))}
+                                          </div>
+                                        </div>
                                       ))}
-                                  </div>
-                                )}
+                                    </div>
+                                  );
+                                })()}
                               </AccordionContent>
                             </AccordionItem>
                           </Accordion>
@@ -1187,35 +1331,33 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex gap-2">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
-                                                  className="border-white/20 text-white hover:bg-white/10"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              {product.purchaseLink && (
-                                                <Button
-                                                  size="sm"
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                              >
+                                                <Edit className="w-3 h-3" />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => deleteProduct(product.id)}
+                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
+                                            </div>
+                                            {product.purchaseLink && (
+                                              <Button
+                                                size="sm"
                                                   onClick={() => window.open(product.purchaseLink, '_blank')}
                                                   className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
                                                 >
                                                   Shop Now
                                                 </Button>
                                               )}
-                                            </div>
                                           </CardContent>
                                         </Card>
                                       ))}
@@ -1285,7 +1427,7 @@ export default function Profile() {
               setEditingProduct(null);
               setAddProductContext(null);
             }}
-            initialCategory={'Zulqadar Experiences'}
+            initialCategory={'Favorite Experiences'}
           />
         ) : (
           <ProductModal
@@ -1321,10 +1463,12 @@ function ProductModal({
   initialCategory?: string;
 }) {
   const { toast } = useToast();
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
     category: product?.category || initialCategory || '',
+    productCategory: (product as any)?.productCategory || '',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     price: product?.price || '',
     location: product?.location || '',
@@ -1336,6 +1480,27 @@ function ProductModal({
   });
   const formRef = useRef(formData);
   useEffect(() => { formRef.current = formData; }, [formData]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/categories', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load product categories', err);
+      }
+    })();
+  }, []);
+
+  // Default productCategory once categories load or when section changes
+  useEffect(() => {
+    if (!formData.productCategory && categories.length > 0) {
+      setFormData(prev => ({ ...prev, productCategory: prev.productCategory || categories[0].name }));
+    }
+  }, [categories]);
 
   const handleImagesChange = async (imageUrls: string[]) => {
     setFormData(prev => ({ ...prev, imageUrls }));
@@ -1404,14 +1569,38 @@ function ProductModal({
                 />
               </div>
               <div>
-                <Label className="text-white/70">Category</Label>
-                <Input
+                <Label className="text-white/70">Section</Label>
+                <Select
                   value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="e.g., Restaurant, Lounge, City"
-                  required
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Favorite Experiences","Luxury Brand Preferences","Personal Brand Products"].map((sec) => (
+                      <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            <div>
+              <Label className="text-white/70">Product Category</Label>
+              <Select
+                value={formData.productCategory}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, productCategory: value }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select product category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -1541,7 +1730,7 @@ function FavoriteExperienceModal({
     subheading: product?.metadata?.subtitle || '',
     placeName: product?.metadata?.placeName || product?.location || '',
     description: product?.description || '',
-    category: product?.category || initialCategory || 'Zulqadar Experiences',
+    category: product?.category || initialCategory || 'Favorite Experiences',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     tags: Array.isArray(product?.metadata?.tags) ? (product?.metadata?.tags as string[]) : [],
     price: product?.price || '',

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -151,7 +152,7 @@ export default function AdminBrands() {
     "Event Sponsorship",
   ], []);
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<InsertBrand>({
+  const { register, handleSubmit, setValue, watch, reset, setError, formState: { errors, isSubmitting } } = useForm<InsertBrand>({
     defaultValues: {
       name: "",
       description: "",
@@ -193,6 +194,10 @@ export default function AdminBrands() {
     return map;
   }, [categories]);
 
+  const { toast } = useToast();
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [editLogoError, setEditLogoError] = useState<string | null>(null);
+
   const applyTheme = (dark: boolean) => {
     const root = document.documentElement;
     if (dark) root.classList.add("dark"); else root.classList.remove("dark");
@@ -224,8 +229,7 @@ export default function AdminBrands() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('theme');
-      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const next = stored ? stored === 'dark' : prefers;
+      const next = stored ? stored === 'dark' : false;
       setIsDark(next);
       applyTheme(next);
     } catch {
@@ -239,21 +243,27 @@ export default function AdminBrands() {
     if (!file) {
       setLogoFile(null);
       setLogoPreview(null);
+      setLogoError(null);
       return;
     }
     const allowed = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
     if (!allowed.includes(file.type)) {
-      alert("Invalid file type. Allowed: PNG, JPG, SVG");
+      const msg = "Invalid file type. Allowed: PNG, JPG, SVG";
+      setLogoError(msg);
+      toast({ title: "Logo file error", description: msg, variant: "destructive" });
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      alert("File too large. Max size: 2MB");
+      const msg = "File too large. Max size: 2MB";
+      setLogoError(msg);
+      toast({ title: "Logo file error", description: msg, variant: "destructive" });
       return;
     }
     setLogoFile(file);
     const reader = new FileReader();
     reader.onload = () => setLogoPreview(reader.result as string);
     reader.readAsDataURL(file);
+    setLogoError(null);
   };
 
   const onEditLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,21 +271,27 @@ export default function AdminBrands() {
     if (!file) {
       setEditLogoFile(null);
       setEditLogoPreview(editingBrand?.imageUrl || null);
+      setEditLogoError(null);
       return;
     }
     const allowed = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
     if (!allowed.includes(file.type)) {
-      alert("Invalid file type. Allowed: PNG, JPG, SVG");
+      const msg = "Invalid file type. Allowed: PNG, JPG, SVG";
+      setEditLogoError(msg);
+      toast({ title: "Logo file error", description: msg, variant: "destructive" });
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      alert("File too large. Max size: 2MB");
+      const msg = "File too large. Max size: 2MB";
+      setEditLogoError(msg);
+      toast({ title: "Logo file error", description: msg, variant: "destructive" });
       return;
     }
     setEditLogoFile(file);
     const reader = new FileReader();
     reader.onload = () => setEditLogoPreview(reader.result as string);
     reader.readAsDataURL(file);
+    setEditLogoError(null);
   };
 
   const uploadLogo = async (): Promise<string> => {
@@ -310,14 +326,21 @@ export default function AdminBrands() {
     try {
       // enforce name constraint locally
       if (!values.name || values.name.trim().length === 0) {
-        alert('Brand Name is required');
+        setError('name', { type: 'manual', message: 'Brand Name is required' });
+        toast({ title: 'Validation failed', description: 'Brand Name is required', variant: 'destructive' });
         return;
       }
       if (values.name.length > 100) {
-        alert('Brand Name max length is 100 characters');
+        setError('name', { type: 'manual', message: 'Max length is 100 characters' });
+        toast({ title: 'Validation failed', description: 'Brand Name must be 100 characters or fewer', variant: 'destructive' });
         return;
       }
       // upload logo first to get imageUrl
+      if (!logoFile) {
+        setLogoError('Logo is required. Please upload a brand logo image.');
+        toast({ title: 'Validation failed', description: 'Please upload a brand logo image', variant: 'destructive' });
+        return;
+      }
       const uploadedUrl = await uploadLogo();
       const payload: InsertBrand = {
         ...values,
@@ -335,6 +358,22 @@ export default function AdminBrands() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
+        const issues = j?.errors as any[] | undefined;
+        if (Array.isArray(issues) && issues.length) {
+          issues.forEach((issue: any) => {
+            const field = issue.field ?? (Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : 'root');
+            const baseMsg = issue.message || 'Invalid value';
+            const tip = issue.tip ? ` — ${issue.tip}` : '';
+            const msg = `${baseMsg}${tip}`;
+            if (field === 'imageUrl' || field === 'logo') {
+              setLogoError(msg);
+            } else if (field && field !== 'root') {
+              setError(field as keyof InsertBrand, { type: 'server', message: msg });
+            }
+          });
+          toast({ title: 'Validation failed', description: 'Please fix highlighted fields and try again.', variant: 'destructive' });
+          return;
+        }
         throw new Error(j?.message || `Failed to create brand: ${res.status}`);
       }
       // reset form and refresh list
@@ -344,7 +383,8 @@ export default function AdminBrands() {
       setOpenCreate(false);
       await refetch();
     } catch (e: any) {
-      alert(e?.message || 'Error creating brand');
+      const msg = e?.message || 'Error creating brand';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
     }
   };
 
@@ -352,11 +392,13 @@ export default function AdminBrands() {
     try {
       if (!editingBrand) return;
       if (!values.name || values.name.trim().length === 0) {
-        alert('Brand Name is required');
+        editForm.setError('name', { type: 'manual', message: 'Brand Name is required' });
+        toast({ title: 'Validation failed', description: 'Brand Name is required', variant: 'destructive' });
         return;
       }
       if (values.name.length > 100) {
-        alert('Brand Name max length is 100 characters');
+        editForm.setError('name', { type: 'manual', message: 'Max length is 100 characters' });
+        toast({ title: 'Validation failed', description: 'Brand Name must be 100 characters or fewer', variant: 'destructive' });
         return;
       }
       const uploadedUrl = await uploadEditLogo();
@@ -375,15 +417,33 @@ export default function AdminBrands() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
+        const issues = j?.errors as any[] | undefined;
+        if (Array.isArray(issues) && issues.length) {
+          issues.forEach((issue: any) => {
+            const field = issue.field ?? (Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : 'root');
+            const baseMsg = issue.message || 'Invalid value';
+            const tip = issue.tip ? ` — ${issue.tip}` : '';
+            const msg = `${baseMsg}${tip}`;
+            if (field === 'imageUrl' || field === 'logo') {
+              setEditLogoError(msg);
+            } else if (field && field !== 'root') {
+              editForm.setError(field as keyof InsertBrand, { type: 'server', message: msg });
+            }
+          });
+          toast({ title: 'Validation failed', description: 'Please fix highlighted fields and try again.', variant: 'destructive' });
+          return;
+        }
         throw new Error(j?.message || `Failed to update brand: ${res.status}`);
       }
       setOpenEdit(false);
       setEditingBrand(null);
       setEditLogoFile(null);
       setEditLogoPreview(null);
+      setEditLogoError(null);
       await refetch();
     } catch (e: any) {
-      alert(e?.message || 'Error updating brand');
+      const msg = e?.message || 'Error updating brand';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
     }
   };
 
@@ -509,7 +569,7 @@ export default function AdminBrands() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setLocation('/admin')} tooltip="Settings">
+                  <SidebarMenuButton onClick={() => setLocation('/admin/settings')} tooltip="Settings">
                     <Settings />
                     <span>Settings</span>
                   </SidebarMenuButton>
@@ -647,6 +707,8 @@ export default function AdminBrands() {
                     {logoPreview && (
                       <img src={logoPreview} alt="Logo preview" className="mt-2 h-16 w-16 rounded border object-cover" />
                     )}
+                    {logoError && <p className="text-destructive text-sm">{logoError}</p>}
+                    {errors.imageUrl && <p className="text-destructive text-sm">{errors.imageUrl.message as string}</p>}
                   </div>
                   <div className="space-y-1">
                     <Label>Source Type</Label>
@@ -764,6 +826,10 @@ export default function AdminBrands() {
                     </div>
                     {(editLogoPreview || editingBrand?.imageUrl) && (
                       <img src={editLogoPreview || editingBrand?.imageUrl || ''} alt="Logo preview" className="mt-2 h-16 w-16 rounded border object-cover" />
+                    )}
+                    {editLogoError && <p className="text-destructive text-sm">{editLogoError}</p>}
+                    {editForm.formState.errors.imageUrl && (
+                      <p className="text-destructive text-sm">{editForm.formState.errors.imageUrl.message as string}</p>
                     )}
                   </div>
                   <div className="space-y-1">

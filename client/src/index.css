@@ -141,6 +141,59 @@
 
 /* Custom utility classes */
 @layer components {
+  /* Scoped white text overrides for dark-themed sections
+     Ensures inputs, textareas, and typographic elements render white text
+     Use container classes to keep changes localized to specific pages */
+  .login-page,
+  .profile-page {
+    color: #ffffff;
+  }
+
+  .login-page h1,
+  .login-page h2,
+  .login-page h3,
+  .login-page h4,
+  .login-page h5,
+  .login-page p,
+  .login-page label,
+  .login-page span,
+  .login-page a,
+  .profile-page h1,
+  .profile-page h2,
+  .profile-page h3,
+  .profile-page h4,
+  .profile-page h5,
+  .profile-page p,
+  .profile-page label,
+  .profile-page span,
+  .profile-page a {
+    color: #ffffff !important;
+  }
+
+  /* Force field text and placeholder colors to white in scoped sections */
+  .login-page input,
+  .login-page textarea,
+  .login-page select,
+  .profile-page input,
+  .profile-page textarea,
+  .profile-page select {
+    color: #ffffff !important;
+  }
+
+  .login-page input::placeholder,
+  .login-page textarea::placeholder,
+  .profile-page input::placeholder,
+  .profile-page textarea::placeholder {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  /* Maintain visible caret */
+  .login-page input,
+  .login-page textarea,
+  .profile-page input,
+  .profile-page textarea {
+    caret-color: #ffffff;
+  }
   .brand-tag {
     @apply transition-all duration-200 hover:shadow-md;
   }

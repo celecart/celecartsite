@@ -51,6 +51,7 @@ export default function AdminProducts() {
     name: "",
     description: "",
     category: "",
+    productCategory: "",
     price: "",
     location: "",
     website: "",
@@ -133,7 +134,8 @@ export default function AdminProducts() {
       celebrityId: undefined,
       name: "",
       description: "",
-      category: categories[0]?.name || "",
+      category: "Luxury Brand Preferences",
+      productCategory: categories[0]?.name || "",
       price: "",
       location: "",
       website: "",
@@ -157,6 +159,7 @@ export default function AdminProducts() {
         name: full.name || "",
         description: full.description || "",
         category: full.category || "",
+        productCategory: (full as any).productCategory || categories[0]?.name || "",
         price: full.price || "",
         location: full.location || "",
         website: full.website || "",
@@ -208,6 +211,7 @@ export default function AdminProducts() {
       name: form.name,
       description: form.description || undefined,
       category: form.category,
+      productCategory: form.productCategory || undefined,
       imageUrl: form.imageUrls.length <= 1 ? (form.imageUrls[0] || '') : form.imageUrls,
       price: form.price || undefined,
       location: form.location || undefined,
@@ -454,9 +458,20 @@ export default function AdminProducts() {
               </Select>
             </div>
             <div>
-              <Label>Category</Label>
+              <Label>Section</Label>
               <Select value={form.category || ''} onValueChange={(v) => setForm((f:any) => ({ ...f, category: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
+                <SelectContent>
+                  {["Favorite Experiences","Luxury Brand Preferences","Personal Brand Products","Zulqadar Experiences"].map(sec => (
+                    <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Product Category</Label>
+              <Select value={form.productCategory || ''} onValueChange={(v) => setForm((f:any) => ({ ...f, productCategory: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select product category" /></SelectTrigger>
                 <SelectContent>
                   {categories.map(cat => (<SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>))}
                 </SelectContent>

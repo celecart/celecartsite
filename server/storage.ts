@@ -2104,20 +2104,110 @@ export class PgStorage implements IStorage {
     return rows.length > 0;
   }
 
-  // Brand operations (delegate)
-  async getBrands(): Promise<Brand[]> { return this.mem.getBrands(); }
-  async getBrandById(id: number): Promise<Brand | undefined> { return this.mem.getBrandById(id); }
-  async createBrand(brand: InsertBrand): Promise<Brand> { return this.mem.createBrand(brand); }
-  async updateBrand(id: number, update: Partial<InsertBrand>): Promise<Brand | undefined> {
-    return this.mem.updateBrand(id, update);
+    // Brand operations (Postgres-backed)
+  async getBrands(): Promise<Brand[]> {
+    return await this._db.select().from(brands);
   }
-  async deleteBrand(id: number): Promise<boolean> {
-    return this.mem.deleteBrand(id);
+
+  async getBrandById(id: number): Promise<Brand | undefined> {
+    const rows = await this._db.select().from(brands).where(eq(brands.id, id)).limit(1);
+    return rows[0] as Brand | undefined;
   }
+
+  async createBrand(insertBrand: InsertBrand): Promise<Brand> {
+    const values = {
+      name: insertBrand.name,
+      description: insertBrand.description ?? null,
+      imageUrl: insertBrand.imageUrl,
+      websiteUrl: insertBrand.websiteUrl ?? null,
+      origins: insertBrand.origins ?? [],
+      categoryIds: insertBrand.categoryIds ?? [],
+      sourceType: insertBrand.sourceType ?? null,
+      celebWearers: insertBrand.celebWearers ?? [],
+    };
+    try {
+      console.log("[PgStorage] Begin transaction: createBrand", { name: values.name, imageUrl: values.imageUrl });
+      const created = await (this._db as any).transaction(async (tx: any) => {
+        const rows = await tx.insert(brands).values(values).returning();
+        return rows[0] as Brand;
+      });
+      console.log("[PgStorage] Commit transaction: createBrand success", { id: (created as any)?.id, name: created.name });
+      return created;
+    } catch (err) {
+      console.error("[PgStorage] Rollback transaction: createBrand failed", { error: (err as any)?.message });
+      throw err;
+    }
+  }
+  
+  // CelebrityBrand operations (Postgres-backed)
   async getCelebrityBrands(celebrityId: number): Promise<CelebrityBrand[]> {
-    return this.mem.getCelebrityBrands(celebrityId);
+    const rows = await this._db
+      .select()
+      .from(celebrityBrands)
+      .where(eq(celebrityBrands.celebrityId, celebrityId));
+    return rows.map(row => ({
+      ...row,
+      description: row.description ?? null,
+      itemType: row.itemType ?? null,
+      categoryId: row.categoryId ?? null,
+      equipmentSpecs: row.equipmentSpecs ?? null,
+      occasionPricing: row.occasionPricing ?? null,
+      relationshipStartYear: row.relationshipStartYear ?? null,
+      grandSlamAppearances: row.grandSlamAppearances ?? [],
+    }));
   }
-  async createCelebrityBrand(celebrityBrand: InsertCelebrityBrand): Promise<CelebrityBrand> { return this.mem.createCelebrityBrand(celebrityBrand); }
+
+  async createCelebrityBrand(insertCelebrityBrand: InsertCelebrityBrand): Promise<CelebrityBrand> {
+    const values = {
+      celebrityId: insertCelebrityBrand.celebrityId,
+      brandId: insertCelebrityBrand.brandId,
+      description: insertCelebrityBrand.description ?? null,
+      itemType: insertCelebrityBrand.itemType ?? null,
+      categoryId: insertCelebrityBrand.categoryId ?? null,
+      imagePosition: insertCelebrityBrand.imagePosition,
+      equipmentSpecs: insertCelebrityBrand.equipmentSpecs ?? null,
+      occasionPricing: insertCelebrityBrand.occasionPricing ?? null,
+      relationshipStartYear: insertCelebrityBrand.relationshipStartYear ?? null,
+      grandSlamAppearances: insertCelebrityBrand.grandSlamAppearances ?? [],
+    };
+    const rows = await this._db.insert(celebrityBrands).values(values).returning();
+    const row = rows[0];
+    return {
+      ...row,
+      description: row.description ?? null,
+      itemType: row.itemType ?? null,
+      categoryId: row.categoryId ?? null,
+      equipmentSpecs: row.equipmentSpecs ?? null,
+      occasionPricing: row.occasionPricing ?? null,
+      relationshipStartYear: row.relationshipStartYear ?? null,
+      grandSlamAppearances: row.grandSlamAppearances ?? [],
+    } as CelebrityBrand;
+  }
+
+  async updateBrand(id: number, update: Partial<InsertBrand>): Promise<Brand | undefined> {
+    const values: any = {};
+    if (update.name !== undefined) values.name = update.name;
+    if (update.description !== undefined) values.description = update.description ?? null;
+    if (update.imageUrl !== undefined) values.imageUrl = update.imageUrl;
+    if (update.websiteUrl !== undefined) values.websiteUrl = update.websiteUrl ?? null;
+    if (update.origins !== undefined) values.origins = update.origins ?? [];
+    if (update.categoryIds !== undefined) values.categoryIds = update.categoryIds ?? [];
+    if (update.sourceType !== undefined) values.sourceType = update.sourceType ?? null;
+    if (update.celebWearers !== undefined) values.celebWearers = update.celebWearers ?? [];
+
+    if (Object.keys(values).length === 0) {
+      const rows = await this._db.select().from(brands).where(eq(brands.id, id)).limit(1);
+      return rows[0] as Brand | undefined;
+    }
+
+    const rows = await this._db.update(brands).set(values).where(eq(brands.id, id)).returning();
+    return rows[0] as Brand | undefined;
+  }
+
+  async deleteBrand(id: number): Promise<boolean> {
+    const rows = await this._db.delete(brands).where(eq(brands.id, id)).returning();
+    return rows.length > 0;
+  }
 
   // Category operations (delegate)
   async getCategories(): Promise<Category[]> { return this.mem.getCategories(); }

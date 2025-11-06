@@ -9,6 +9,7 @@ interface CelebrityProduct {
   name: string;
   description: string;
   category: string;
+  productCategory?: string;
   imageUrl: string;
   price: string;
   location: string;
@@ -161,10 +162,10 @@ function ProductCard({ product, featured = false }: ProductCardProps) {
     return val as string;
   })();
   return (
-    <div className={`bg-white rounded-lg shadow-sm border overflow-hidden hover:shadow-md transition-all duration-300 ${
+    <div className={`relative rounded-xl overflow-hidden border hover:shadow-md transition-all duration-300 ${
       featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-gray-200'
     }`}>
-      {/* Product Image */}
+      {/* Product Image with overlays */}
       <div className="relative h-48 bg-gray-100 overflow-hidden">
         {imageSrc ? (
           <img 
@@ -177,78 +178,32 @@ function ProductCard({ product, featured = false }: ProductCardProps) {
             <Package className="w-12 h-12 text-gray-400" />
           </div>
         )}
-        
+
+        {/* Dark gradient overlay for text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent"></div>
+
         {/* Featured Badge */}
         {featured && (
-          <div className="absolute top-3 left-3">
-            <Badge className="bg-amber-500 text-white hover:bg-amber-600">
-              <Star className="w-3 h-3 mr-1 fill-white" />
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-amber-600 text-white px-2 py-0.5 rounded-full">
               Featured
             </Badge>
           </div>
         )}
-        
-        {/* Rating */}
-        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-          <span className="text-xs font-medium text-gray-700">{product.rating}</span>
-        </div>
-      </div>
 
-      {/* Product Info */}
-      <div className="p-4 space-y-3">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h5 className="font-semibold text-gray-900 line-clamp-2 leading-tight">{product.name}</h5>
-            <Badge variant="outline" className="text-xs whitespace-nowrap">
-              {product.category}
+        {/* Price badge */}
+        {product.price && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+              {product.price}
             </Badge>
           </div>
-          
-          <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
-        </div>
+        )}
 
-        {/* Price and Location */}
-        <div className="flex items-center justify-between">
-          <div className="text-lg font-bold text-amber-600">
-            ${product.price}
-          </div>
-          {product.location && (
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <MapPin className="w-3 h-3" />
-              <span className="truncate max-w-20">{product.location}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
-          {product.purchaseLink && (
-            <Button 
-              asChild 
-              size="sm" 
-              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <a href={product.purchaseLink} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Buy Now
-              </a>
-            </Button>
-          )}
-          
-          {product.website && (
-            <Button 
-              asChild 
-              variant="outline" 
-              size="sm"
-              className="border-amber-200 text-amber-700 hover:bg-amber-50"
-            >
-              <a href={product.website} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-3 h-3 mr-1" />
-                Website
-              </a>
-            </Button>
-          )}
+        {/* Bottom labels: name and category */}
+        <div className="absolute bottom-2 left-2 right-2 text-white">
+          <div className="text-sm font-semibold line-clamp-1">{product.name}</div>
+          <div className="text-xs opacity-90 line-clamp-1">{product.category}</div>
         </div>
       </div>
     </div>

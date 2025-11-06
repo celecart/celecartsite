@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag, Plus, Edit, Trash2, Upload, X } from "lucide-react";
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -108,8 +108,7 @@ export default function AdminPlans() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('theme');
-      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const next = stored ? stored === 'dark' : prefers;
+      const next = stored ? stored === 'dark' : false;
       setIsDark(next);
       applyTheme(next);
     } catch {
@@ -473,7 +472,7 @@ export default function AdminPlans() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin')} tooltip="Settings">
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/settings')} tooltip="Settings">
                   <Settings />
                   <span>Settings</span>
                 </SidebarMenuButton>
