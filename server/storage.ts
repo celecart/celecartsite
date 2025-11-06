@@ -2123,8 +2123,18 @@ export class PgStorage implements IStorage {
       sourceType: insertBrand.sourceType ?? null,
       celebWearers: insertBrand.celebWearers ?? [],
     };
-    const rows = await this._db.insert(brands).values(values).returning();
-    return rows[0] as Brand;
+    try {
+      console.log("[PgStorage] Begin transaction: createBrand", { name: values.name, imageUrl: values.imageUrl });
+      const created = await (this._db as any).transaction(async (tx: any) => {
+        const rows = await tx.insert(brands).values(values).returning();
+        return rows[0] as Brand;
+      });
+      console.log("[PgStorage] Commit transaction: createBrand success", { id: (created as any)?.id, name: created.name });
+      return created;
+    } catch (err) {
+      console.error("[PgStorage] Rollback transaction: createBrand failed", { error: (err as any)?.message });
+      throw err;
+    }
   }
   
   // CelebrityBrand operations (Postgres-backed)
