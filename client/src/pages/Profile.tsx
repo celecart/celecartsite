@@ -149,6 +149,21 @@ export default function Profile() {
   >('personalFavourite');
   // Track where Add Product was triggered to prefill category and render placement
   const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
+  const [luxuryCategoryFilter, setLuxuryCategoryFilter] = useState<string>('All');
+  const [luxurySortOrder, setLuxurySortOrder] = useState<'default' | 'price_asc' | 'price_desc' | 'newest' | 'featured'>('default');
+  const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([
+    'Apparel','Accessories','Footwear','Technology','Vehicles','Fragrance','Beauty'
+  ]);
+  useEffect(() => {
+    // Fetch canonical categories from backend, fall back to defaults on error
+    fetch('/api/categories')
+      .then(res => res.ok ? res.json() : [])
+      .then((cats: Category[]) => {
+        const names = Array.from(new Set((cats || []).map(c => c?.name).filter(Boolean)));
+        if (names.length) setAvailableProductCategories(names as string[]);
+      })
+      .catch(() => {/* ignore errors, keep defaults */});
+  }, []);
   const [profileData, setProfileData] = useState<ProfileData>({
     displayName: '',
     email: '',
@@ -1014,76 +1029,230 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => { const c = (p.category || '').toLowerCase().trim(); return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences'; }).length === 0 ? (
-                                  <div className="text-white/70">No luxury brand items yet.</div>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                                    {products
-                                      .filter(p => { const c = (p.category || '').toLowerCase().trim(); return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences'; })
-                                      .map((product) => (
-                                        <Card key={product.id} className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
-                                          {product.isFeatured && (
-                                            <Badge className="absolute top-3 left-3 bg-amber-500 text-black shadow-md">Popular</Badge>
-                                          )}
-                                          <CardContent className="p-0">
-                                            <div className="relative w-full h-64">
-                                              {product.imageUrl ? (
-                                                Array.isArray(product.imageUrl) ? (
-                                                  <img
-                                                    src={normalizeImageUrl(product.imageUrl[0])}
-                                                    alt={product.name}
-                                                    className="absolute inset-0 w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                      const target = e.target as HTMLImageElement;
-                                                      target.onerror = null;
-                                                      target.src = "/assets/product-placeholder.svg";
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <img
-                                                    src={normalizeImageUrl(product.imageUrl as string)}
-                                                    alt={product.name}
-                                                    className="absolute inset-0 w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                      const target = e.target as HTMLImageElement;
-                                                      target.onerror = null;
-                                                      target.src = "/assets/product-placeholder.svg";
-                                                    }}
-                                                  />
-                                                )
-                                              ) : (
-                                                <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white/50">No Image</div>
-                                              )}
-                                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                                              <span className="absolute top-3 right-3 px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
-                                              <div className="absolute bottom-3 right-3 flex gap-2 z-10">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
-                                                  className="border-white/20 text-white bg-black/30 hover:bg-black/40"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => deleteProduct(product.id)}
-                                                  className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                              <div className="absolute bottom-3 left-3 right-3">
-                                                <h3 className="text-white font-playfair font-semibold">{product.name}</h3>
-                                                <div className="text-white/80 text-sm">{product.category}</div>
-                                              </div>
-                                            </div>
-                                          </CardContent>
-                                        </Card>
+                                {(() => {
+                                  const KNOWN = availableProductCategories;
+                                  const luxuryProducts = products.filter(p => {
+                                    const c = (p.category || '').toLowerCase().trim();
+                                    return c === 'luxury brand preferences' || c === 'luxury & lifestyle' || c.includes('luxury') || c === 'luxary brand preferences' || KNOWN.some(k => c === k.toLowerCase());
+                                  });
+
+                                  const getProductCategory = (p: any) => {
+                                    const normalize = (s: any) => (s ?? '').toString().trim();
+                                    const matchKnown = (val: string) => {
+                                      if (!val) return undefined;
+                                      const lower = val.toLowerCase();
+                                      const exact = KNOWN.find(k => k.toLowerCase() === lower);
+                                      if (exact) return exact;
+                                      const partial = KNOWN.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
+                                      return partial;
+                                    };
+
+                                    // Prefer explicit product category fields
+                                    const pcRaw = normalize(p.productCategory ?? p.product_category);
+                                    if (pcRaw) {
+                                      const rawLower = pcRaw.toLowerCase();
+                                      if (rawLower === 'uncategorized' || rawLower === 'uncategorised') {
+                                        return 'Other';
+                                      }
+                                      return matchKnown(pcRaw) ?? pcRaw;
+                                    }
+
+                                    // Parse metadata tags if present
+                                    let metadata: any = p.metadata;
+                                    if (typeof metadata === 'string') {
+                                      try { metadata = JSON.parse(metadata); } catch { /* ignore */ }
+                                    }
+                                    if (Array.isArray(metadata?.tags) && metadata.tags.length > 0) {
+                                      for (const t of metadata.tags) {
+                                        const m = matchKnown(normalize(t));
+                                        if (m) return m;
+                                      }
+                                      const firstTag = normalize(metadata.tags[0]);
+                                      if (firstTag) return firstTag;
+                                    }
+
+                                    // As a last resort, try matching the section name to known categories
+                                    const section = normalize(p.category);
+                                    const sectionMatch = matchKnown(section);
+                                    if (sectionMatch) return sectionMatch;
+
+                                    // Final fallback: categorize as Other (avoid Uncategorized)
+                                    return 'Other';
+                                  };
+
+                                  if (luxuryProducts.length === 0) {
+                                    return <div className="text-white/70">No luxury brand items yet.</div>;
+                                  }
+
+                                  const productCats = Array.from(new Set(luxuryProducts.map(getProductCategory)));
+                                  const allCategories = Array.from(new Set([...availableProductCategories, ...productCats]));
+                                  const categoriesWithProducts = allCategories.filter(cat => luxuryProducts.some(p => getProductCategory(p) === cat));
+                                  const visibleCategories = luxuryCategoryFilter === 'All'
+                                    ? (categoriesWithProducts.length ? categoriesWithProducts : productCats)
+                                    : [luxuryCategoryFilter];
+
+                                  const countVisible = luxuryCategoryFilter === 'All'
+                                    ? luxuryProducts.length
+                                    : luxuryProducts.filter(p => getProductCategory(p) === luxuryCategoryFilter).length;
+
+                                  const sortProducts = (arr: any[]) => {
+                                    const parsePrice = (p: any) => {
+                                      const s = (p.price || '').toString();
+                                      const n = parseFloat(s.replace(/[^0-9.]/g, ''));
+                                      return Number.isFinite(n) ? n : NaN;
+                                    };
+                                    const byDate = (p: any) => {
+                                      const d = new Date((p.updatedAt || p.createdAt || '') as string);
+                                      return isNaN(d.getTime()) ? 0 : d.getTime();
+                                    };
+                                    const byFeatured = (a: any, b: any) => (b.isFeatured === true ? 1 : 0) - (a.isFeatured === true ? 1 : 0);
+
+                                    switch (luxurySortOrder) {
+                                      case 'price_asc':
+                                        return [...arr].sort((a, b) => {
+                                          const pa = parsePrice(a), pb = parsePrice(b);
+                                          if (isNaN(pa) && isNaN(pb)) return 0;
+                                          if (isNaN(pa)) return 1;
+                                          if (isNaN(pb)) return -1;
+                                          return pa - pb;
+                                        });
+                                      case 'price_desc':
+                                        return [...arr].sort((a, b) => {
+                                          const pa = parsePrice(a), pb = parsePrice(b);
+                                          if (isNaN(pa) && isNaN(pb)) return 0;
+                                          if (isNaN(pa)) return 1;
+                                          if (isNaN(pb)) return -1;
+                                          return pb - pa;
+                                        });
+                                      case 'featured':
+                                        return [...arr].sort(byFeatured);
+                                      case 'newest':
+                                        return [...arr].sort((a, b) => byDate(b) - byDate(a));
+                                      default:
+                                        return arr;
+                                    }
+                                  };
+
+                                  return (
+                                    <div className="space-y-8 mt-4">
+                                      <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-white/80 text-sm mr-2">Filter by Category</span>
+                                          <Button
+                                            size="sm"
+                                            variant={luxuryCategoryFilter === 'All' ? 'default' : 'outline'}
+                                            className="rounded-full px-3"
+                                            onClick={() => setLuxuryCategoryFilter('All')}
+                                          >
+                                            All
+                                          </Button>
+                                          {allCategories.map((cat) => (
+                                            <Button
+                                              key={cat}
+                                              size="sm"
+                                              variant={luxuryCategoryFilter === cat ? 'default' : 'outline'}
+                                              className="rounded-full px-3"
+                                              onClick={() => setLuxuryCategoryFilter(cat)}
+                                            >
+                                              {cat}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                        <div className="flex items-center gap-3 text-white/70 text-sm">
+                                          <span>Showing {countVisible} of {luxuryProducts.length} products</span>
+                                          <span className="ml-4">Sort By</span>
+                                          <Select value={luxurySortOrder} onValueChange={(v) => setLuxurySortOrder(v as any)}>
+                                            <SelectTrigger className="w-40">
+                                              <SelectValue placeholder="Default Order" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="default">Default Order</SelectItem>
+                                              <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                                              <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                                              <SelectItem value="featured">Featured First</SelectItem>
+                                              <SelectItem value="newest">Newest</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+
+                                      {visibleCategories.map((cat) => (
+                                        <div key={cat}>
+                                          <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-white font-playfair font-semibold">{cat}</h3>
+                                            <div className="border-t border-white/10 flex-grow ml-4" />
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {sortProducts(luxuryProducts
+                                              .filter(p => getProductCategory(p) === cat))
+                                              .map((product) => (
+                                                <Card key={product.id} className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
+                                                  {product.isFeatured && (
+                                                    <Badge className="absolute top-3 left-3 bg-amber-500 text-black shadow-md">Popular</Badge>
+                                                  )}
+                                                  <CardContent className="p-0">
+                                                    <div className="relative w-full h-64">
+                                                      {product.imageUrl ? (
+                                                        Array.isArray(product.imageUrl) ? (
+                                                          <img
+                                                            src={normalizeImageUrl(product.imageUrl[0])}
+                                                            alt={product.name}
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                              const target = e.target as HTMLImageElement;
+                                                              target.onerror = null;
+                                                              target.src = "/assets/product-placeholder.svg";
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <img
+                                                            src={normalizeImageUrl(product.imageUrl as string)}
+                                                            alt={product.name}
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                              const target = e.target as HTMLImageElement;
+                                                              target.onerror = null;
+                                                              target.src = "/assets/product-placeholder.svg";
+                                                            }}
+                                                          />
+                                                        )
+                                                      ) : (
+                                                        <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white/50">No Image</div>
+                                                      )}
+                                                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                                                      <span className="absolute top-3 right-3 px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
+                                                      <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                          className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                                        >
+                                                          <Edit className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={() => deleteProduct(product.id)}
+                                                          className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                                        >
+                                                          <Trash2 className="w-3 h-3" />
+                                                        </Button>
+                                                      </div>
+                                                      <div className="absolute bottom-3 left-3 right-3">
+                                                        <h3 className="text-white font-playfair font-semibold">{product.name}</h3>
+                                                        <div className="text-white/80 text-sm">{product.productCategory || product.category}</div>
+                                                      </div>
+                                                    </div>
+                                                  </CardContent>
+                                                </Card>
+                                              ))}
+                                          </div>
+                                        </div>
                                       ))}
-                                  </div>
-                                )}
+                                    </div>
+                                  );
+                                })()}
                               </AccordionContent>
                             </AccordionItem>
                           </Accordion>

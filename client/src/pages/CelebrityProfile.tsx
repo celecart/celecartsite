@@ -80,6 +80,8 @@ export default function CelebrityProfile() {
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const isCelebrityCelebrityPage = typeof window !== 'undefined' && window.location.pathname === '/celebrity/celebrity';
+  const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([]);
+  const [luxuryCategoryFilter, setLuxuryCategoryFilter] = useState<string>('All');
   
 
   // Allow deep linking to a specific tab via query string or hash
@@ -97,6 +99,17 @@ export default function CelebrityProfile() {
     },
     enabled: !!celebrityId,
   });
+
+  // Fetch canonical product categories from backend
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.ok ? res.json() : [])
+      .then((cats: any[]) => {
+        const names = Array.from(new Set((cats || []).map((c: any) => c?.name).filter(Boolean)));
+        if (names.length) setAvailableProductCategories(names as string[]);
+      })
+      .catch(() => { /* ignore errors */ });
+  }, []);
 
   // Prefer the resolved celebrity.id from API; fall back to route param
   const effectiveCelebrityId = celebrity?.id ?? celebrityId;
@@ -1546,35 +1559,120 @@ export default function CelebrityProfile() {
                             </div>
                           );
                         }
-                        return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {luxuryPrefs.map((product) => {
-                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
-                              const purchaseUrl = product.purchaseLink || product.website || '';
-                              const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
-                              return (
-                                <div
-                                  key={product.id}
-                                  className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
-                                  style={{ aspectRatio: '3/4' }}
-                                  onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
-                                >
-                                  <img src={img || '/assets/placeholder.png'} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
-                                  {product.isFeatured && (
-                                    <div className="absolute top-2 left-2 bg-yellow-400 text-white px-2 py-1 rounded-full text-sm font-semibold">Popular</div>
-                                  )}
-                                  {product.price && (
-                                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-semibold">{product.price}</div>
-                                  )}
-                                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
-                                    <h3 className="text-lg font-bold">{product.name}</h3>
-                                    <p className="text-sm">{product.category}</p>
+                        return (() => {
+                          const KNOWN = availableProductCategories;
+                          const normalize = (s: any) => (s ?? '').toString().trim();
+                          const matchKnown = (val: string) => {
+                            if (!val) return undefined;
+                            const lower = val.toLowerCase();
+                            const exact = KNOWN.find(k => k.toLowerCase() === lower);
+                            if (exact) return exact;
+                            const partial = KNOWN.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
+                            return partial;
+                          };
+
+                          const getProductCategory = (p: any) => {
+                            const pcRaw = normalize(p.productCategory ?? (p as any).product_category);
+                            if (pcRaw) {
+                              const rawLower = pcRaw.toLowerCase();
+                              if (rawLower === 'uncategorized' || rawLower === 'uncategorised') return 'Other';
+                              return matchKnown(pcRaw) ?? pcRaw;
+                            }
+                            let metadata: any = (p as any).metadata;
+                            if (typeof metadata === 'string') {
+                              try { metadata = JSON.parse(metadata); } catch { /* ignore */ }
+                            }
+                            if (Array.isArray(metadata?.tags) && metadata.tags.length > 0) {
+                              for (const t of metadata.tags) {
+                                const m = matchKnown(normalize(t));
+                                if (m) return m;
+                              }
+                              const firstTag = normalize(metadata.tags[0]);
+                              if (firstTag) return firstTag;
+                            }
+                            const section = normalize(p.category);
+                            const sectionMatch = matchKnown(section);
+                            if (sectionMatch) return sectionMatch;
+                            return 'Other';
+                          };
+
+                          const productCats = Array.from(new Set(luxuryPrefs.map(getProductCategory)));
+                          const allCategories = Array.from(new Set([...KNOWN, ...productCats]));
+                          const categoriesWithProducts = allCategories.filter(cat => luxuryPrefs.some(p => getProductCategory(p) === cat));
+                          const visibleCategories = luxuryCategoryFilter === 'All' ? categoriesWithProducts : [luxuryCategoryFilter];
+
+                          const countVisible = luxuryCategoryFilter === 'All'
+                            ? luxuryPrefs.length
+                            : luxuryPrefs.filter(p => getProductCategory(p) === luxuryCategoryFilter).length;
+
+                          return (
+                            <div className="space-y-8 mt-4">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-gray-700 text-sm mr-2">Filter by Category</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={`rounded-full px-3 transition-colors ${luxuryCategoryFilter === 'All' ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}
+                                    onClick={() => setLuxuryCategoryFilter('All')}
+                                  >
+                                    All
+                                  </Button>
+                                  {allCategories.map((cat) => (
+                                    <Button
+                                      key={cat}
+                                      size="sm"
+                                      variant="outline"
+                                      className={`rounded-full px-3 transition-colors ${luxuryCategoryFilter === cat ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}
+                                      onClick={() => setLuxuryCategoryFilter(cat)}
+                                    >
+                                      {cat}
+                                    </Button>
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-600 text-sm">
+                                  <span>Showing {countVisible} of {luxuryPrefs.length} products</span>
+                                </div>
+                              </div>
+
+                              {visibleCategories.map((cat) => (
+                                <div key={cat}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-gray-900 font-playfair font-semibold">{cat}</h3>
+                                    <div className="border-t border-gray-200 flex-grow ml-4" />
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    {luxuryPrefs.filter(p => getProductCategory(p) === cat).map((product) => {
+                                      const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                                      const purchaseUrl = product.purchaseLink || product.website || '';
+                                      const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                                      return (
+                                        <div
+                                          key={product.id}
+                                          className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
+                                          style={{ aspectRatio: '3/4' }}
+                                          onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                        >
+                                          <img src={img || '/assets/placeholder.png'} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                                          {product.isFeatured && (
+                                            <div className="absolute top-2 left-2 bg-yellow-400 text-white px-2 py-1 rounded-full text-sm font-semibold">Popular</div>
+                                          )}
+                                          {product.price && (
+                                            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-semibold">{product.price}</div>
+                                          )}
+                                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
+                                            <h3 className="text-lg font-bold">{product.name}</h3>
+                                            <p className="text-sm">{getProductCategory(product)}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        );
+                              ))}
+                            </div>
+                          );
+                        })();
                       })()
                     )}
                   </>
@@ -1750,44 +1848,120 @@ export default function CelebrityProfile() {
                             </div>
                           );
                         }
-                        return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {luxuryPrefs.map((product) => {
-                              const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
-                              const discountedPrice = (product as any).discountedPrice || (product as any).salePrice || '';
-                              const isPopular = product.popular; // Adjust based on actual data
-                              const purchaseUrl = product.purchaseLink || product.website || '';
-                              const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
-                              return (
-                                <div
-                                  key={product.id}
-                                  className={`group relative rounded-xl overflow-hidden aspect-[3/4] shadow-sm border border-gray-200 transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-md ${clickable ? 'cursor-pointer' : ''}`}
-                                  onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
-                                >
-                                  <img 
-                                    src={img || '/assets/placeholder.png'} 
-                                    alt={product.name} 
-                                  className="w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-105" 
-                                   loading="lazy" 
-                                  />
-                                  
-                                  <div className="absolute top-3 right-3 bg-amber-800/90 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-sm">
-                                    {discountedPrice || product.price || 'N/A'}
+                        return (() => {
+                          const KNOWN = availableProductCategories;
+                          const normalize = (s: any) => (s ?? '').toString().trim();
+                          const matchKnown = (val: string) => {
+                            if (!val) return undefined;
+                            const lower = val.toLowerCase();
+                            const exact = KNOWN.find(k => k.toLowerCase() === lower);
+                            if (exact) return exact;
+                            const partial = KNOWN.find(k => lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower));
+                            return partial;
+                          };
+
+                          const getProductCategory = (p: any) => {
+                            const pcRaw = normalize(p.productCategory ?? (p as any).product_category);
+                            if (pcRaw) {
+                              const rawLower = pcRaw.toLowerCase();
+                              if (rawLower === 'uncategorized' || rawLower === 'uncategorised') return 'Other';
+                              return matchKnown(pcRaw) ?? pcRaw;
+                            }
+                            let metadata: any = (p as any).metadata;
+                            if (typeof metadata === 'string') {
+                              try { metadata = JSON.parse(metadata); } catch { /* ignore */ }
+                            }
+                            if (Array.isArray(metadata?.tags) && metadata.tags.length > 0) {
+                              for (const t of metadata.tags) {
+                                const m = matchKnown(normalize(t));
+                                if (m) return m;
+                              }
+                              const firstTag = normalize(metadata.tags[0]);
+                              if (firstTag) return firstTag;
+                            }
+                            const section = normalize(p.category);
+                            const sectionMatch = matchKnown(section);
+                            if (sectionMatch) return sectionMatch;
+                            return 'Other';
+                          };
+
+                          const productCats = Array.from(new Set(luxuryPrefs.map(getProductCategory)));
+                          const allCategories = Array.from(new Set([...KNOWN, ...productCats]));
+                          const categoriesWithProducts = allCategories.filter(cat => luxuryPrefs.some(p => getProductCategory(p) === cat));
+                          const visibleCategories = luxuryCategoryFilter === 'All' ? categoriesWithProducts : [luxuryCategoryFilter];
+
+                          const countVisible = luxuryCategoryFilter === 'All'
+                            ? luxuryPrefs.length
+                            : luxuryPrefs.filter(p => getProductCategory(p) === luxuryCategoryFilter).length;
+
+                          return (
+                            <div className="space-y-8 mt-4">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-gray-700 text-sm mr-2">Filter by Category</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={`rounded-full px-3 transition-colors ${luxuryCategoryFilter === 'All' ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}
+                                    onClick={() => setLuxuryCategoryFilter('All')}
+                                  >
+                                    All
+                                  </Button>
+                                  {allCategories.map((cat) => (
+                                    <Button
+                                      key={cat}
+                                      size="sm"
+                                      variant="outline"
+                                      className={`rounded-full px-3 transition-colors ${luxuryCategoryFilter === cat ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-amber-500 shadow-sm' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}
+                                      onClick={() => setLuxuryCategoryFilter(cat)}
+                                    >
+                                      {cat}
+                                    </Button>
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-3 text-gray-600 text-sm">
+                                  <span>Showing {countVisible} of {luxuryPrefs.length} products</span>
+                                </div>
+                              </div>
+
+                              {visibleCategories.map((cat) => (
+                                <div key={cat}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-gray-900 font-playfair font-semibold">{cat}</h3>
+                                    <div className="border-t border-gray-200 flex-grow ml-4" />
                                   </div>
-                                  {isPopular && (
-                                    <div className="absolute top-3 left-3 bg-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-sm">
-                                      Popular
-                                    </div>
-                                  )}
-                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                                    <h4 className="text-white text-lg font-playfair font-semibold line-clamp-1">{product.name}</h4>
-                                    <p className="text-amber-100 text-sm line-clamp-1">{product.category}</p>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                    {luxuryPrefs.filter(p => getProductCategory(p) === cat).map((product) => {
+                                      const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
+                                      const purchaseUrl = product.purchaseLink || product.website || '';
+                                      const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                                      return (
+                                        <div
+                                          key={product.id}
+                                          className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
+                                          style={{ aspectRatio: '3/4' }}
+                                          onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                        >
+                                          <img src={img || '/assets/placeholder.png'} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                                          {product.isFeatured && (
+                                            <div className="absolute top-2 left-2 bg-yellow-400 text-white px-2 py-1 rounded-full text-sm font-semibold">Popular</div>
+                                          )}
+                                          {product.price && (
+                                            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-semibold">{product.price}</div>
+                                          )}
+                                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4">
+                                            <h3 className="text-lg font-bold">{product.name}</h3>
+                                            <p className="text-sm">{getProductCategory(product)}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        );
+                              ))}
+                            </div>
+                          );
+                        })();
                       })()
                     )}
                   </>
