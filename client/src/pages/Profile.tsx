@@ -146,7 +146,7 @@ export default function Profile() {
   const [editingProduct, setEditingProduct] = useState<CelebrityProduct | null>(null);
   // Add nested products tab state
   const [productTab, setProductTab] = useState<
-    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'aiStylist' | 'fashionEpisodes'
+    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'fashionEpisodes'
   >('personalFavourite');
   // Track where Add Product was triggered to prefill category and render placement
   const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
@@ -892,12 +892,7 @@ export default function Profile() {
                               <span>Celeconnect</span>
                             </div>
                           </TabsTrigger>
-                          <TabsTrigger value="aiStylist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
-                            <div className="flex items-center gap-2">
-                              <Wand2 className="w-4 h-4" />
-                              <span>AI Stylist</span>
-                            </div>
-                          </TabsTrigger>
+                          {/** AI Stylist tab removed from Profile navigation **/}
                           <TabsTrigger value="fashionEpisodes" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
                             <div className="flex items-center gap-2">
                               <Video className="w-4 h-4" />
@@ -1410,9 +1405,7 @@ export default function Profile() {
                         <TabsContent value="celeconnect" className="mt-4">
                           <div className="text-white/80">Connect with fans and brands through product links.</div>
                         </TabsContent>
-                        <TabsContent value="aiStylist" className="mt-4">
-                          <div className="text-white/80">AI stylist recommendations will appear here.</div>
-                        </TabsContent>
+                        {/** AI Stylist content removed from Profile **/}
                         <TabsContent value="fashionEpisodes" className="mt-4">
                           <div className="text-white/80">Fashion & Style episodes will be listed here.</div>
                         </TabsContent>

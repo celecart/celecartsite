@@ -530,14 +530,7 @@ export default function CelebrityProfile() {
                   <span className="relative z-10 font-medium whitespace-nowrap">Celeconnect</span>
                 </TabsTrigger>
                 
-                <TabsTrigger 
-                  value="events" 
-                  className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-                  <Sparkles className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
-                  <span className="relative z-10 font-medium whitespace-nowrap">AI Stylist</span>
-                </TabsTrigger>
+                {/** AI Stylist tab removed from celebrity profile navigation **/}
                 
                 <TabsTrigger 
                   value="videos" 
@@ -2681,68 +2674,8 @@ export default function CelebrityProfile() {
               </div>
             </TabsContent>
             
-            <TabsContent value="events" className="mt-6">
-              <div className="space-y-8">
-                {/* Header Section */}
-                <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 rounded-2xl p-8 border border-amber-200 shadow-lg">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full shadow-lg">
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-3xl font-playfair font-bold mb-3 bg-gradient-to-r from-amber-700 via-orange-600 to-amber-700 bg-clip-text text-transparent">
-                        AI Stylist
-                      </h3>
-                      <p className="text-gray-700 text-lg leading-relaxed">
-                        Get personalized fashion recommendations powered by AI, based on <span className="font-semibold text-amber-700">{celebrity.name}</span>'s style preferences. 
-                        Discover outfit combinations, color palettes, and styling tips tailored just for you.
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">ðŸŽ¨ Style Analysis</span>
-                        <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">ðŸ‘— Outfit Suggestions</span>
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">ðŸ¤– AI Recommendations</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Features Grid */}
-                <div className="bg-gradient-to-br from-neutral-50 to-amber-50/30 rounded-2xl p-6 border border-amber-100 shadow-sm">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-amber-500/20 rounded-lg">
-                      <Sparkles className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <h3 className="text-2xl font-playfair font-bold text-amber-700">AI Styling Features</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">ðŸŽ¯</span>
-                      </div>
-                      <h4 className="font-semibold text-gray-800 mb-2 text-center">Personal Style Analysis</h4>
-                      <p className="text-sm text-gray-600 text-center">AI analyzes your preferences to create personalized style profiles</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">ðŸ‘•</span>
-                      </div>
-                      <h4 className="font-semibold text-gray-800 mb-2 text-center">Smart Outfit Builder</h4>
-                      <p className="text-sm text-gray-600 text-center">Mix and match clothing items based on celebrity style patterns</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-6 border border-amber-100 shadow-sm hover:shadow-md transition-all duration-300">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white font-bold text-lg">ðŸŒˆ</span>
-                      </div>
-                      <h4 className="font-semibold text-gray-800 mb-2 text-center">Color Palette Generator</h4>
-                      <p className="text-sm text-gray-600 text-center">Find perfect color combinations that complement your style</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabsContent></Tabs>
+            {/** AI Stylist content removed from celebrity profile **/}
+            </Tabs>
         </div>
       </div>
       
@@ -2763,8 +2696,7 @@ export default function CelebrityProfile() {
             </p>
           </div>
           
-          {/* AI Features Tabs */}
-          <AIFeaturesTabs celebrity={celebrity} />
+          {/** AI features section removed **/}
         </div>
       </div>
 

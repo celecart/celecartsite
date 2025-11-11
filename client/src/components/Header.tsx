@@ -211,6 +211,16 @@ export default function Header() {
               >
                 Cele World
               </Link>
+              <Link 
+                href="/ai-stylist" 
+                className={cn(
+                  "relative px-2 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 mr-3 md:mr-5",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/ai-stylist" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                AI Stylist
+              </Link>
             </div>
           </nav>
           
@@ -556,6 +566,13 @@ export default function Header() {
                     onClick={() => setShowMobileMenu(false)}
                   >
                     Cele World
+                  </Link>
+                  <Link 
+                    href="/ai-stylist"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    AI Stylist
                   </Link>
                   
                   {/* Mobile Sign In / Profile */}

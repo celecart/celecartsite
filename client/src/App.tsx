@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import CelebrityProfile from "@/pages/CelebrityProfile";
 import Product from "@/pages/Product";
 import ContentCreator from "@/pages/ContentCreator";
+import AIStylist from "@/pages/AIStylist";
 import Login from "@/pages/Login";
 import ViewportSimulator from "./components/ViewportSimulator";
 import SignUp from "@/pages/SignUp";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/celebrities" component={Celebrities} />
       <Route path="/celebrity/:id" component={CelebrityProfile} />
       <Route path="/product/:id" component={Product} />
+      <Route path="/ai-stylist" component={AIStylist} />
       <Route path="/content-creator" component={ContentCreator} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/roles" component={AdminRoles} />
