@@ -1,19 +1,19 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Brand } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import BrandModal from "@/components/BrandModal";
 import { Crown, Sparkles } from "lucide-react";
 
 export default function Brands() {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  // Modal removed; navigate to brand products page on click
 
   const { data: brands, isLoading } = useQuery<Brand[]>({
     queryKey: ["/api/brands"],
@@ -29,11 +29,8 @@ export default function Brands() {
   }, [brands, search]);
 
   const handleOpen = (brand: Brand) => {
-    setSelectedBrand(brand);
-    setShowModal(true);
+    if (brand?.id) setLocation(`/brands/${brand.id}/products`);
   };
-
-  const handleClose = () => setShowModal(false);
 
   const container = {
     hidden: { opacity: 0 },
@@ -140,9 +137,6 @@ export default function Brands() {
       </section>
 
       <Footer />
-      {showModal && selectedBrand && (
-        <BrandModal brand={selectedBrand} onClose={handleClose} />
-      )}
     </div>
   );
 }

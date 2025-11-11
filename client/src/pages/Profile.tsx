@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
@@ -93,6 +93,7 @@ const normalizeImageUrl = (val: string | string[] | undefined | null): string =>
 };
 
 export default function Profile() {
+  const [, setLocation] = useLocation();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -145,7 +146,7 @@ export default function Profile() {
   const [editingProduct, setEditingProduct] = useState<CelebrityProduct | null>(null);
   // Add nested products tab state
   const [productTab, setProductTab] = useState<
-    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'aiStylist' | 'fashionEpisodes'
+    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'fashionEpisodes'
   >('personalFavourite');
   // Track where Add Product was triggered to prefill category and render placement
   const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
@@ -891,12 +892,7 @@ export default function Profile() {
                               <span>Celeconnect</span>
                             </div>
                           </TabsTrigger>
-                          <TabsTrigger value="aiStylist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
-                            <div className="flex items-center gap-2">
-                              <Wand2 className="w-4 h-4" />
-                              <span>AI Stylist</span>
-                            </div>
-                          </TabsTrigger>
+                          {/** AI Stylist tab removed from Profile navigation **/}
                           <TabsTrigger value="fashionEpisodes" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
                             <div className="flex items-center gap-2">
                               <Video className="w-4 h-4" />
@@ -930,7 +926,16 @@ export default function Profile() {
                                     {products
                                       .filter(p => (p.category || '').toLowerCase() === 'favorite experiences')
                                       .map((product) => (
-                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                        <Card
+                                          key={product.id}
+                                          className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
+                                          onClick={() => {
+                                            const url = product.purchaseLink || product.website;
+                                            if (url) window.open(url, '_blank');
+                                          }}
+                                          role="link"
+                                          aria-label={`Open ${product.name} shop link in new tab`}
+                                        >
                                           {product.isFeatured && (
                                             <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
                                           )}
@@ -984,7 +989,7 @@ export default function Profile() {
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowAddProduct(true); }}
                                                 className="border-white/20 text-white bg-black/30 hover:bg-black/40"
                                               >
                                                 <Edit className="w-3 h-3" />
@@ -992,7 +997,7 @@ export default function Profile() {
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => deleteProduct(product.id)}
+                                                onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }}
                                                 className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
                                               >
                                                 <Trash2 className="w-3 h-3" />
@@ -1001,7 +1006,7 @@ export default function Profile() {
                                             {product.purchaseLink && (
                                               <Button
                                                 size="sm"
-                                                onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                onClick={(e) => { e.stopPropagation(); window.open(product.purchaseLink, '_blank'); }}
                                                 className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
                                               >
                                                 Shop Now
@@ -1186,7 +1191,20 @@ export default function Profile() {
                                             {sortProducts(luxuryProducts
                                               .filter(p => getProductCategory(p) === cat))
                                               .map((product) => (
-                                                <Card key={product.id} className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg">
+                                                <Card
+                                                  key={product.id}
+                                                  className="relative group overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-lg cursor-pointer"
+                                                  onClick={() => {
+                                                    const url = product.purchaseLink || product.website;
+                                                    if (url) {
+                                                      window.open(url, '_blank');
+                                                    } else {
+                                                      setLocation(`/product/${product.id}?type=celebrity`);
+                                                    }
+                                                  }}
+                                                  role="link"
+                                                  aria-label={`Open ${product.name} shop link in new tab`}
+                                                >
                                                   {product.isFeatured && (
                                                     <Badge className="absolute top-3 left-3 bg-amber-500 text-black shadow-md">Popular</Badge>
                                                   )}
@@ -1281,7 +1299,20 @@ export default function Profile() {
                                     {products
                                       .filter(p => (p.category || '').toLowerCase() === 'personal brand products')
                                       .map((product) => (
-                                        <Card key={product.id} className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg">
+                                        <Card
+                                          key={product.id}
+                                          className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
+                                          onClick={() => {
+                                            const url = product.purchaseLink || product.website;
+                                            if (url) {
+                                              window.open(url, '_blank');
+                                            } else {
+                                              setLocation(`/product/${product.id}?type=celebrity`);
+                                            }
+                                          }}
+                                          role="link"
+                                          aria-label={`Open ${product.name} shop link in new tab`}
+                                        >
                                           {product.isFeatured && (
                                             <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md">Most Popular</Badge>
                                           )}
@@ -1335,7 +1366,7 @@ export default function Profile() {
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowAddProduct(true); }}
                                                 className="border-white/20 text-white bg-black/30 hover:bg-black/40"
                                               >
                                                 <Edit className="w-3 h-3" />
@@ -1343,7 +1374,7 @@ export default function Profile() {
                                               <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => deleteProduct(product.id)}
+                                                onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }}
                                                 className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
                                               >
                                                 <Trash2 className="w-3 h-3" />
@@ -1352,7 +1383,7 @@ export default function Profile() {
                                             {product.purchaseLink && (
                                               <Button
                                                 size="sm"
-                                                  onClick={() => window.open(product.purchaseLink, '_blank')}
+                                                  onClick={(e) => { e.stopPropagation(); window.open(product.purchaseLink, '_blank'); }}
                                                   className="bg-violet-600 hover:bg-violet-700 text-white rounded-full"
                                                 >
                                                   Shop Now
@@ -1374,9 +1405,7 @@ export default function Profile() {
                         <TabsContent value="celeconnect" className="mt-4">
                           <div className="text-white/80">Connect with fans and brands through product links.</div>
                         </TabsContent>
-                        <TabsContent value="aiStylist" className="mt-4">
-                          <div className="text-white/80">AI stylist recommendations will appear here.</div>
-                        </TabsContent>
+                        {/** AI Stylist content removed from Profile **/}
                         <TabsContent value="fashionEpisodes" className="mt-4">
                           <div className="text-white/80">Fashion & Style episodes will be listed here.</div>
                         </TabsContent>

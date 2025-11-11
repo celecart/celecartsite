@@ -211,77 +211,27 @@ export default function Header() {
               >
                 Cele World
               </Link>
+              <Link 
+                href="/ai-stylist" 
+                className={cn(
+                  "relative px-2 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 mr-3 md:mr-5",
+                  "text-white/90 hover:text-amber-400 uppercase tracking-wide",
+                  location === "/ai-stylist" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                )}
+              >
+                AI Stylist
+              </Link>
             </div>
           </nav>
           
           {/* Premium Action Section */}
           <div className="flex items-center space-x-3">
-            {/* Enhanced Celebrity Filter */}
+            {/* Enhanced Celebrity Filter removed */}
+            {/**
             <div className="hidden lg:block ml-3 md:ml-4 mr-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-4 py-2 text-white/90 hover:text-amber-400 transition-all duration-300 backdrop-blur-sm"
-                  >
-                    <Filter className="h-4 w-4" />
-                    <span className="text-xs uppercase font-medium tracking-wide">
-                      {activeSportFilter ? activeSportFilter : "All Celebrities"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="end" 
-                  className="bg-black/90 backdrop-blur-xl border border-amber-500/20 rounded-xl p-2 shadow-2xl"
-                >
-                  <DropdownMenuLabel className="text-amber-400 font-medium px-3 py-2">
-                    Filter by Category
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-white/10 my-2" />
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-white/90 hover:text-amber-400 focus:text-amber-400 cursor-pointer rounded-lg px-3 py-2 transition-all duration-200", 
-                      !activeSportFilter && "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 font-medium"
-                    )}
-                    onClick={() => setActiveSportFilter(null)}
-                  >
-                    <Trophy className="mr-2 h-4 w-4" />
-                    <span>Celebrities</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-white/90 hover:text-amber-400 focus:text-amber-400 cursor-pointer rounded-lg px-3 py-2 transition-all duration-200", 
-                      activeSportFilter === "tennis" && "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 font-medium"
-                    )}
-                    onClick={() => setActiveSportFilter("tennis")}
-                  >
-                    <Award className="mr-2 h-4 w-4" />
-                    <span>Tennis</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-white/90 hover:text-amber-400 focus:text-amber-400 cursor-pointer rounded-lg px-3 py-2 transition-all duration-200", 
-                      activeSportFilter === "boxing" && "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 font-medium"
-                    )}
-                    onClick={() => setActiveSportFilter("boxing")}
-                  >
-                    <Dumbbell className="mr-2 h-4 w-4" />
-                    <span>Boxing</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-white/90 hover:text-amber-400 focus:text-amber-400 cursor-pointer rounded-lg px-3 py-2 transition-all duration-200", 
-                      activeSportFilter === "soccer" && "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 font-medium"
-                    )}
-                    onClick={() => setActiveSportFilter("soccer")}
-                  >
-                    <Activity className="mr-2 h-4 w-4" />
-                    <span>Soccer</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              ... filter dropdown removed ...
             </div>
+            */}
             
             {/* Premium Search Bar */}
             <div className="relative hidden lg:block w-56">
@@ -471,6 +421,7 @@ export default function Header() {
               <div className="space-y-3">
                 <h3 className="text-amber-400 text-sm font-medium tracking-wide">Filter Categories</h3>
                 <div className="grid grid-cols-2 gap-3">
+                  {/*
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -488,6 +439,7 @@ export default function Header() {
                     <Trophy className="mr-2 h-3 w-3" />
                     All Celebrities
                   </Button>
+                  */}
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -614,6 +566,13 @@ export default function Header() {
                     onClick={() => setShowMobileMenu(false)}
                   >
                     Cele World
+                  </Link>
+                  <Link 
+                    href="/ai-stylist"
+                    className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    AI Stylist
                   </Link>
                   
                   {/* Mobile Sign In / Profile */}

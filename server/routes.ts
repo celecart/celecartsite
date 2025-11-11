@@ -13,7 +13,8 @@ import {
   insertPermissionSchema,
   insertUserSchema,
   insertPlanSchema,
-  insertCelebrityProductSchema
+  insertCelebrityProductSchema,
+  insertBrandProductSchema
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -1224,6 +1225,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch celebrity" });
     }
   });
+
+  // Alias route: GET /celebrity/:id
+  // If the client requests JSON (Accept header or ?format=json), return the same
+  // payload as /api/celebrities/:id; otherwise pass through to the SPA router.
+  app.get('/celebrity/:id', async (req: Request, res: Response, next: NextFunction) => {
+    const accept = (req.headers['accept'] || '').toString().toLowerCase();
+    const wantsJson = accept.includes('application/json') || req.query.format === 'json';
+
+    if (!wantsJson) {
+      // Let the frontend router render the page
+      return next();
+    }
+
+    try {
+      const rawId = (req.params.id || '').trim();
+      const id = parseInt(rawId);
+      if (!rawId || isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid celebrity ID' });
+      }
+
+      let celebrity = await storage.getCelebrityById(id);
+      if (!celebrity) {
+        celebrity = await storage.getCelebrityByUserId(id);
+      }
+      if (!celebrity) {
+        return res.status(404).json({ message: 'Celebrity not found' });
+      }
+
+      // Optional: mirror activity logging from /api/celebrities/:id when authenticated
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        try {
+          const user = req.user as any;
+          await storage.logUserActivity({
+            userId: user.id,
+            activityType: 'view',
+            entityType: 'celebrity',
+            entityId: celebrity.id,
+            entityName: celebrity.name,
+            metadata: JSON.stringify({ 
+              timestamp: new Date().toISOString(),
+              userAgent: req.get('User-Agent') || null
+            })
+          });
+        } catch (activityError) {
+          console.error('Failed to log celebrity view activity (alias route):', activityError);
+        }
+      }
+
+      res.json(celebrity);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch celebrity' });
+    }
+  });
   
   // Get celebrities by category
   app.get("/api/celebrities/category/:category", async (req: Request, res: Response) => {
@@ -1352,6 +1406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
       const offset = parseInt(req.query.offset as string) || 0;
+      const includeInactive = ["1", "true", "yes"].includes(String(req.query.includeInactive || "").toLowerCase());
 
       let brands = await storage.getBrands();
 
@@ -1366,6 +1421,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         brands = brands.filter(b => (b.categoryIds ?? []).includes(categoryId));
       }
 
+      // Hide inactive brands by default on public site
+      if (!includeInactive) {
+        brands = brands.filter((b: any) => b?.isActive !== false);
+      }
+
       const paged = brands.slice(offset, offset + limit);
       res.set('X-Total-Count', brands.length.toString());
       res.set('X-Limit', limit.toString());
@@ -1373,6 +1433,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(paged);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch brands" });
+    }
+  });
+
+  // Admin: Disable all brands (set isActive=false)
+  app.post("/api/brands/disable-all", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const all = await storage.getBrands();
+      let updated = 0;
+      for (const b of all) {
+        await storage.updateBrand(b.id, { isActive: false });
+        updated++;
+      }
+      res.json({ message: "All brands disabled", updated });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to disable all brands" });
     }
   });
   
@@ -1722,6 +1797,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Product not found" });
       }
       
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+  
+  // Brand Products API endpoints
+  
+  // Get all brand products
+  app.get("/api/brand-products", async (req: Request, res: Response) => {
+    try {
+      console.log("Fetching brand products with query:", req.query);
+      const brandId = req.query.brandId ? parseInt(req.query.brandId as string) : undefined;
+      const products = await storage.getBrandProducts(brandId as any);
+      console.log("Fetched brand products:", products);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching brand products:", error);
+      res.status(500).json({ message: "Failed to fetch brand products", error: (error as any).message });
+    }
+  });
+  
+  // Get brand product by ID
+  app.get("/api/brand-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      const product = await storage.getBrandProductById(id as any);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+  
+  // Create brand product
+  app.post("/api/brand-products", async (req: Request, res: Response) => {
+    try {
+      console.log("Creating brand product with data:", req.body);
+      const validatedData = insertBrandProductSchema.parse(req.body);
+      console.log("Validated brand product data:", validatedData);
+      const product = await storage.createBrandProduct(validatedData as any);
+      console.log("Created brand product:", product);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Error creating brand product:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create product", error: (error as any).message });
+    }
+  });
+  
+  // Update brand product
+  app.put("/api/brand-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      console.log("Updating brand product with data:", req.body);
+      const validatedData = insertBrandProductSchema.partial().parse(req.body);
+      console.log("Validated data for brand product update:", validatedData);
+      const product = await storage.updateBrandProduct(id as any, validatedData as any);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      console.log("Updated brand product:", product);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating brand product:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+  
+  // Delete brand product
+  app.delete("/api/brand-products/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      const success = await storage.deleteBrandProduct(id as any);
+      if (!success) {
+        return res.status(404).json({ message: "Product not found" });
+      }
       res.json({ message: "Product deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete product" });

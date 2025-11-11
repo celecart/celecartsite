@@ -35,7 +35,6 @@ export default function CelebrityGallery() {
   
   // Categories for the filter buttons
   const categories = [
-    { id: "All", label: "All Celebrities" },
     { id: "On-Court Style", label: "On-Court" },
     { id: "Court Fashion", label: "Court Fashion" },
     { id: "Red Carpet", label: "Red Carpet" },

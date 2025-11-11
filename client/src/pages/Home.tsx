@@ -12,21 +12,14 @@ import TrendingSpotlight from "@/components/TrendingSpotlight";
 import AnimatedBrandAds from "@/components/AnimatedBrandAds";
 import CelebrityTestimonials from "@/components/CelebrityTestimonials";
 
-import { useState } from "react";
 import { Brand } from "@shared/schema";
-import BrandModal from "@/components/BrandModal";
+import { useLocation } from "wouter";
 
 export default function Home() {
-  const [showBrandModal, setShowBrandModal] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [, setLocation] = useLocation();
 
   const handleOpenBrandModal = (brand: Brand) => {
-    setSelectedBrand(brand);
-    setShowBrandModal(true);
-  };
-
-  const handleCloseBrandModal = () => {
-    setShowBrandModal(false);
+    if (brand?.id) setLocation(`/brands/${brand.id}/products`);
   };
 
   return (
@@ -65,9 +58,6 @@ export default function Home() {
       </div>
       <Newsletter />
       <Footer />
-      {showBrandModal && selectedBrand && (
-        <BrandModal brand={selectedBrand} onClose={handleCloseBrandModal} />
-      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import MultiImageUpload from "@/components/MultiImageUpload";
 import {
   SidebarProvider,
   Sidebar,
@@ -32,7 +34,8 @@ import {
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag, ExternalLink, Upload, AlertTriangle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { Brand, Category, InsertBrand } from "@shared/schema";
+import type { Brand, Category, InsertBrand, InsertBrandProduct } from "@shared/schema";
+import { validateBrandProductInput } from "@/lib/validation";
 
 function RichTextEditor({ id, value, onChange, placeholder, className }: { id?: string; value?: string; onChange: (html: string) => void; placeholder?: string; className?: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -112,7 +115,8 @@ function RichTextEditor({ id, value, onChange, placeholder, className }: { id?: 
 }
 
 async function fetchBrands(query?: string): Promise<Brand[]> {
-  const url = query && query.trim() ? `/api/brands?q=${encodeURIComponent(query.trim())}` : "/api/brands";
+  const base = "/api/brands?includeInactive=1";
+  const url = query && query.trim() ? `${base}&q=${encodeURIComponent(query.trim())}` : base;
   const res = await fetch(url, { credentials: "include" });
   if (!res.ok) throw new Error(`Failed to fetch brands: ${res.status}`);
   return res.json();
@@ -134,6 +138,7 @@ export default function AdminBrands() {
   const [openEdit, setOpenEdit] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [bulkDisabling, setBulkDisabling] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
@@ -162,6 +167,7 @@ export default function AdminBrands() {
       categoryIds: [],
       sourceType: undefined,
       celebWearers: [],
+      isActive: true,
     }
   });
 
@@ -175,6 +181,7 @@ export default function AdminBrands() {
       categoryIds: [],
       sourceType: undefined,
       celebWearers: [],
+      isActive: true,
     }
   });
 
@@ -194,9 +201,37 @@ export default function AdminBrands() {
     return map;
   }, [categories]);
 
+  // Flattened category names for product category dropdown
+  const productCategoryNames = useMemo(() => {
+    return Array.from(new Set((categories || []).map((c) => c.name).filter(Boolean)));
+  }, [categories]);
+
   const { toast } = useToast();
   const [logoError, setLogoError] = useState<string | null>(null);
   const [editLogoError, setEditLogoError] = useState<string | null>(null);
+
+  // Brand Product modal state and form
+  const [openProduct, setOpenProduct] = useState(false);
+  const [productBrandId, setProductBrandId] = useState<number | null>(null);
+  const [productImages, setProductImages] = useState<string[]>([]);
+
+  const productForm = useForm<InsertBrandProduct>({
+    defaultValues: {
+      brandId: 0,
+      name: "",
+      description: "",
+      category: "",
+      productCategory: "",
+      imageUrl: [],
+      price: 0,
+      website: "",
+      purchaseLink: "",
+      rating: 0,
+      isActive: true,
+      isFeatured: false,
+      metadata: {},
+    },
+  });
 
   const applyTheme = (dark: boolean) => {
     const root = document.documentElement;
@@ -478,6 +513,90 @@ export default function AdminBrands() {
     }
   };
 
+  // Create Brand Product handler
+  const onCreateProduct = async () => {
+    const values = productForm.getValues();
+    const brandId = productBrandId || undefined;
+
+    // Client-side validation before server submission
+    const { errors, normalized } = validateBrandProductInput(values as any, productImages, brandId);
+    if (errors && Object.keys(errors).length > 0) {
+      productForm.clearErrors();
+      let firstField: string | null = null;
+      Object.entries(errors).forEach(([field, message]) => {
+        if (field === 'brandId') {
+          toast({ title: 'Brand required', description: message, variant: 'destructive' });
+          return;
+        }
+        productForm.setError(field as any, { message });
+        if (!firstField) firstField = field;
+      });
+      if (firstField && (productForm as any).setFocus) {
+        (productForm as any).setFocus(firstField as any);
+      }
+      return; // prevent submission when errors exist
+    }
+
+    const payload: InsertBrandProduct = normalized as InsertBrandProduct;
+    try {
+      const res = await fetch('/api/brand-products', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 400 && j?.errors && Array.isArray(j.errors)) {
+          productForm.clearErrors();
+          let firstField: string | null = null;
+          (j.errors as any[]).forEach((issue) => {
+            const field = Array.isArray(issue?.path) && issue.path.length ? String(issue.path[0]) : 'root';
+            const message = issue?.message || 'Invalid value.';
+            if (field !== 'root') {
+              productForm.setError(field as any, { message });
+              if (!firstField) firstField = field;
+            }
+          });
+          if (firstField && (productForm as any).setFocus) {
+            (productForm as any).setFocus(firstField as any);
+          }
+          throw new Error(j?.message || 'Please correct the highlighted fields.');
+        }
+        throw new Error(j?.message || `Failed to create product: ${res.status}`);
+      }
+      toast({ title: 'Product created', description: 'Brand product has been added.' });
+      setOpenProduct(false);
+      setProductBrandId(null);
+      setProductImages([]);
+      productForm.reset();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Failed to create product', variant: 'destructive' });
+    }
+  };
+
+  const disableAllBrands = async () => {
+    const ok = window.confirm('Disable visibility for ALL brands? This sets Active = false.');
+    if (!ok) return;
+    try {
+      setBulkDisabling(true);
+      const res = await fetch('/api/brands/disable-all', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j?.message || `Failed to disable all brands: ${res.status}`);
+      }
+      toast({ title: 'All brands disabled', description: 'Inactive brands are hidden on site.' });
+      await refetch();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Failed to disable all brands', variant: 'destructive' });
+    } finally {
+      setBulkDisabling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -601,17 +720,26 @@ export default function AdminBrands() {
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger />
             <div className="flex-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-            >
-              Refresh
-            </Button>
-            <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="ml-2">Add Brand</Button>
-              </DialogTrigger>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-2"
+            disabled={bulkDisabling}
+            onClick={disableAllBrands}
+          >
+            Disable All
+          </Button>
+          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="ml-2">Add Brand</Button>
+            </DialogTrigger>
               <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Brand</DialogTitle>
@@ -722,6 +850,17 @@ export default function AdminBrands() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="isActive">Active</Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isActive"
+                        checked={!!watch('isActive')}
+                        onCheckedChange={(checked) => setValue('isActive', Boolean(checked))}
+                      />
+                      <span className="text-sm text-muted-foreground">Enable brand visibility on site</span>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="submit" disabled={isSubmitting}>Create</Button>
@@ -845,6 +984,17 @@ export default function AdminBrands() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-isActive">Active</Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-isActive"
+                        checked={!!editForm.watch('isActive')}
+                        onCheckedChange={(checked) => editForm.setValue('isActive', Boolean(checked))}
+                      />
+                      <span className="text-sm text-muted-foreground">Enable brand visibility on site</span>
+                    </div>
+                  </div>
                   <DialogFooter>
                     <Button type="submit" disabled={editForm.formState.isSubmitting}>Save Changes</Button>
                   </DialogFooter>
@@ -905,6 +1055,187 @@ export default function AdminBrands() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Add Product Modal */}
+            <Dialog
+              open={openProduct}
+              onOpenChange={(open) => {
+                setOpenProduct(open);
+                if (!open) {
+                  setProductBrandId(null);
+                  setProductImages([]);
+                  productForm.reset();
+                }
+              }}
+            >
+              <DialogContent className="sm:max-w-[720px] max-h-[85vh] overflow-y-auto sm:rounded-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Brand Product</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    onCreateProduct();
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="product-name">Name</Label>
+                      <Input
+                        id="product-name"
+                        aria-invalid={!!productForm.formState.errors.name}
+                        aria-describedby={productForm.formState.errors.name ? 'product-name-error' : undefined}
+                        {...productForm.register('name', { required: true, onChange: () => productForm.clearErrors('name') })}
+                        placeholder="Product name"
+                      />
+                      {productForm.formState.errors.name && (
+                        <p id="product-name-error" className="text-xs text-red-500">{productForm.formState.errors.name.message || 'Please enter a valid name.'}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-category">Category</Label>
+                      <Input
+                        id="product-category"
+                        aria-invalid={!!productForm.formState.errors.category}
+                        aria-describedby={productForm.formState.errors.category ? 'product-category-error' : undefined}
+                        {...productForm.register('category', { onChange: () => productForm.clearErrors('category') })}
+                        placeholder="e.g., Clothing"
+                      />
+                      {productForm.formState.errors.category && (
+                        <p id="product-category-error" className="text-xs text-red-500">{productForm.formState.errors.category.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-productCategory">Product Category</Label>
+                      <Select
+                        value={productForm.watch('productCategory') || ''}
+                        onValueChange={(val) => {
+                          productForm.setValue('productCategory', val, { shouldDirty: true, shouldValidate: true });
+                          productForm.clearErrors('productCategory');
+                        }}
+                      >
+                        <SelectTrigger
+                          id="product-productCategory"
+                          aria-invalid={!!productForm.formState.errors.productCategory}
+                          aria-describedby={productForm.formState.errors.productCategory ? 'product-productCategory-error' : undefined}
+                          className="w-full"
+                        >
+                          <SelectValue placeholder={categoriesLoading ? 'Loading…' : 'Select a product category'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(productCategoryNames || []).map((name) => (
+                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {productForm.formState.errors.productCategory && (
+                        <p id="product-productCategory-error" className="text-xs text-red-500">{productForm.formState.errors.productCategory.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-price">Price</Label>
+                      <Input
+                        id="product-price"
+                        type="number"
+                        step="0.01"
+                        aria-invalid={!!productForm.formState.errors.price}
+                        aria-describedby={productForm.formState.errors.price ? 'product-price-error' : undefined}
+                        {...productForm.register('price', { valueAsNumber: true, onChange: () => productForm.clearErrors('price') })}
+                        placeholder="0.00"
+                      />
+                      {productForm.formState.errors.price && (
+                        <p id="product-price-error" className="text-xs text-red-500">{productForm.formState.errors.price.message || 'Enter a valid price.'}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="product-description">Description</Label>
+                      <Textarea
+                        id="product-description"
+                        aria-invalid={!!productForm.formState.errors.description}
+                        aria-describedby={productForm.formState.errors.description ? 'product-description-error' : undefined}
+                        {...productForm.register('description', { onChange: () => productForm.clearErrors('description') })}
+                        placeholder="Short description"
+                      />
+                      {productForm.formState.errors.description && (
+                        <p id="product-description-error" className="text-xs text-red-500">{productForm.formState.errors.description.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-website">Website</Label>
+                      <Input
+                        id="product-website"
+                        aria-invalid={!!productForm.formState.errors.website}
+                        aria-describedby={productForm.formState.errors.website ? 'product-website-error' : undefined}
+                        {...productForm.register('website', { onChange: () => productForm.clearErrors('website') })}
+                        placeholder="https://example.com"
+                      />
+                      {productForm.formState.errors.website && (
+                        <p id="product-website-error" className="text-xs text-red-500">{productForm.formState.errors.website.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-purchaseLink">Purchase Link</Label>
+                      <Input
+                        id="product-purchaseLink"
+                        aria-invalid={!!productForm.formState.errors.purchaseLink}
+                        aria-describedby={productForm.formState.errors.purchaseLink ? 'product-purchaseLink-error' : undefined}
+                        {...productForm.register('purchaseLink', { onChange: () => productForm.clearErrors('purchaseLink') })}
+                        placeholder="https://store.example.com"
+                      />
+                      {productForm.formState.errors.purchaseLink && (
+                        <p id="product-purchaseLink-error" className="text-xs text-red-500">{productForm.formState.errors.purchaseLink.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="product-rating">Rating</Label>
+                      <Input
+                        id="product-rating"
+                        type="number"
+                        step="0.1"
+                        aria-invalid={!!productForm.formState.errors.rating}
+                        aria-describedby={productForm.formState.errors.rating ? 'product-rating-error' : undefined}
+                        {...productForm.register('rating', { valueAsNumber: true, onChange: () => productForm.clearErrors('rating') })}
+                        placeholder="0-5"
+                      />
+                      {productForm.formState.errors.rating && (
+                        <p id="product-rating-error" className="text-xs text-red-500">{productForm.formState.errors.rating.message}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={!!productForm.watch('isActive')}
+                          onCheckedChange={(c) => productForm.setValue('isActive', !!c)}
+                        />
+                        <Label>Active</Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={!!productForm.watch('isFeatured')}
+                          onCheckedChange={(c) => productForm.setValue('isFeatured', !!c)}
+                        />
+                        <Label>Featured</Label>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Images</Label>
+                      <MultiImageUpload
+                        uploadUrl="/api/upload/product-images"
+                        onImagesChange={(urls) => setProductImages(urls)}
+                      />
+                      {productForm.formState.errors.imageUrl && (
+                        <p id="product-imageUrl-error" className="text-xs text-red-500">{productForm.formState.errors.imageUrl.message || 'Please add valid image URLs.'}</p>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setOpenProduct(false)}>Cancel</Button>
+                    <Button type="submit">Create Product</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </header>
           <main className="p-4">
             <div className="grid gap-4">
@@ -930,18 +1261,19 @@ export default function AdminBrands() {
                           <TableHead className="hidden md:table-cell">Website</TableHead>
                           <TableHead className="hidden md:table-cell">Origins</TableHead>
                           <TableHead className="hidden md:table-cell">Categories</TableHead>
+                          <TableHead className="hidden md:table-cell">Active</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {isLoading && (
                           <TableRow>
-                            <TableCell colSpan={6}>Loading brands…</TableCell>
+                            <TableCell colSpan={7}>Loading brands…</TableCell>
                           </TableRow>
                         )}
                         {!isLoading && (data || []).length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={6}>No brands found.</TableCell>
+                            <TableCell colSpan={7}>No brands found.</TableCell>
                           </TableRow>
                         )}
                         {(data || []).map((b) => (
@@ -977,8 +1309,48 @@ export default function AdminBrands() {
                                 ? (b.categoryIds || []).map((id) => categoryNameById.get(id) || String(id)).join(', ')
                                 : <span className="text-muted-foreground">—</span>}
                             </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {b.isActive ? (
+                                <Badge className="bg-green-600 hover:bg-green-600">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setLocation(`/admin/brands/${b.id}/products`)}
+                                >
+                                  View Products
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setProductBrandId(b.id);
+                                    setProductImages([]);
+                                    productForm.reset({
+                                      brandId: b.id,
+                                      name: "",
+                                      description: "",
+                                      category: "",
+                                      productCategory: "",
+                                      imageUrl: [],
+                                      price: 0,
+                                      website: "",
+                                      purchaseLink: "",
+                                      rating: 0,
+                                      isActive: true,
+                                      isFeatured: false,
+                                      metadata: {},
+                                    });
+                                    setOpenProduct(true);
+                                  }}
+                                >
+                                  Add Product
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -993,6 +1365,7 @@ export default function AdminBrands() {
                                       categoryIds: b.categoryIds || [],
                                       sourceType: (b as any).sourceType || undefined,
                                       celebWearers: b.celebWearers || [],
+                                      isActive: (b as any).isActive ?? true,
                                     });
                                     setEditLogoPreview(b.imageUrl || null);
                                     setOpenEdit(true);

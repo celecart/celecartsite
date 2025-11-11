@@ -90,12 +90,26 @@ export default function BrandModal({ brand, onClose }: BrandModalProps) {
               </div>
             </div>
             
-            <button 
-              className="block w-full py-3 bg-gold text-dark font-semibold rounded text-center hover:bg-gold/90 transition-colors mt-4"
-              onClick={onClose}
-            >
-              Browse Celebrities Wearing {brand.name}
-            </button>
+            <div className="mt-4 flex items-center gap-3">
+              <a
+                href={`/brands/${brand.id}/products`}
+                className="flex-1"
+                onClick={(e) => {
+                  // Allow navigation and close modal for a smooth UX
+                  setTimeout(() => onClose(), 0);
+                }}
+              >
+                <button className="w-full py-3 bg-gold text-dark font-semibold rounded text-center hover:bg-gold/90 transition-colors">
+                  View Products
+                </button>
+              </a>
+              <button 
+                className="py-3 px-4 bg-dark text-light border border-white/20 rounded hover:bg-white/10 transition-colors"
+                onClick={onClose}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </motion.div>
       </motion.div>

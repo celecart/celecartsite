@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Package, Star, ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -161,15 +162,18 @@ function ProductCard({ product, featured = false }: ProductCardProps) {
     } catch {}
     return val as string;
   })();
-  return (
-    <div className={`relative rounded-xl overflow-hidden border hover:shadow-md transition-all duration-300 ${
-      featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-gray-200'
-    }`}>
+  const linkUrl = (product.purchaseLink || product.website || '').trim();
+  const CardInner = (
+    <div
+      className={`relative rounded-xl overflow-hidden border hover:shadow-md transition-all duration-300 ${
+        featured ? 'border-amber-200 ring-2 ring-amber-100' : 'border-gray-200'
+      } ${linkUrl ? 'cursor-pointer' : ''}`}
+    >
       {/* Product Image with overlays */}
       <div className="relative h-48 bg-gray-100 overflow-hidden">
         {imageSrc ? (
-          <img 
-            src={imageSrc} 
+          <img
+            src={imageSrc}
             alt={product.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />
@@ -185,18 +189,24 @@ function ProductCard({ product, featured = false }: ProductCardProps) {
         {/* Featured Badge */}
         {featured && (
           <div className="absolute top-2 left-2">
-            <Badge className="bg-amber-600 text-white px-2 py-0.5 rounded-full">
-              Featured
-            </Badge>
+            <Badge className="bg-amber-600 text-white px-2 py-0.5 rounded-full">Featured</Badge>
           </div>
         )}
 
         {/* Price badge */}
         {product.price && (
           <div className="absolute top-2 right-2">
-            <Badge className="bg-emerald-600 text-white px-2 py-0.5 rounded-full">
-              {product.price}
-            </Badge>
+            <Badge className="bg-emerald-600 text-white px-2 py-0.5 rounded-full">{product.price}</Badge>
+          </div>
+        )}
+
+        {/* External link indicator if clickable */}
+        {linkUrl && (
+          <div className="absolute bottom-2 right-2 text-white/90">
+            <span className="inline-flex items-center gap-1 text-xs bg-black/40 px-2 py-1 rounded-full">
+              <ExternalLink className="w-3 h-3" />
+              Shop
+            </span>
           </div>
         )}
 
@@ -207,5 +217,29 @@ function ProductCard({ product, featured = false }: ProductCardProps) {
         </div>
       </div>
     </div>
+  );
+
+  // If an external URL exists, use <a>. Otherwise, fall back to internal details.
+  if (linkUrl) {
+    return (
+      <a
+        href={linkUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${product.name} shop link in new tab`}
+        className="block focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl"
+      >
+        {CardInner}
+      </a>
+    );
+  }
+  return (
+    <Link
+      href={`/product/${product.id}?type=celebrity`}
+      aria-label={`View ${product.name} details`}
+      className="block focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-xl"
+    >
+      {CardInner}
+    </Link>
   );
 }

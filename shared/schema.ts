@@ -69,6 +69,7 @@ export const brands = pgTable("brands", {
   description: text("description"),
   imageUrl: text("image_url").notNull(),
   websiteUrl: text("website_url"),
+  isActive: boolean("is_active").default(true).notNull(),
   origins: jsonb("origins").$type<string[]>(),
   categoryIds: jsonb("category_ids").$type<number[]>(),
   sourceType: text("source_type"),
@@ -81,6 +82,7 @@ export const insertBrandSchema = createInsertSchema(brands)
     description: true,
     imageUrl: true,
     websiteUrl: true,
+    isActive: true,
     origins: true,
     categoryIds: true,
     sourceType: true,
@@ -91,6 +93,7 @@ export const insertBrandSchema = createInsertSchema(brands)
     description: z.string().optional(),
     imageUrl: z.string().min(1, "Logo is required"),
     websiteUrl: z.string().url("Invalid URL").optional(),
+    isActive: z.boolean().default(true).optional(),
     origins: z.array(z.string()).default([]).optional(),
     categoryIds: z.array(z.number()).default([]).optional(),
     sourceType: z.enum([
@@ -465,6 +468,51 @@ export const insertCelebrityProductSchema = createInsertSchema(celebrityProducts
 
 export type InsertCelebrityProduct = z.infer<typeof insertCelebrityProductSchema>;
 export type CelebrityProduct = typeof celebrityProducts.$inferSelect;
+
+// Brand Products table for products under a specific brand (admin-managed)
+export const brandProducts = pgTable("brand_products", {
+  id: serial("id").primaryKey(),
+  brandId: integer("brand_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  productCategory: text("product_category"),
+  imageUrl: text("image_url").notNull(),
+  price: text("price"),
+  website: text("website"),
+  purchaseLink: text("purchase_link"),
+  rating: integer("rating"),
+  isActive: boolean("is_active").default(true).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(),
+  createdAt: text("created_at").notNull().default("now()"),
+  updatedAt: text("updated_at").notNull().default("now()"),
+  metadata: jsonb("metadata").$type<{
+    tags?: string[];
+  } | null>(),
+});
+
+export const insertBrandProductSchema = createInsertSchema(brandProducts).pick({
+  brandId: true,
+  name: true,
+  description: true,
+  category: true,
+  productCategory: true,
+  imageUrl: true,
+  price: true,
+  website: true,
+  purchaseLink: true,
+  rating: true,
+  isActive: true,
+  isFeatured: true,
+  createdAt: true,
+  updatedAt: true,
+  metadata: true,
+}).extend({
+  imageUrl: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+export type InsertBrandProduct = z.infer<typeof insertBrandProductSchema>;
+export type BrandProduct = typeof brandProducts.$inferSelect;
 export type UserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;

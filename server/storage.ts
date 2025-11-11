@@ -72,7 +72,7 @@ import {
 
 } from "@shared/data";
 
-import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole, celebrityProducts, type CelebrityProduct, type InsertCelebrityProduct } from "@shared/schema";
+import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole, celebrityProducts, type CelebrityProduct, type InsertCelebrityProduct, brandProducts, type BrandProduct, type InsertBrandProduct } from "@shared/schema";
 
 import { db } from "./db";
 
@@ -283,6 +283,17 @@ export interface IStorage {
 
   deleteUserActivities(userId: number): Promise<boolean>;
 
+}
+
+// Extend storage interface with brand product operations
+declare module './storage' {
+  interface IStorage {
+    getBrandProducts(brandId?: number): Promise<BrandProduct[]>;
+    getBrandProductById(id: number): Promise<BrandProduct | null>;
+    createBrandProduct(product: InsertBrandProduct): Promise<BrandProduct>;
+    updateBrandProduct(id: number, update: Partial<InsertBrandProduct>): Promise<BrandProduct | null>;
+    deleteBrandProduct(id: number): Promise<boolean>;
+  }
 }
 
 
@@ -1054,7 +1065,8 @@ export class MemStorage implements IStorage {
 
       description: insertBrand.description ?? null,
 
-      celebWearers: celebWearers
+      celebWearers: celebWearers,
+      isActive: (insertBrand as any).isActive ?? true
 
     };
 
@@ -1084,6 +1096,7 @@ export class MemStorage implements IStorage {
       celebWearers: Array.isArray(update.celebWearers)
         ? update.celebWearers.filter((v) => typeof v === 'string')
         : existing.celebWearers ?? [],
+      isActive: (update as any).isActive ?? (existing as any).isActive ?? true,
     };
 
     this.brands.set(id, merged);
@@ -2124,6 +2137,7 @@ export class PgStorage implements IStorage {
       categoryIds: insertBrand.categoryIds ?? [],
       sourceType: insertBrand.sourceType ?? null,
       celebWearers: insertBrand.celebWearers ?? [],
+      isActive: (insertBrand as any).isActive ?? true,
     };
     try {
       console.log("[PgStorage] Begin transaction: createBrand", { name: values.name, imageUrl: values.imageUrl });
@@ -2194,6 +2208,7 @@ export class PgStorage implements IStorage {
     if (update.categoryIds !== undefined) values.categoryIds = update.categoryIds ?? [];
     if (update.sourceType !== undefined) values.sourceType = update.sourceType ?? null;
     if (update.celebWearers !== undefined) values.celebWearers = update.celebWearers ?? [];
+    if ((update as any).isActive !== undefined) values.isActive = (update as any).isActive;
 
     if (Object.keys(values).length === 0) {
       const rows = await this._db.select().from(brands).where(eq(brands.id, id)).limit(1);
@@ -2946,6 +2961,120 @@ export class PgStorage implements IStorage {
       return rows.length > 0;
     } else {
       return this.celebrityProducts.delete(id);
+    }
+  }
+
+  // Brand product methods
+  async getBrandProducts(brandId?: number): Promise<BrandProduct[]> {
+    if (this._db) {
+      try {
+        let result;
+        if (brandId) {
+          result = await this._db.select().from(brandProducts).where(eq(brandProducts.brandId, brandId));
+        } else {
+          result = await this._db.select().from(brandProducts);
+        }
+
+        const processed = result.map((product) => {
+          let processedImageUrl = (product as any).imageUrl as any;
+          if (typeof processedImageUrl === 'string' && processedImageUrl === '[]') {
+            processedImageUrl = [] as any;
+          } else if (typeof processedImageUrl === 'string' && processedImageUrl.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(processedImageUrl);
+              processedImageUrl = Array.isArray(parsed) ? parsed : [];
+            } catch {
+              processedImageUrl = [] as any;
+            }
+          }
+          return { ...(product as any), imageUrl: processedImageUrl } as any;
+        });
+
+        return processed as any;
+      } catch (error) {
+        console.error("Database query failed:", error);
+        throw error;
+      }
+    } else {
+      return [];
+    }
+  }
+
+  async getBrandProductById(id: number): Promise<BrandProduct | null> {
+    if (this._db) {
+      const rows = await this._db.select().from(brandProducts).where(eq(brandProducts.id, id));
+      if (rows.length === 0) return null;
+      const product = rows[0] as any as BrandProduct;
+      let processedImageUrl = (product as any).imageUrl as any;
+      if (typeof processedImageUrl === 'string' && processedImageUrl.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(processedImageUrl);
+          processedImageUrl = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          processedImageUrl = [] as any;
+        }
+      }
+      return { ...(product as any), imageUrl: processedImageUrl } as any;
+    } else {
+      return null;
+    }
+  }
+
+  async createBrandProduct(productData: InsertBrandProduct): Promise<BrandProduct> {
+    if (this._db) {
+      const processedData = {
+        ...productData,
+        imageUrl: Array.isArray(productData.imageUrl)
+          ? JSON.stringify(productData.imageUrl)
+          : (productData.imageUrl || '[]')
+      } as any;
+      const rows = await this._db.insert(brandProducts).values(processedData).returning();
+      const result = rows[0] as any as BrandProduct;
+      if (typeof (result as any).imageUrl === 'string' && ((result as any).imageUrl as any).startsWith('[')) {
+        try {
+          (result as any).imageUrl = JSON.parse((result as any).imageUrl as any) as any;
+        } catch {}
+      }
+      return result as any;
+    } else {
+      throw new Error('In-memory brand products not supported');
+    }
+  }
+
+  async updateBrandProduct(id: number, updateData: Partial<InsertBrandProduct>): Promise<BrandProduct | null> {
+    if (this._db) {
+      const processedData: any = { ...updateData, updatedAt: new Date().toISOString() };
+      if (updateData.imageUrl !== undefined) {
+        if (Array.isArray(updateData.imageUrl)) {
+          processedData.imageUrl = updateData.imageUrl.length > 0 ? JSON.stringify(updateData.imageUrl) : '[]';
+        } else {
+          processedData.imageUrl = updateData.imageUrl || '[]';
+        }
+      }
+      const rows = await this._db.update(brandProducts).set(processedData).where(eq(brandProducts.id, id)).returning();
+      if (rows.length === 0) return null;
+      const result = rows[0] as any as BrandProduct;
+      if (typeof (result as any).imageUrl === 'string' && ((result as any).imageUrl as any).startsWith('[')) {
+        try {
+          (result as any).imageUrl = JSON.parse((result as any).imageUrl as any) as any;
+        } catch {
+          (result as any).imageUrl = [] as any;
+        }
+      } else if (!(result as any).imageUrl || ((result as any).imageUrl as any) === '') {
+        (result as any).imageUrl = [] as any;
+      }
+      return result as any;
+    } else {
+      return null;
+    }
+  }
+
+  async deleteBrandProduct(id: number): Promise<boolean> {
+    if (this._db) {
+      const rows = await this._db.delete(brandProducts).where(eq(brandProducts.id, id)).returning({ id: brandProducts.id });
+      return rows.length > 0;
+    } else {
+      return false;
     }
   }
 }
