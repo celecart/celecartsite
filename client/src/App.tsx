@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import CelebrityProfile from "@/pages/CelebrityProfile";
+import Product from "@/pages/Product";
 import ContentCreator from "@/pages/ContentCreator";
 import Login from "@/pages/Login";
 import ViewportSimulator from "./components/ViewportSimulator";
@@ -26,12 +27,14 @@ import AddBlog from "@/pages/AddBlog";
 import EditBlog from "@/pages/EditBlog";
 import AdminProducts from "@/pages/AdminProducts";
 import AdminBrands from "@/pages/AdminBrands";
+import AdminBrandProducts from "@/pages/AdminBrandProducts";
 import Brands from "@/pages/Brands";
 import AdminSettings from "@/pages/AdminSettings";
+import BrandProducts from "@/pages/BrandProducts";
 
 function Router() {
   return (
-    <Switch>
+  <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signin" component={Login} />
@@ -43,6 +46,7 @@ function Router() {
       <Route path="/plans" component={Plans} />
       <Route path="/celebrities" component={Celebrities} />
       <Route path="/celebrity/:id" component={CelebrityProfile} />
+      <Route path="/product/:id" component={Product} />
       <Route path="/content-creator" component={ContentCreator} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/roles" component={AdminRoles} />
@@ -52,13 +56,16 @@ function Router() {
       <Route path="/admin/plans" component={AdminPlans} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/brands" component={AdminBrands} />
+    <Route path="/admin/brands/:id/products" component={AdminBrandProducts} />
+    <Route path="/brands/:id/products" component={BrandProducts} />
+      <Route path="/admin/brand-products" component={AdminBrandProducts} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/brands" component={Brands} />
       <Route path="/cele-world" component={CeleWorld} />
       <Route path="/add-blog" component={AddBlog} />
       <Route path="/edit-blog/:id" component={EditBlog} />
       <Route component={NotFound} />
-    </Switch>
+  </Switch>
   );
 }
 

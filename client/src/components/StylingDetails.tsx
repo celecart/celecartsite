@@ -36,6 +36,7 @@ interface OutfitDetails {
   price: string;
   details: string;
   purchaseLink?: string;
+  purchaseUrl?: string;
 }
 
 interface LookDetails {
@@ -75,156 +76,167 @@ export default function StylingDetails({ looks, className = "" }: StylingDetails
             ))}
           </TabsList>
           
-          {looks.map((look, index) => (
-            <TabsContent key={index} value={look.occasion} className="space-y-6">
-              {look.image && (
-                <div className="w-full rounded-lg overflow-hidden">
-                  <img 
-                    src={look.image} 
-                    alt={look.occasion} 
-                    className="w-full object-cover h-64"
-                  />
-                </div>
-              )}
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Outfit Details */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Store className="h-5 w-5 text-amber-600" />
-                    <h3 className="font-semibold text-lg">Outfit Details</h3>
+          {looks.map((look, index) => {
+            const purchaseUrl = look.outfit?.purchaseLink || look.outfit?.purchaseUrl || '';
+            const clickable = !!purchaseUrl;
+            const clickableProps = clickable ? {
+              onClick: () => window.open(purchaseUrl, '_blank'),
+              role: 'link' as const,
+              tabIndex: 0,
+              onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+              'aria-label': `Open ${look.outfit?.designer || 'item'} shop link in new tab`
+            } : {};
+            return (
+              <TabsContent key={index} value={look.occasion} className="space-y-6">
+                {look.image && (
+                  <div className={`w-full rounded-lg overflow-hidden ${clickable ? 'cursor-pointer' : ''}`} {...clickableProps}>
+                    <img 
+                      src={look.image} 
+                      alt={look.occasion} 
+                      className="w-full object-cover h-64"
+                    />
+                  </div>
+                )}
+                
+                <div className={`grid md:grid-cols-2 gap-6 ${clickable ? 'cursor-pointer' : ''}`} {...clickableProps}>
+                  {/* Outfit Details */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Store className="h-5 w-5 text-amber-600" />
+                      <h3 className="font-semibold text-lg">Outfit Details</h3>
+                    </div>
+                    
+                    <div className="pl-7 space-y-3">
+                      <div>
+                        <span className="text-sm text-muted-foreground">Designer:</span>
+                        <p className="font-medium">{look.outfit.designer}</p>
+                      </div>
+                      
+                      <div>
+                        <span className="text-sm text-muted-foreground">Price:</span>
+                        <p className="font-medium">{look.outfit.price}</p>
+                      </div>
+                      
+                      <div>
+                        <span className="text-sm text-muted-foreground">Details:</span>
+                        <p>{look.outfit.details}</p>
+                      </div>
+                      
+                      {look.outfit.purchaseLink && (
+                        <div className="mt-4">
+                          <Button 
+                            variant="default" 
+                            className="bg-gold hover:bg-gold/90 text-dark" 
+                            size="sm"
+                            asChild
+                          >
+                            <a 
+                              href={look.outfit.purchaseLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1"
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                              <span>Shop this look</span>
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="pl-7 space-y-3">
-                    <div>
-                      <span className="text-sm text-muted-foreground">Designer:</span>
-                      <p className="font-medium">{look.outfit.designer}</p>
-                    </div>
+                  {/* Hair and Makeup */}
+                  <div className="space-y-6">
+                    {look.hairStylist && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Scissors className="h-5 w-5 text-amber-600" />
+                          <h3 className="font-semibold">Hair by {look.hairStylist.name}</h3>
+                        </div>
+                        
+                        <div className="pl-7">
+                          <p className="text-sm mb-2">{look.hairStylist.details}</p>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {look.hairStylist.instagram && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a 
+                                  href={`https://instagram.com/${look.hairStylist.instagram}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1"
+                                >
+                                  <Instagram className="h-4 w-4" />
+                                  <span>@{look.hairStylist.instagram}</span>
+                                </a>
+                              </Button>
+                            )}
+                            
+                            {look.hairStylist.website && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a 
+                                  href={look.hairStylist.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  <span>Website</span>
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
-                    <div>
-                      <span className="text-sm text-muted-foreground">Price:</span>
-                      <p className="font-medium">{look.outfit.price}</p>
-                    </div>
-                    
-                    <div>
-                      <span className="text-sm text-muted-foreground">Details:</span>
-                      <p>{look.outfit.details}</p>
-                    </div>
-                    
-                    {look.outfit.purchaseLink && (
-                      <div className="mt-4">
-                        <Button 
-                          variant="default" 
-                          className="bg-gold hover:bg-gold/90 text-dark" 
-                          size="sm"
-                          asChild
-                        >
-                          <a 
-                            href={look.outfit.purchaseLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1"
-                          >
-                            <ShoppingCart className="h-4 w-4" />
-                            <span>Shop this look</span>
-                          </a>
-                        </Button>
+                    {look.makeupArtist && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Paintbrush className="h-5 w-5 text-amber-600" />
+                          <h3 className="font-semibold">Makeup by {look.makeupArtist.name}</h3>
+                        </div>
+                        
+                        <div className="pl-7">
+                          <p className="text-sm mb-2">{look.makeupArtist.details}</p>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {look.makeupArtist.instagram && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a 
+                                  href={`https://instagram.com/${look.makeupArtist.instagram}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1"
+                                >
+                                  <Instagram className="h-4 w-4" />
+                                  <span>@{look.makeupArtist.instagram}</span>
+                                </a>
+                              </Button>
+                            )}
+                            
+                            {look.makeupArtist.website && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a 
+                                  href={look.makeupArtist.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  <span>Website</span>
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Hair and Makeup */}
-                <div className="space-y-6">
-                  {look.hairStylist && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Scissors className="h-5 w-5 text-amber-600" />
-                        <h3 className="font-semibold">Hair by {look.hairStylist.name}</h3>
-                      </div>
-                      
-                      <div className="pl-7">
-                        <p className="text-sm mb-2">{look.hairStylist.details}</p>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          {look.hairStylist.instagram && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={`https://instagram.com/${look.hairStylist.instagram}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <Instagram className="h-4 w-4" />
-                                <span>@{look.hairStylist.instagram}</span>
-                              </a>
-                            </Button>
-                          )}
-                          
-                          {look.hairStylist.website && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={look.hairStylist.website} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                                <span>Website</span>
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {look.makeupArtist && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Paintbrush className="h-5 w-5 text-amber-600" />
-                        <h3 className="font-semibold">Makeup by {look.makeupArtist.name}</h3>
-                      </div>
-                      
-                      <div className="pl-7">
-                        <p className="text-sm mb-2">{look.makeupArtist.details}</p>
-                        
-                        <div className="flex flex-wrap gap-2">
-                          {look.makeupArtist.instagram && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={`https://instagram.com/${look.makeupArtist.instagram}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <Instagram className="h-4 w-4" />
-                                <span>@{look.makeupArtist.instagram}</span>
-                              </a>
-                            </Button>
-                          )}
-                          
-                          {look.makeupArtist.website && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a 
-                                href={look.makeupArtist.website} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                                <span>Website</span>
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-          ))}
+              </TabsContent>
+            );
+          })}
         </Tabs>
       </CardContent>
     </Card>

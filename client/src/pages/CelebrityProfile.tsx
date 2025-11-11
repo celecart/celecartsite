@@ -1,4 +1,5 @@
 import { useRoute } from "wouter";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, ShoppingBag, Sparkles, Upload, Camera, Video, Calendar, Star, UserPlus, ExternalLink, MapPin, Instagram, Twitter, Youtube, Music2 } from "lucide-react";
 import FashionStyleEpisodes from "@/components/FashionStyleEpisodes";
 import { useEffect, useState } from "react";
-import BrandModal from "@/components/BrandModal";
 import BrandImage from "@/components/BrandImage";
 import { toast } from "@/hooks/use-toast";
 import OccasionPricing from "@/components/OccasionPricing";
@@ -76,8 +76,7 @@ export interface CelebrityBrandWithDetails {
 export default function CelebrityProfile() {
   const [_, params] = useRoute("/celebrity/:id");
   const celebrityId = params?.id ? parseInt(params.id) : 0;
-  const [showBrandModal, setShowBrandModal] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [, setLocation] = useLocation();
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const isCelebrityCelebrityPage = typeof window !== 'undefined' && window.location.pathname === '/celebrity/celebrity';
   const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([]);
@@ -312,12 +311,7 @@ export default function CelebrityProfile() {
   }, []);
 
   const handleOpenBrandModal = (brand: Brand) => {
-    setSelectedBrand(brand);
-    setShowBrandModal(true);
-  };
-
-  const handleCloseBrandModal = () => {
-    setShowBrandModal(false);
+    if (brand?.id) setLocation(`/brands/${brand.id}/products`);
   };
 
   if (isLoading) {
@@ -688,41 +682,56 @@ export default function CelebrityProfile() {
                             look.occasion !== "Favorite Lounge" &&
                             look.occasion !== "Executive Fashion"
                           )
-                          .map((look, index) => (
-                            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-amber-100">
-                              <h4 className="text-xl font-playfair font-semibold mb-6 text-amber-600 border-b border-amber-200 pb-2">
-                                {look.occasion}
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="w-full h-48 bg-neutral-50 rounded-md overflow-hidden border border-amber-100">
-                                  <img 
-                                    src={look.image} 
-                                    alt={look.outfit.designer} 
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div>
-                                  <div className="mb-1">
-                                    <span className="font-medium text-neutral-700">{look.outfit.designer}</span>
+                          .map((look, index) => {
+                            const purchaseUrl = look.outfit?.purchaseLink || (look.outfit as any)?.purchaseUrl || '';
+                            const clickable = !!purchaseUrl;
+                            const clickableProps = clickable ? {
+                              onClick: () => window.open(purchaseUrl, '_blank'),
+                              role: 'link',
+                              tabIndex: 0,
+                              onKeyDown: (e) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                              'aria-label': `Open ${look.outfit?.designer || 'item'} shop link in new tab`
+                            } : {};
+                            return (
+                              <div
+                                key={index}
+                                className={`bg-white p-6 rounded-lg shadow-sm border border-amber-100 ${clickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+                                {...clickableProps}
+                              >
+                                <h4 className="text-xl font-playfair font-semibold mb-6 text-amber-600 border-b border-amber-200 pb-2">
+                                  {look.occasion}
+                                </h4>
+                                <div className="space-y-4">
+                                  <div className="w-full h-48 bg-neutral-50 rounded-md overflow-hidden border border-amber-100">
+                                    <img 
+                                      src={look.image} 
+                                      alt={look.outfit.designer} 
+                                      className="w-full h-full object-cover"
+                                    />
                                   </div>
-                                  <a
-                                    href={look.outfit.purchaseLink || '#'} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="text-lg font-playfair text-amber-600 hover:underline"
-                                  >
-                                    {look.outfit.designer}
-                                  </a>
-                                  <div className="flex items-center mt-1">
-                                    <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{look.outfit.price}</span>
+                                  <div>
+                                    <div className="mb-1">
+                                      <span className="font-medium text-neutral-700">{look.outfit.designer}</span>
+                                    </div>
+                                    <a
+                                      href={look.outfit.purchaseLink || '#'} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="text-lg font-playfair text-amber-600 hover:underline"
+                                    >
+                                      {look.outfit.designer}
+                                    </a>
+                                    <div className="flex items-center mt-1">
+                                      <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{look.outfit.price}</span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-gray-600">
+                                      {look.outfit.details}
+                                    </p>
                                   </div>
-                                  <p className="mt-2 text-sm text-gray-600">
-                                    {look.outfit.details}
-                                  </p>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         }
                       </div>
                     </div>
@@ -1424,9 +1433,16 @@ export default function CelebrityProfile() {
                           return (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {experienceLooks.map((look, index) => {
-                                const purchaseUrl = look.outfit?.purchaseLink || '';
+                            const purchaseUrl = look.outfit?.purchaseLink || (look.outfit as any)?.purchaseUrl || '';
+                                const clickableProps = purchaseUrl ? {
+                                  onClick: () => window.open(purchaseUrl, '_blank'),
+                                  role: 'link',
+                                  tabIndex: 0,
+                                  onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                                  'aria-label': `Open ${look.occasion} shop link in new tab`
+                                } : {};
                                 return (
-                                  <div key={index} className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden">
+                                  <div key={index} className={`group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden ${purchaseUrl ? 'cursor-pointer' : ''}`} {...(clickableProps as any)}>
                                     <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                       <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                       <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1457,8 +1473,19 @@ export default function CelebrityProfile() {
                             {favExperiences.map((product) => {
                               const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                               const purchaseUrl = product.purchaseLink || product.website || '';
+                              const clickableProps = purchaseUrl ? {
+                                onClick: () => window.open(purchaseUrl, '_blank'),
+                                role: 'link',
+                                tabIndex: 0,
+                                onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                                'aria-label': `Open ${product.name} shop link in new tab`
+                              } : {};
                               return (
-                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                <div
+                                  key={product.id}
+                                  className={`group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden ${purchaseUrl ? 'cursor-pointer' : ''}`}
+                                  {...(clickableProps as any)}
+                                >
                                   
                                   {product.isFeatured ? (
                                     <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
@@ -1536,14 +1563,21 @@ export default function CelebrityProfile() {
                           return (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                               {luxuryLooks.map((look, index) => {
-                                const purchaseUrl = look.outfit?.purchaseLink || '';
-                                const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                          const purchaseUrl = look.outfit?.purchaseLink || (look.outfit as any)?.purchaseUrl || '';
+                                const clickable = !!purchaseUrl;
+                                const clickableProps = clickable ? {
+                                  onClick: () => window.open(purchaseUrl, '_blank'),
+                                  role: 'link',
+                                  tabIndex: 0,
+                                  onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                                  'aria-label': `Open ${look.occasion} shop link in new tab`
+                                } : {};
                                 return (
                                   <div
                                     key={index}
                                     className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
                                     style={{ aspectRatio: '3/4' }}
-                                    onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                    {...(clickableProps as any)}
                                   >
                                     <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="absolute inset-0 w-full h-full object-cover" />
                                     {look.outfit?.price && (
@@ -1645,13 +1679,17 @@ export default function CelebrityProfile() {
                                     {luxuryPrefs.filter(p => getProductCategory(p) === cat).map((product) => {
                                       const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                                       const purchaseUrl = product.purchaseLink || product.website || '';
-                                      const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                                      const clickable = !!purchaseUrl;
                                       return (
                                         <div
                                           key={product.id}
                                           className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
                                           style={{ aspectRatio: '3/4' }}
                                           onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                          role={clickable ? 'link' : undefined}
+                                          tabIndex={clickable ? 0 : undefined}
+                                          onKeyDown={clickable ? (e) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); } : undefined}
+                                          aria-label={clickable ? `Open ${product.name} shop link in new tab` : undefined}
                                         >
                                           <img src={img || '/assets/placeholder.png'} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
                                           {product.isFeatured && (
@@ -1713,9 +1751,16 @@ export default function CelebrityProfile() {
                           return (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {experienceLooks.map((look, index) => {
-                                const purchaseUrl = look.outfit?.purchaseLink || '';
+                                const purchaseUrl = look.outfit?.purchaseLink || (look.outfit as any)?.purchaseUrl || '';
+                                const clickableProps = purchaseUrl ? {
+                                  onClick: () => window.open(purchaseUrl, '_blank'),
+                                  role: 'link',
+                                  tabIndex: 0,
+                                  onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                                  'aria-label': `Open ${look.occasion} shop link in new tab`
+                                } : {};
                                 return (
-                                  <div key={index} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden">
+                                  <div key={index} className={`group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden ${purchaseUrl ? 'cursor-pointer' : ''}`} {...(clickableProps as any)}>
                                     <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                                       <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                       <div className="absolute inset-0 bg-gradient-to-t from-amber-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1747,8 +1792,19 @@ export default function CelebrityProfile() {
                             {favExperiences.map((product) => {
                               const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                               const purchaseUrl = product.purchaseLink || product.website || '';
+                              const clickableProps = purchaseUrl ? {
+                            onClick: () => window.open(purchaseUrl, '_blank'),
+                            role: 'link',
+                            tabIndex: 0,
+                            onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                            'aria-label': `Open ${product.name} shop link in new tab`
+                          } : {};
                               return (
-                                <div key={product.id} className="group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden">
+                                <div
+                                  key={product.id}
+                                  className={`group relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-2xl border border-amber-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-amber-200 hover:ring-amber-400/50 overflow-hidden ${purchaseUrl ? 'cursor-pointer' : ''}`}
+                                  {...(clickableProps as any)}
+                                >
                                   {product.isFeatured ? (
                                     <div className="absolute top-3 left-3"><Badge className="bg-amber-600 text-white">Most Popular</Badge></div>
                                   ) : null}
@@ -1826,13 +1882,20 @@ export default function CelebrityProfile() {
                           return (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                               {luxuryLooks.map((look, index) => {
-                                const purchaseUrl = look.outfit?.purchaseLink || '';
-                                const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                                const purchaseUrl = look.outfit?.purchaseLink || (look.outfit as any)?.purchaseUrl || '';
+                                const clickable = !!purchaseUrl;
+                                const clickableProps = clickable ? {
+                                  onClick: () => window.open(purchaseUrl, '_blank'),
+                                  role: 'link',
+                                  tabIndex: 0,
+                                  onKeyDown: (e: any) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                                  'aria-label': `Open ${look.occasion} shop link in new tab`
+                                } : {};
                                 return (
                                 <div
                                   key={index}
                                   className={`group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col transition-shadow hover:shadow-md ${clickable ? 'cursor-pointer' : ''}`}
-                                  onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                  {...(clickableProps as any)}
                                 >
                                   <div className="relative bg-white overflow-hidden flex items-center justify-center h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px]">
                                     <img src={look.image || '/assets/placeholder.png'} alt={look.occasion} className="max-h-full max-w-full object-contain object-center transition-transform duration-300 ease-out group-hover:scale-[1.03] will-change-transform" loading="lazy" />
@@ -1934,13 +1997,17 @@ export default function CelebrityProfile() {
                                     {luxuryPrefs.filter(p => getProductCategory(p) === cat).map((product) => {
                                       const img = (() => { const val = product.imageUrl as any; if (!val) return ''; if (Array.isArray(val)) return val[0] || ''; if (typeof val === 'string') { const trimmed = val.trim(); if (trimmed.startsWith('[')) { try { const arr = JSON.parse(trimmed); if (Array.isArray(arr)) return arr[0] || ''; } catch {} } return val; } return ''; })();
                                       const purchaseUrl = product.purchaseLink || product.website || '';
-                                      const clickable = isCelebrityCelebrityPage && !!purchaseUrl;
+                                      const clickable = !!purchaseUrl;
                                       return (
                                         <div
                                           key={product.id}
                                           className={`relative overflow-hidden rounded-lg shadow-md ${clickable ? 'cursor-pointer' : ''}`}
                                           style={{ aspectRatio: '3/4' }}
                                           onClick={clickable ? () => window.open(purchaseUrl, '_blank') : undefined}
+                                          role={clickable ? 'link' : undefined}
+                                          tabIndex={clickable ? 0 : undefined}
+                                          onKeyDown={clickable ? (e) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); } : undefined}
+                                          aria-label={clickable ? `Open ${product.name} shop link in new tab` : undefined}
                                         >
                                           <img src={img || '/assets/placeholder.png'} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
                                           {product.isFeatured && (
@@ -2143,8 +2210,19 @@ export default function CelebrityProfile() {
                         {personalBrandProducts.map((product) => {
                           const img = Array.isArray(product.imageUrl) ? (product.imageUrl[0] || '') : (product.imageUrl || '');
                           const purchaseUrl = product.purchaseLink || product.website || '';
+                          const clickableProps = purchaseUrl ? {
+                            onClick: () => window.open(purchaseUrl, '_blank'),
+                            role: 'link',
+                            tabIndex: 0,
+                            onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter') window.open(purchaseUrl, '_blank'); },
+                            'aria-label': `Open ${product.name} shop link in new tab`
+                          } : {};
                           return (
-                                <div key={product.id} className="group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden flex flex-col">
+                                <div
+                                  key={product.id}
+                                  className={`group relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-200 shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 hover:rotate-[0.15deg] ring-1 ring-purple-200 hover:ring-purple-400/50 overflow-hidden flex flex-col ${purchaseUrl ? 'cursor-pointer' : ''}`}
+                                  {...(clickableProps as any)}
+                                >
                                   
                                   {product.isFeatured ? (
                                     <div className="absolute top-3 left-3"><Badge className="bg-purple-600 text-white">Most Popular</Badge></div>
@@ -2695,9 +2773,7 @@ export default function CelebrityProfile() {
 
       {/* Product editing is disabled on this page; use Profile page for edits. */}
 
-      {showBrandModal && selectedBrand && (
-        <BrandModal brand={selectedBrand} onClose={handleCloseBrandModal} />
-      )}
+      {/* Brand modal removed; navigation handled on brand click */}
     </div>
   );
 }

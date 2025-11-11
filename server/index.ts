@@ -84,6 +84,8 @@ app.use((req, res, next) => {
       await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "style_notes" text');
       await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "brands_worn" text');
       await pool!.query('ALTER TABLE "celebrities" ADD COLUMN IF NOT EXISTS "user_id" integer');
+      // Ensure brands have is_active column
+      await pool!.query('ALTER TABLE "brands" ADD COLUMN IF NOT EXISTS "is_active" boolean DEFAULT true');
       // Ensure new user social/professional columns exist
       await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profession" text');
       await pool!.query('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "description" text');
@@ -176,10 +178,9 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Serve the app on a configurable port (default 5000)
+  // This serves both the API and the client.
+  const port = Number(process.env.PORT || 5000);
   server.listen(port, "localhost", () => {
     log(`serving on port ${port}`);
   });
