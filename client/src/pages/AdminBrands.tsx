@@ -32,6 +32,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag, ExternalLink, Upload, AlertTriangle, X } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { Brand, Category, InsertBrand, InsertBrandProduct } from "@shared/schema";
@@ -214,6 +215,12 @@ export default function AdminBrands() {
   const [openProduct, setOpenProduct] = useState(false);
   const [productBrandId, setProductBrandId] = useState<number | null>(null);
   const [productImages, setProductImages] = useState<string[]>([]);
+  // Marketing API config (local storage persisted)
+  const [marketingApi, setMarketingApi] = useState<{ endpoint: string; clientId: string; clientSecret: string }>({
+    endpoint: "",
+    clientId: "",
+    clientSecret: "",
+  });
 
   const productForm = useForm<InsertBrandProduct>({
     defaultValues: {
@@ -272,6 +279,26 @@ export default function AdminBrands() {
       applyTheme(false);
     }
   }, []);
+  // Load Marketing API settings
+  useEffect(() => {
+    try {
+      const endpoint = localStorage.getItem('marketingApi.endpoint') || '';
+      const clientId = localStorage.getItem('marketingApi.clientId') || '';
+      const clientSecret = localStorage.getItem('marketingApi.clientSecret') || '';
+      setMarketingApi({ endpoint, clientId, clientSecret });
+    } catch {}
+  }, []);
+
+  const saveMarketingApi = () => {
+    try {
+      localStorage.setItem('marketingApi.endpoint', marketingApi.endpoint);
+      localStorage.setItem('marketingApi.clientId', marketingApi.clientId);
+      localStorage.setItem('marketingApi.clientSecret', marketingApi.clientSecret);
+      toast({ title: 'Saved', description: 'Marketing API settings saved.' });
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to save Marketing API settings.', variant: 'destructive' });
+    }
+  };
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -662,12 +689,12 @@ export default function AdminBrands() {
                     <Tag />
                     <span>Brands</span>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
-                    <Star />
-                    <span>Celebrities</span>
-                  </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
+                  <Star />
+                  <span>Celebrities</span>
+                </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => setLocation('/admin/products')} tooltip="Products">
@@ -701,17 +728,7 @@ export default function AdminBrands() {
               <span className="text-sm text-muted-foreground">
                 {user?.displayName || user?.username}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const next = !isDark;
-                  setIsDark(next);
-                  applyTheme(next);
-                }}
-              >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+              <ThemeToggle />
             </div>
           </SidebarFooter>
           <SidebarRail />
@@ -1239,6 +1256,7 @@ export default function AdminBrands() {
           </header>
           <main className="p-4">
             <div className="grid gap-4">
+              
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-semibold">Brands</CardTitle>

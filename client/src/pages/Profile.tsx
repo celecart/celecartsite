@@ -146,7 +146,7 @@ export default function Profile() {
   const [editingProduct, setEditingProduct] = useState<CelebrityProduct | null>(null);
   // Add nested products tab state
   const [productTab, setProductTab] = useState<
-    'personalFavourite' | 'personalBrand' | 'shoppingPlaylist' | 'celeconnect' | 'fashionEpisodes'
+    'personalFavourite' | 'personalBrand' | 'celeVibe' | 'shoppingPlaylist' | 'celeconnect' | 'fashionEpisodes'
   >('personalFavourite');
   // Track where Add Product was triggered to prefill category and render placement
   const [addProductContext, setAddProductContext] = useState<'zulqadarExperiences' | 'luxuryBrandPreferences' | 'personalBrandProducts' | null>(null);
@@ -880,6 +880,12 @@ export default function Profile() {
                               <span>Personal Brand</span>
                             </div>
                           </TabsTrigger>
+                          <TabsTrigger value="celeVibe" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Cele vibe</span>
+                            </div>
+                          </TabsTrigger>
                           <TabsTrigger value="shoppingPlaylist" className="data-[state=active]:bg-amber-500 data-[state=active]:text-black rounded-xl px-3 py-2 text-white">
                             <div className="flex items-center gap-2">
                               <ShoppingBag className="w-4 h-4" />
@@ -1397,6 +1403,10 @@ export default function Profile() {
                               </AccordionContent>
                             </AccordionItem>
                           </Accordion>
+                        </TabsContent>
+
+                        <TabsContent value="celeVibe" className="mt-4">
+                          <div className="text-white/80">Cele vibe — curated vibes and highlights will appear here.</div>
                         </TabsContent>
 
                         <TabsContent value="shoppingPlaylist" className="mt-4">

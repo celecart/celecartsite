@@ -28,6 +28,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Moon, Sun, CreditCard, Star, FileText, Package, Plus, Edit, Trash2, Upload, Tag } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import type { CelebrityProduct, Celebrity, Category } from "@shared/schema";
 
@@ -334,7 +335,10 @@ export default function AdminProducts() {
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter>
-            <div className="px-2 text-xs text-muted-foreground">Signed in as {user?.displayName || user?.username}</div>
+            <div className="px-2 flex items-center justify-between gap-2">
+              <div className="text-xs text-muted-foreground">Signed in as {user?.displayName || user?.username}</div>
+              <ThemeToggle />
+            </div>
           </SidebarFooter>
           <SidebarRail />
         </Sidebar>

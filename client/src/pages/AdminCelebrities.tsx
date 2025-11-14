@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Users, ShieldCheck, Tags, Settings, Plus, Edit, Trash2, Sun, Moon, CreditCard, Upload, X, Star, FileText, Package, Tag } from 'lucide-react';
+import ThemeToggle from "@/components/ThemeToggle";
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 import { FallbackImage } from '@/components/ui/fallback-image';
@@ -530,8 +531,11 @@ export default function AdminCelebrities() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {currentUser?.displayName || currentUser?.username}
+          <div className="px-2 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Signed in as {currentUser?.displayName || currentUser?.username}
+            </div>
+            <ThemeToggle />
           </div>
         </SidebarFooter>
         <SidebarRail />

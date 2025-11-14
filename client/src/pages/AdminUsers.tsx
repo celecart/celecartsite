@@ -22,6 +22,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, Activity, ExternalLink, CreditCard, Star, Edit, Trash2, Eye, EyeOff, Upload, Package, Tag } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
@@ -532,8 +533,11 @@ export default function AdminUsers() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {user?.displayName || user?.username}
+          <div className="px-2 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Signed in as {user?.displayName || user?.username}
+            </div>
+            <ThemeToggle />
           </div>
         </SidebarFooter>
         <SidebarRail />
