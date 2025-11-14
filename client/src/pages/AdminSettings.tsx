@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminSettings() {
@@ -12,6 +13,14 @@ export default function AdminSettings() {
   const [, setLocation] = useLocation();
   const [isDark, setIsDark] = useState(false);
   const [displayName, setDisplayName] = useState<string>("");
+  const [logoSubtitle, setLogoSubtitle] = useState<string>("Celebrity Style");
+  const [featuredLabel, setFeaturedLabel] = useState<string>("Featured");
+  const [celebritiesLabel, setCelebritiesLabel] = useState<string>("Celebrities");
+  const [trendingNavLabel, setTrendingNavLabel] = useState<string>("Trending");
+  const [brandsLabel, setBrandsLabel] = useState<string>("Brands");
+  const [plansLabel, setPlansLabel] = useState<string>("Plans");
+  const [celeWorldLabel, setCeleWorldLabel] = useState<string>("Cele World");
+  const [aiStylistLabel, setAiStylistLabel] = useState<string>("AI Stylist");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [dbHealthLoading, setDbHealthLoading] = useState(false);
@@ -48,6 +57,25 @@ export default function AdminSettings() {
       const storedDisplayName = localStorage.getItem("displayName") || "";
       setDisplayName(storedDisplayName);
     } catch {}
+    try {
+      const ls = localStorage;
+      const subtitle = ls.getItem("landingNavLogoSubtitle") || "Celebrity Style";
+      const featured = ls.getItem("landingNavFeaturedLabel") || "Featured";
+      const celebs = ls.getItem("landingNavCelebritiesLabel") || "Celebrities";
+      const trending = ls.getItem("landingNavTrendingLabel") || "Trending";
+      const brands = ls.getItem("landingNavBrandsLabel") || "Brands";
+      const plans = ls.getItem("landingNavPlansLabel") || "Plans";
+      const celeWorld = ls.getItem("landingNavCeleWorldLabel") || "Cele World";
+      const aiStylist = ls.getItem("landingNavAIStylistLabel") || "AI Stylist";
+      setLogoSubtitle(subtitle);
+      setFeaturedLabel(featured);
+      setCelebritiesLabel(celebs);
+      setTrendingNavLabel(trending);
+      setBrandsLabel(brands);
+      setPlansLabel(plans);
+      setCeleWorldLabel(celeWorld);
+      setAiStylistLabel(aiStylist);
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -80,6 +108,23 @@ export default function AdminSettings() {
       toast({ title: "Settings saved", description: "Your preferences have been updated." });
     } catch (e) {
       toast({ title: "Failed to save settings", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const saveNavLabels = () => {
+    try {
+      const ls = localStorage;
+      ls.setItem("landingNavLogoSubtitle", logoSubtitle);
+      ls.setItem("landingNavFeaturedLabel", featuredLabel);
+      ls.setItem("landingNavCelebritiesLabel", celebritiesLabel);
+      ls.setItem("landingNavTrendingLabel", trendingNavLabel);
+      ls.setItem("landingNavBrandsLabel", brandsLabel);
+      ls.setItem("landingNavPlansLabel", plansLabel);
+      ls.setItem("landingNavCeleWorldLabel", celeWorldLabel);
+      ls.setItem("landingNavAIStylistLabel", aiStylistLabel);
+      toast({ title: "Navigation updated", description: "Labels saved. Refresh header if needed." });
+    } catch (e) {
+      toast({ title: "Failed to save navigation", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -208,6 +253,118 @@ export default function AdminSettings() {
             <div className="flex gap-2">
               <Button onClick={saveSettings}>Save Settings</Button>
               <Button variant="outline" onClick={() => setLocation('/admin')}>Back to Admin</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Landing Navigation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead className="hidden md:table-cell">Description</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Logo subtitle</TableCell>
+                    <TableCell>
+                      <Input
+                        value={logoSubtitle}
+                        onChange={(e) => setLogoSubtitle(e.target.value)}
+                        placeholder="Celebrity Style"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Small text under the site logo</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Featured section</TableCell>
+                    <TableCell>
+                      <Input
+                        value={featuredLabel}
+                        onChange={(e) => setFeaturedLabel(e.target.value)}
+                        placeholder="Featured"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Top picks anchor on landing</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Celebrities link</TableCell>
+                    <TableCell>
+                      <Input
+                        value={celebritiesLabel}
+                        onChange={(e) => setCelebritiesLabel(e.target.value)}
+                        placeholder="Celebrities"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Navigation link to celebrities page</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Trending section</TableCell>
+                    <TableCell>
+                      <Input
+                        value={trendingNavLabel}
+                        onChange={(e) => setTrendingNavLabel(e.target.value)}
+                        placeholder="Trending"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Landing anchor for trending styles; e.g. "Hot"</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Brands link</TableCell>
+                    <TableCell>
+                      <Input
+                        value={brandsLabel}
+                        onChange={(e) => setBrandsLabel(e.target.value)}
+                        placeholder="Brands"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Navigation link to brands directory</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Plans link</TableCell>
+                    <TableCell>
+                      <Input
+                        value={plansLabel}
+                        onChange={(e) => setPlansLabel(e.target.value)}
+                        placeholder="Plans"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">Subscription plans page link</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Cele World link</TableCell>
+                    <TableCell>
+                      <Input
+                        value={celeWorldLabel}
+                        onChange={(e) => setCeleWorldLabel(e.target.value)}
+                        placeholder="Cele World"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">News and updates page link</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>AI Stylist link</TableCell>
+                    <TableCell>
+                      <Input
+                        value={aiStylistLabel}
+                        onChange={(e) => setAiStylistLabel(e.target.value)}
+                        placeholder="AI Stylist"
+                      />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">AI assistant for styling page link</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={saveNavLabels}>Save Navigation</Button>
             </div>
           </CardContent>
         </Card>

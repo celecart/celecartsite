@@ -22,6 +22,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, ArrowLeft, Activity, Clock, User, Eye, LogIn, UserPlus, Filter, Star, CreditCard, Tag } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import UserActivityFeed from "@/components/UserActivityFeed";
 import { Package } from "lucide-react";
 
@@ -263,8 +264,11 @@ export default function AdminUserActivities() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {currentUser?.displayName || currentUser?.username}
+          <div className="px-2 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Signed in as {currentUser?.displayName || currentUser?.username}
+            </div>
+            <ThemeToggle />
           </div>
         </SidebarFooter>
         <SidebarRail />

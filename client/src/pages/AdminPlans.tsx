@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarSeparator, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag, Plus, Edit, Trash2, Upload, X } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useLocation } from 'wouter';
 import { useToast } from "@/hooks/use-toast";
 
@@ -481,8 +482,11 @@ export default function AdminPlans() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {currentUser?.displayName || currentUser?.username}
+          <div className="px-2 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Signed in as {currentUser?.displayName || currentUser?.username}
+            </div>
+            <ThemeToggle />
           </div>
         </SidebarFooter>
         <SidebarRail />

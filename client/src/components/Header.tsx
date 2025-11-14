@@ -27,6 +27,14 @@ export default function Header() {
   const [activeSportFilter, setActiveSportFilter] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [logoSubtitle, setLogoSubtitle] = useState<string>("Celebrity Style");
+  const [featuredLabel, setFeaturedLabel] = useState<string>("Featured");
+  const [celebritiesLabel, setCelebritiesLabel] = useState<string>("Celebrities");
+  const [trendingLabel, setTrendingLabel] = useState<string>("Trending");
+  const [brandsLabel, setBrandsLabel] = useState<string>("Brands");
+  const [plansLabel, setPlansLabel] = useState<string>("Plans");
+  const [celeWorldLabel, setCeleWorldLabel] = useState<string>("Cele World");
+  const [aiStylistLabel, setAiStylistLabel] = useState<string>("AI Stylist");
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -101,6 +109,28 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    try {
+      const ls = localStorage;
+      const subtitle = ls.getItem("landingNavLogoSubtitle");
+      if (subtitle && subtitle.trim().length > 0) setLogoSubtitle(subtitle);
+      const featured = ls.getItem("landingNavFeaturedLabel");
+      if (featured && featured.trim().length > 0) setFeaturedLabel(featured);
+      const celebs = ls.getItem("landingNavCelebritiesLabel");
+      if (celebs && celebs.trim().length > 0) setCelebritiesLabel(celebs);
+      const trending = ls.getItem("landingNavTrendingLabel");
+      if (trending && trending.trim().length > 0) setTrendingLabel(trending);
+      const brands = ls.getItem("landingNavBrandsLabel");
+      if (brands && brands.trim().length > 0) setBrandsLabel(brands);
+      const plans = ls.getItem("landingNavPlansLabel");
+      if (plans && plans.trim().length > 0) setPlansLabel(plans);
+      const celeWorld = ls.getItem("landingNavCeleWorldLabel");
+      if (celeWorld && celeWorld.trim().length > 0) setCeleWorldLabel(celeWorld);
+      const aiStylist = ls.getItem("landingNavAIStylistLabel");
+      if (aiStylist && aiStylist.trim().length > 0) setAiStylistLabel(aiStylist);
+    } catch {}
+  }, []);
   
   return (
     <header className={cn(
@@ -119,7 +149,7 @@ export default function Header() {
                 <span className="text-white">ELECART</span>
               </div>
               <div className="mt-1 text-xs text-white/60 uppercase tracking-widest font-light">
-                Celebrity Style
+                {logoSubtitle}
               </div>
             </Link>
           </div>
@@ -135,7 +165,7 @@ export default function Header() {
                   location === "/#featured" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Featured
+                {featuredLabel}
               </a>
               {/* Celebrities anchor hidden; keep All Celebrities link */}
               <Link 
@@ -146,7 +176,7 @@ export default function Header() {
                   location === "/celebrities" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Celebrities
+                {celebritiesLabel}
               </Link>
               {/*
               <a 
@@ -178,7 +208,7 @@ export default function Header() {
                   (location === "/#trending" || location === "/#spotlight") && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Trending
+                {trendingLabel}
               </a>
 
               <Link 
@@ -189,7 +219,7 @@ export default function Header() {
                   location === "/brands" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Brands
+                {brandsLabel}
               </Link>
               <Link 
                 href="/plans" 
@@ -199,7 +229,7 @@ export default function Header() {
                   location === "/plans" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Plans
+                {plansLabel}
               </Link>
               <Link 
                 href="/cele-world" 
@@ -209,7 +239,7 @@ export default function Header() {
                   location === "/cele-world" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                Cele World
+                {celeWorldLabel}
               </Link>
               <Link 
                 href="/ai-stylist" 
@@ -219,7 +249,7 @@ export default function Header() {
                   location === "/ai-stylist" && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
                 )}
               >
-                AI Stylist
+                {aiStylistLabel}
               </Link>
             </div>
           </nav>
@@ -503,7 +533,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Featured
+                    {featuredLabel}
                   </a>
                   {/* Celebrities links removed */}
                   <Link 
@@ -511,7 +541,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Celebrities
+                    {celebritiesLabel}
                   </Link>
                   {/*
                   <a 
@@ -541,7 +571,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Trending
+                    {trendingLabel}
                   </a>
 
                   <Link 
@@ -549,7 +579,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Brands
+                    {brandsLabel}
                   </Link>
                   
                   <Link 
@@ -557,7 +587,7 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Plans
+                    {plansLabel}
                   </Link>
                   
                   <Link 
@@ -565,14 +595,14 @@ export default function Header() {
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    Cele World
+                    {celeWorldLabel}
                   </Link>
                   <Link 
                     href="/ai-stylist"
                     className="flex items-center px-4 py-3 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10 text-white/90 hover:bg-gradient-to-r hover:from-amber-500/20 hover:to-orange-500/20 hover:text-amber-400 hover:border-amber-400/50 transition-all duration-300 text-sm font-medium uppercase tracking-wide"
                     onClick={() => setShowMobileMenu(false)}
                   >
-                    AI Stylist
+                    {aiStylistLabel}
                   </Link>
                   
                   {/* Mobile Sign In / Profile */}

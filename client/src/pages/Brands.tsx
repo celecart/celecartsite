@@ -88,7 +88,7 @@ export default function Brands() {
           </div>
 
           {isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-[280px] rounded-2xl bg-midgray" />
               ))}
@@ -97,7 +97,7 @@ export default function Brands() {
 
           {!isLoading && (
             <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
               variants={container}
               initial="hidden"
               animate="show"

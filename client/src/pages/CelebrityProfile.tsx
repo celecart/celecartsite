@@ -28,6 +28,7 @@ import { FallbackImage } from "@/components/ui/fallback-image";
 import { LuxuryItemCard } from "@/components/ui/luxury-item-card";
 import PersonalFavourite from "@/components/PersonalFavourite";
 import AccessibleCollection from "@/components/AccessibleCollection";
+// (Modal imports removed; add-to-event handled on user Profile page)
 
 // Define types for celebrityBrands items
 export interface CelebrityBrandWithDetails {
@@ -290,6 +291,9 @@ export default function CelebrityProfile() {
     enabled: !!effectiveCelebrityId,
   });
 
+  // Permission: only the celebrity owner can add event products here
+  // Add product actions are handled on the user's Profile page, not here
+
   // Note: product edits are available on the profile page only.
 
   // Load the currently logged-in user for personalized headings
@@ -512,6 +516,15 @@ export default function CelebrityProfile() {
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
                   <Sparkles className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
                   <span className="relative z-10 font-medium whitespace-nowrap">Personal Brand</span>
+                </TabsTrigger>
+                {/* Cele vibe tab placed right after Personal Brand */}
+                <TabsTrigger 
+                  value="cele_video" 
+                  className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+                  <Video className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
+                  <span className="relative z-10 font-medium whitespace-nowrap">Cele vibe</span>
                 </TabsTrigger>
                 
                 <TabsTrigger 
@@ -2673,6 +2686,73 @@ export default function CelebrityProfile() {
                 </div>
               </div>
             </TabsContent>
+
+            {/* New: Simple Cele Video tab (YouTube embed or social link) */}
+            <TabsContent value="cele_video" className="mt-6">
+              <div className="space-y-6">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gold/20 rounded-full">
+                    <Video className="w-5 h-5 text-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold mb-2">{celebrity.name}'s Celebrity Videos</h3>
+                    <p className="text-gray-700">
+                      Featured video content from {celebrity.name}. If available, YouTube and media uploads appear here.
+                    </p>
+                  </div>
+                </div>
+                {celebrityUser?.youtube ? (
+                  <div className="mt-4">
+                    <a
+                      className="inline-flex items-center text-amber-700 hover:text-amber-800 font-medium"
+                      href={celebrityUser.youtube}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Youtube className="w-5 h-5 mr-2" />
+                      Watch on YouTube
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-gray-600">No linked video channel found for this celebrity.</div>
+                )}
+              </div>
+            </TabsContent>
+
+
+
+            {/* New: Diwali event products */}
+            <TabsContent value="diwali" className="mt-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold">Diwali Products</h3>
+                  {/* Add Product button moved to Profile page */}
+                </div>
+                {productsLoading && <div className="text-gray-600">Loading products…</div>}
+                {productsError && <div className="text-red-600">Failed to load products.</div>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(products || [])
+                    .filter(p => (p.category || '').toLowerCase() === 'diwali')
+                    .map(p => (
+                      <div key={p.id} className="rounded-lg border border-amber-200 bg-white overflow-hidden shadow-sm">
+                        <div className="aspect-video bg-neutral-100">
+                          <FallbackImage src={Array.isArray(p.imageUrl) ? (p.imageUrl[0] || '') : (p.imageUrl || '')} alt={p.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="p-4">
+                          <div className="font-semibold text-lg">{p.name}</div>
+                          <div className="text-amber-700 font-medium">{p.price}</div>
+                          {p.description && <div className="text-gray-600 text-sm mt-2 line-clamp-3">{p.description}</div>}
+                          {p.purchaseLink && (
+                            <a href={p.purchaseLink} target="_blank" rel="noreferrer" className="inline-flex items-center text-amber-700 hover:text-amber-800 mt-3">
+                              <ExternalLink className="w-4 h-4 mr-1" /> Shop
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </TabsContent>
             
             {/** AI Stylist content removed from celebrity profile **/}
             </Tabs>
@@ -2706,6 +2786,8 @@ export default function CelebrityProfile() {
       {/* Product editing is disabled on this page; use Profile page for edits. */}
 
       {/* Brand modal removed; navigation handled on brand click */}
+
+      {/* Add-to-event modal removed; product creation is available on Profile page */}
     </div>
   );
 }

@@ -47,6 +47,7 @@ import {
   Grid,
   List
  , Tag } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Package } from "lucide-react";
 
 interface User {
@@ -517,18 +518,7 @@ export default function AdminRoles() {
               <span className="text-sm text-muted-foreground">
                 {user?.displayName || user?.username}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const next = !isDark;
-                  setIsDark(next);
-                  applyTheme(next);
-                  localStorage.setItem('theme', next ? 'dark' : 'light');
-                }}
-              >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+              <ThemeToggle />
             </div>
           </SidebarFooter>
           <SidebarRail />

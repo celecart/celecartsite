@@ -21,6 +21,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface User {
   id: number;
@@ -212,8 +213,11 @@ export default function AdminDashboard() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="px-2 text-xs text-muted-foreground">
-            Signed in as {user?.displayName || user?.username}
+          <div className="px-2 flex items-center justify-between gap-2">
+            <div className="text-xs text-muted-foreground">
+              Signed in as {user?.displayName || user?.username}
+            </div>
+            <ThemeToggle />
           </div>
         </SidebarFooter>
         <SidebarRail />

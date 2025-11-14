@@ -9,6 +9,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import type { InsertBrandProduct } from "@shared/schema";
+import MultiImageUpload from "@/components/MultiImageUpload";
 import {
   SidebarProvider,
   Sidebar,
@@ -60,6 +64,26 @@ export default function AdminBrandProducts() {
   const [sortBy, setSortBy] = useState<string>('name-asc');
   const [page, setPage] = useState<number>(1);
   const pageSize = 20;
+  const [marketingApi, setMarketingApi] = useState<{ endpoint: string; clientId: string; clientSecret: string }>({ endpoint: "", clientId: "", clientSecret: "" });
+  const [openProduct, setOpenProduct] = useState(false);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const productForm = useForm<InsertBrandProduct>({
+    defaultValues: {
+      brandId: preselectedBrandId || 0,
+      name: "",
+      description: "",
+      category: "",
+      productCategory: "",
+      imageUrl: [],
+      price: 0,
+      website: "",
+      purchaseLink: "",
+      rating: 0,
+      isActive: true,
+      isFeatured: false,
+      metadata: {},
+    },
+  });
 
   const { data: brands, isLoading: brandsLoading, error: brandsError } = useQuery({
     queryKey: ['brands-for-products'],
@@ -80,6 +104,60 @@ export default function AdminBrandProducts() {
   useEffect(() => {
     if (preselectedBrandId) setBrandFilter(preselectedBrandId);
   }, [preselectedBrandId]);
+
+  useEffect(() => {
+    if (typeof brandFilter !== 'number') return;
+    try {
+      const pfx = `marketingApi.${brandFilter}.`;
+      const endpoint = localStorage.getItem(pfx + 'endpoint') || '';
+      const clientId = localStorage.getItem(pfx + 'clientId') || '';
+      const clientSecret = localStorage.getItem(pfx + 'clientSecret') || '';
+      setMarketingApi({ endpoint, clientId, clientSecret });
+    } catch {}
+  }, [brandFilter]);
+
+  const saveMarketingApi = () => {
+    if (typeof brandFilter !== 'number') {
+      toast({ title: 'Select brand', description: 'Please select a brand first.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const pfx = `marketingApi.${brandFilter}.`;
+      localStorage.setItem(pfx + 'endpoint', marketingApi.endpoint);
+      localStorage.setItem(pfx + 'clientId', marketingApi.clientId);
+      localStorage.setItem(pfx + 'clientSecret', marketingApi.clientSecret);
+      toast({ title: 'Saved', description: 'Marketing API settings saved.' });
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to save Marketing API settings.', variant: 'destructive' });
+    }
+  };
+
+  const onSubmitProduct = productForm.handleSubmit(async (values) => {
+    try {
+      const body: InsertBrandProduct = {
+        ...values,
+        brandId: typeof brandFilter === 'number' ? brandFilter : values.brandId,
+        imageUrl: productImages.length ? (productImages as any) : values.imageUrl,
+      } as any;
+      const res = await fetch('/api/brand-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        toast({ title: 'Failed', description: 'Could not create product.', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Created', description: 'Brand product created.' });
+      setOpenProduct(false);
+      setProductImages([]);
+      productForm.reset();
+      await refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Network error creating product.', variant: 'destructive' });
+    }
+  });
 
   const brandById = useMemo(() => {
     const m = new Map<number, Brand>();
@@ -126,7 +204,7 @@ export default function AdminBrandProducts() {
   }, [pageItems]);
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="bg-background text-white">
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader>
@@ -158,17 +236,116 @@ export default function AdminBrandProducts() {
           <SidebarRail />
         </Sidebar>
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-gradient-to-r from-black via-gray-900 to-black backdrop-blur-xl border-amber-500/20">
             <SidebarTrigger className="-ml-1" />
+            {typeof brandFilter === 'number' && (
+              <button
+                className="flex items-center gap-3 hover:text-amber-400 transition-colors"
+                onClick={() => setLocation(`/admin/brands/${brandFilter}/marketing-api`)}
+                aria-label="Open Marketing API page"
+              >
+                <Avatar className="h-8 w-8">
+                  {brandById.get(brandFilter)?.imageUrl 
+                    ? <AvatarImage src={brandById.get(brandFilter)?.imageUrl as any} alt={brandById.get(brandFilter)?.name || 'Brand'} />
+                    : <AvatarFallback>{(brandById.get(brandFilter)?.name || 'B')[0].toUpperCase()}</AvatarFallback>}
+                </Avatar>
+                <span className="text-sm font-semibold">
+                  {brandById.get(brandFilter)?.name || `Brand #${brandFilter}`}
+                </span>
+              </button>
+            )}
             <div className="ml-auto" />
           </header>
           <main className="p-4">
             <div className="grid gap-4">
-              <Card>
+              <Card className="bg-white/5 border border-white/10 hover:border-amber-400/40 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-semibold">Brand Products</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Marketing API</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="marketing-endpoint">API endpoint</Label>
+                      <Input id="marketing-endpoint" placeholder="https://api.example.com/marketing" value={marketingApi.endpoint} onChange={(e)=> setMarketingApi((p)=> ({...p, endpoint: e.target.value}))} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="marketing-client-id">Client ID</Label>
+                      <Input id="marketing-client-id" placeholder="Enter client id" value={marketingApi.clientId} onChange={(e)=> setMarketingApi((p)=> ({...p, clientId: e.target.value}))} />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="marketing-client-secret">Client Secret</Label>
+                      <Input id="marketing-client-secret" type="password" placeholder="Enter client secret" value={marketingApi.clientSecret} onChange={(e)=> setMarketingApi((p)=> ({...p, clientSecret: e.target.value}))} />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button onClick={saveMarketingApi} disabled={typeof brandFilter !== 'number'} className="bg-amber-500 hover:bg-amber-600 text-black">Save Settings</Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+
+              <Card className="bg-white/5 border border-white/10 hover:border-amber-400/40 transition-colors">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Brand Products</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-3">
+                    <div />
+                    <Dialog open={openProduct} onOpenChange={setOpenProduct}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black">Add Product</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Create Brand Product</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={onSubmitProduct} className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-name">Name *</Label>
+                              <Input id="bp-name" placeholder="e.g., Signature Jacket" {...productForm.register('name', { required: true, maxLength: 120 })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-category">Category</Label>
+                              <Input id="bp-category" placeholder="e.g., Apparel" {...productForm.register('category')} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-productCategory">Product Category</Label>
+                              <Input id="bp-productCategory" placeholder="e.g., Jackets" {...productForm.register('productCategory')} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-price">Price</Label>
+                              <Input id="bp-price" placeholder="e.g., 199.00" {...productForm.register('price')} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <Label htmlFor="bp-description">Description</Label>
+                              <Input id="bp-description" placeholder="Short description" {...productForm.register('description')} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-website">Website</Label>
+                              <Input id="bp-website" placeholder="https://example.com" {...productForm.register('website')} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-purchaseLink">Purchase Link</Label>
+                              <Input id="bp-purchaseLink" placeholder="https://store.example.com/buy" {...productForm.register('purchaseLink')} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="bp-rating">Rating</Label>
+                              <Input id="bp-rating" type="number" min={0} max={5} step={1} placeholder="0-5" {...productForm.register('rating', { valueAsNumber: true })} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <Label>Images</Label>
+                              <MultiImageUpload uploadUrl="/api/upload/product-images" onImagesChange={(urls)=> setProductImages(urls)} />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button type="button" variant="outline" onClick={()=> setOpenProduct(false)}>Cancel</Button>
+                            <Button type="submit">Create Product</Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                   {/* Filters */}
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
                     <div>
