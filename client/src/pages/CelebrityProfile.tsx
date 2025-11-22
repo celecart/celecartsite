@@ -28,6 +28,7 @@ import { FallbackImage } from "@/components/ui/fallback-image";
 import { LuxuryItemCard } from "@/components/ui/luxury-item-card";
 import PersonalFavourite from "@/components/PersonalFavourite";
 import AccessibleCollection from "@/components/AccessibleCollection";
+import CelebrityVibesEvents from "@/components/CelebrityVibesEvents";
 // (Modal imports removed; add-to-event handled on user Profile page)
 
 // Define types for celebrityBrands items
@@ -534,7 +535,9 @@ export default function CelebrityProfile() {
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
                   <ShoppingBag className="w-4 h-4 mr-2 relative z-10 group-hover:text-amber-400 transition-colors" />
                   <span className="relative z-10 font-medium whitespace-nowrap">Shopping playlist</span>
-                </TabsTrigger><TabsTrigger 
+                </TabsTrigger>
+                
+                <TabsTrigger 
                   value="media" 
                   className="tab-glow group relative px-6 py-3 text-white hover:text-amber-400 data-[state=active]:text-amber-400 data-[state=active]:bg-amber-600/10 rounded-lg transition-all duration-300 border border-transparent hover:border-amber-600/30 data-[state=active]:border-amber-600/50 backdrop-blur-sm shadow-lg hover:shadow-amber-600/20"
                 >
@@ -2687,39 +2690,13 @@ export default function CelebrityProfile() {
               </div>
             </TabsContent>
 
-            {/* New: Simple Cele Video tab (YouTube embed or social link) */}
+            {/* Cele vibe: Celebrity Vibes Events */}
             <TabsContent value="cele_video" className="mt-6">
-              <div className="space-y-6">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gold/20 rounded-full">
-                    <Video className="w-5 h-5 text-gold" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">{celebrity.name}'s Celebrity Videos</h3>
-                    <p className="text-gray-700">
-                      Featured video content from {celebrity.name}. If available, YouTube and media uploads appear here.
-                    </p>
-                  </div>
-                </div>
-                {celebrityUser?.youtube ? (
-                  <div className="mt-4">
-                    <a
-                      className="inline-flex items-center text-amber-700 hover:text-amber-800 font-medium"
-                      href={celebrityUser.youtube}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Youtube className="w-5 h-5 mr-2" />
-                      Watch on YouTube
-                    </a>
-                  </div>
-                ) : (
-                  <div className="text-gray-600">No linked video channel found for this celebrity.</div>
-                )}
-              </div>
+              <CelebrityVibesEvents 
+                celebrityId={celebrityId} 
+                isOwnProfile={false}
+              />
             </TabsContent>
-
-
 
             {/* New: Diwali event products */}
             <TabsContent value="diwali" className="mt-6">

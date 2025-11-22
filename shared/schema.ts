@@ -513,9 +513,75 @@ export const insertBrandProductSchema = createInsertSchema(brandProducts).pick({
 
 export type InsertBrandProduct = z.infer<typeof insertBrandProductSchema>;
 export type BrandProduct = typeof brandProducts.$inferSelect;
-export type UserRole = z.infer<typeof insertUserRoleSchema>;
-export type UserRole = typeof userRoles.$inferSelect;
-export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+
+// Celebrity Vibes Events - Special occasions/events where celebrities can showcase products
+export const celebrityVibesEvents = pgTable("celebrity_vibes_events", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // e.g., "Eid Collection", "Diwali Special", "Oscars 2024"
+  description: text("description").notNull(),
+  eventType: text("event_type").notNull(), // e.g., "Religious", "Award Show", "Festival", "Holiday"
+  imageUrl: text("image_url").notNull(), // Banner/cover image for the event
+  startDate: text("start_date").notNull(), // ISO date string when event starts
+  endDate: text("end_date").notNull(), // ISO date string when event ends
+  isActive: boolean("is_active").default(true).notNull(), // Whether event is currently active
+  isFeatured: boolean("is_featured").default(false).notNull(), // Featured events show prominently
+  createdAt: text("created_at").notNull().default("now()"),
+  updatedAt: text("updated_at").notNull().default("now()"),
+  metadata: jsonb("metadata").$type<{
+    color?: string; // Theme color for the event
+    tags?: string[]; // Additional tags for categorization
+    displayOrder?: number; // Order in which to display events
+  } | null>(),
+});
+
+export const insertCelebrityVibesEventSchema = createInsertSchema(celebrityVibesEvents).pick({
+  name: true,
+  description: true,
+  eventType: true,
+  imageUrl: true,
+  startDate: true,
+  endDate: true,
+  isActive: true,
+  isFeatured: true,
+  createdAt: true,
+  updatedAt: true,
+  metadata: true,
+}).extend({
+  name: z.string().min(1, "Event name is required").max(100, "Max 100 characters"),
+  description: z.string().min(1, "Description is required"),
+  eventType: z.string().min(1, "Event type is required"),
+  imageUrl: z.string().min(1, "Event image is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+});
+
+export type InsertCelebrityVibesEvent = z.infer<typeof insertCelebrityVibesEventSchema>;
+export type CelebrityVibesEvent = typeof celebrityVibesEvents.$inferSelect;
+
+// Celebrity Event Products - Links celebrity products to specific vibes events
+export const celebrityEventProducts = pgTable("celebrity_event_products", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(), // Reference to celebrity_vibes_events
+  celebrityId: integer("celebrity_id").notNull(), // Reference to celebrities table
+  productId: integer("product_id").notNull(), // Reference to celebrity_products table
+  displayOrder: integer("display_order").default(0), // Order in which to display products
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: text("created_at").notNull().default("now()"),
+  notes: text("notes"), // Optional notes about why this product was chosen for this event
+});
+
+export const insertCelebrityEventProductSchema = createInsertSchema(celebrityEventProducts).pick({
+  eventId: true,
+  celebrityId: true,
+  productId: true,
+  displayOrder: true,
+  isActive: true,
+  createdAt: true,
+  notes: true,
+});
+
+export type InsertCelebrityEventProduct = z.infer<typeof insertCelebrityEventProductSchema>;
+export type CelebrityEventProduct = typeof celebrityEventProducts.$inferSelect;
 export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
 export type UserRole = typeof userRoles.$inferSelect;

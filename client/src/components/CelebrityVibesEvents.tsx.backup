@@ -1,0 +1,1979 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface CelebrityVibesEvent {
+  id: number;
+  name: string;
+  description: string;
+  eventType: string;
+  imageUrl: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  metadata?: {
+    color?: string;
+    tags?: string[];
+  };
+}
+
+interface CelebrityBrand {
+  id: number;
+  celebrityId: number;
+  brandId: number;
+  itemType: string;
+  description: string;
+  imageUrl?: string;
+  brand?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface EventProduct {
+  id: number;
+  eventId: number;
+  celebrityId: number;
+  productId: number;
+  displayOrder: number;
+  isActive: boolean;
+  notes?: string;
+  product?: CelebrityBrand;
+}
+
+interface Props {
+  celebrityId: number;
+  isOwnProfile: boolean;
+}
+
+export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Props) {
+  const [events, setEvents] = useState<CelebrityVibesEvent[]>([]);
+  const [eventProducts, setEventProducts] = useState<Record<number, EventProduct[]>>({});
+  const [availableProducts, setAvailableProducts] = useState<CelebrityBrand[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CelebrityVibesEvent | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [viewingEvent, setViewingEvent] = useState<CelebrityVibesEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addProductTab, setAddProductTab] = useState<'existing' | 'new'>('existing');
+  const [newProduct, setNewProduct] = useState({
+    brandName: '',
+    itemType: '',
+    description: '',
+    imageUrl: '',
+  });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [showCreateEventDialog, setShowCreateEventDialog] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    name: '',
+    description: '',
+    eventType: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CelebrityVibesEvent | null>(null);
+  const [showEditEventDialog, setShowEditEventDialog] = useState(false);
+  const [updatingEvent, setUpdatingEvent] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<EventProduct | null>(null);
+  const [showEditProductDialog, setShowEditProductDialog] = useState(false);
+  const [productNotes, setProductNotes] = useState('');
+  const [productDisplayOrder, setProductDisplayOrder] = useState(0);
+  const [updatingProduct, setUpdatingProduct] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchEvents();
+    if (isOwnProfile) {
+      fetchAvailableProducts();
+    }
+  }, [celebrityId, isOwnProfile]);
+
+  useEffect(() => {
+    if (viewingEvent) {
+      // Refresh products when viewing event dialog opens
+      fetchEventProducts(viewingEvent.id);
+    }
+  }, [viewingEvent]);
+
+  const fetchEvents = async () => {
+    try {
+      // Fetch all events if owner, only active events for public view
+      const url = isOwnProfile 
+        ? '/api/celebrity-vibes-events' 
+        : '/api/celebrity-vibes-events?active=true';
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setEvents(data);
+        
+        // Fetch products for each event
+        for (const event of data) {
+          fetchEventProducts(event.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEventProducts = async (eventId: number) => {
+    try {
+      setLoadingProducts(true);
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/celebrity-vibes-events/${eventId}/products?celebrityId=${celebrityId}&_t=${timestamp}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEventProducts(prev => ({ ...prev, [eventId]: data }));
+      }
+    } catch (error) {
+      console.error(`Error fetching products for event ${eventId}:`, error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const fetchAvailableProducts = async () => {
+    try {
+      const response = await fetch(`/api/celebritybrands/${celebrityId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableProducts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching available products:', error);
+    }
+  };
+
+  const handleAddProducts = async () => {
+    if (!selectedEvent || selectedProducts.length === 0) return;
+
+    try {
+      // Filter out products that are already added to this event
+      const alreadyAddedIds = eventProducts[selectedEvent.id]?.map(ep => ep.productId) || [];
+      const productsToAdd = selectedProducts.filter(id => !alreadyAddedIds.includes(id));
+
+      if (productsToAdd.length === 0) {
+        toast({
+          title: 'Info',
+          description: 'All selected products are already added to this event',
+          variant: 'default',
+        });
+        return;
+      }
+
+      const promises = productsToAdd.map((productId, index) =>
+        fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            celebrityId,
+            productId,
+            displayOrder: index,
+            isActive: true,
+          }),
+        }).then(async (res) => {
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            console.error(`Failed to add product ${productId}:`, errorData);
+            return { success: false, productId, error: errorData };
+          }
+          return { success: true, productId };
+        })
+      );
+
+      const results = await Promise.all(promises);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+
+      if (successful.length > 0) {
+        const skipped = selectedProducts.length - productsToAdd.length;
+        let message = `Added ${successful.length} product(s) to ${selectedEvent.name}`;
+        if (skipped > 0) message += ` (${skipped} already added)`;
+        if (failed.length > 0) message += ` - ${failed.length} failed`;
+        
+        toast({
+          title: successful.length === productsToAdd.length ? 'Success' : 'Partial Success',
+          description: message,
+          variant: successful.length === productsToAdd.length ? 'default' : 'default',
+        });
+        await fetchEventProducts(selectedEvent.id);
+        setSelectedProducts([]);
+        setShowAddDialog(false);
+        setSelectedEvent(null);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Some products could not be added',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add products',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveProduct = async (eventId: number, productLinkId: number) => {
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${eventId}/products/${productLinkId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Product removed from event',
+        });
+        fetchEventProducts(eventId);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to remove product',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove product',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload/product-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      setNewProduct({ ...newProduct, imageUrl: data.url });
+      toast({
+        title: 'Success',
+        description: 'Image uploaded successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to upload image',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCreateAndAddProduct = async () => {
+    if (!selectedEvent || !newProduct.brandName || !newProduct.itemType) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in brand name and item type',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreatingProduct(true);
+    try {
+      // First, create or find the brand
+      const brandResponse = await fetch('/api/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProduct.brandName,
+          description: newProduct.description || `Brand for ${newProduct.itemType}`,
+          imageUrl: newProduct.imageUrl || '/assets/product-placeholder.svg',
+          celebWearers: [],
+          isActive: true,
+        }),
+      });
+
+      if (!brandResponse.ok) {
+        const errorData = await brandResponse.json();
+        console.error('Brand creation error:', errorData);
+        throw new Error(errorData.message || 'Failed to create brand');
+      }
+
+      const brand = await brandResponse.json();
+
+      // Create celebrity brand (product)
+      const productResponse = await fetch('/api/celebritybrands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          celebrityId,
+          brandId: brand.id,
+          itemType: newProduct.itemType,
+          description: newProduct.description,
+          imageUrl: newProduct.imageUrl,
+          imagePosition: { top: '50%', left: '50%' }, // Default center position
+        }),
+      });
+
+      if (!productResponse.ok) {
+        const errorData = await productResponse.json();
+        console.error('Celebrity brand creation error:', errorData);
+        throw new Error(errorData.message || 'Failed to create product');
+      }
+
+      const product = await productResponse.json();
+
+      // Check if product is already added to this event
+      const alreadyAddedIds = eventProducts[selectedEvent.id]?.map(ep => ep.productId) || [];
+      if (alreadyAddedIds.includes(product.id)) {
+        console.log('Product already added to event, skipping...');
+        toast({
+          title: 'Info',
+          description: `${newProduct.itemType} already exists in ${selectedEvent.name}`,
+        });
+        
+        // Reset form and close dialog
+        setNewProduct({ brandName: '', itemType: '', description: '', imageUrl: '' });
+        setAddProductTab('existing');
+        setShowAddDialog(false);
+        setSelectedEvent(null);
+        setCreatingProduct(false);
+        return;
+      }
+
+      // Add product to event
+      const eventProductResponse = await fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          celebrityId,
+          productId: product.id,
+          displayOrder: 0,
+          isActive: true,
+        }),
+      });
+
+      if (!eventProductResponse.ok) {
+        const errorData = await eventProductResponse.json();
+        console.error('Failed to add product to event:', errorData);
+        throw new Error(errorData.message || 'Failed to add product to event');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Created and added ${newProduct.itemType} to ${selectedEvent.name}`,
+      });
+
+      // Refresh data
+      await fetchAvailableProducts();
+      // Small delay to ensure database has committed the transaction
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await fetchEventProducts(selectedEvent.id);
+      
+      // If viewing this event, refresh the viewing dialog too
+      if (viewingEvent && viewingEvent.id === selectedEvent.id) {
+        await fetchEventProducts(viewingEvent.id);
+      }
+
+      // Reset form and close dialog
+      setNewProduct({ brandName: '', itemType: '', description: '', imageUrl: '' });
+      setAddProductTab('existing');
+      setShowAddDialog(false);
+      setSelectedEvent(null);
+    } catch (error: any) {
+      console.error('Error in handleCreateAndAddProduct:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create and add product',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreatingEvent(true);
+    try {
+      const response = await fetch('/api/celebrity-vibes-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newEvent.name,
+          description: newEvent.description,
+          eventType: newEvent.eventType,
+          startDate: newEvent.startDate,
+          endDate: newEvent.endDate,
+          isActive: true,
+          isFeatured: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create event');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Event "${newEvent.name}" created successfully`,
+      });
+
+      // Refresh events
+      await fetchEvents();
+
+      // Reset form
+      setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+      setShowCreateEventDialog(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create event. You may not have permission.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
+  const handleEditEvent = (event: CelebrityVibesEvent) => {
+    setEditingEvent(event);
+    setNewEvent({
+      name: event.name,
+      description: event.description,
+      eventType: event.eventType,
+      startDate: event.startDate.split('T')[0],
+      endDate: event.endDate.split('T')[0],
+    });
+    setShowEditEventDialog(true);
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEvent || !newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUpdatingEvent(true);
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${editingEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newEvent.name,
+          description: newEvent.description,
+          eventType: newEvent.eventType,
+          startDate: newEvent.startDate,
+          endDate: newEvent.endDate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update event');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Event "${newEvent.name}" updated successfully`,
+      });
+
+      await fetchEvents();
+      setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+      setShowEditEventDialog(false);
+      setEditingEvent(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update event',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingEvent(false);
+    }
+  };
+
+  const handleToggleEventStatus = async (event: CelebrityVibesEvent) => {
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${event.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          isActive: !event.isActive,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update event status');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Event ${!event.isActive ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      await fetchEvents();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update event status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (event: CelebrityVibesEvent) => {
+    if (!confirm(`Are you sure you want to delete "${event.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${event.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete event');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Event "${event.name}" deleted successfully`,
+      });
+
+      await fetchEvents();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete event',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleProductStatus = async (eventId: number, productLinkId: number, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${eventId}/products/${productLinkId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isActive: !currentStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update product status');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Product ${!currentStatus ? 'activated' : 'deactivated'}`,
+      });
+
+      await fetchEventProducts(eventId);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update product status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditProduct = (eventId: number, product: EventProduct) => {
+    setEditingProduct(product);
+    setProductNotes(product.notes || '');
+    setProductDisplayOrder(product.displayOrder || 0);
+    setSelectedEvent(events.find(e => e.id === eventId) || null);
+    setShowEditProductDialog(true);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct || !selectedEvent) return;
+
+    setUpdatingProduct(true);
+    try {
+      const response = await fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products/${editingProduct.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: productNotes,
+          displayOrder: productDisplayOrder,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update product');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Product updated successfully',
+      });
+
+      await fetchEventProducts(selectedEvent.id);
+      setShowEditProductDialog(false);
+      setEditingProduct(null);
+      setProductNotes('');
+      setProductDisplayOrder(0);
+      setSelectedEvent(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update product',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingProduct(false);
+    }
+  };
+
+  const handleBulkToggleProducts = async (eventId: number, activate: boolean) => {
+    const productsToUpdate = eventProducts[eventId]?.filter(ep => ep.isActive !== activate) || [];
+    
+    if (productsToUpdate.length === 0) {
+      toast({
+        title: 'Info',
+        description: `All products are already ${activate ? 'active' : 'inactive'}`,
+      });
+      return;
+    }
+
+    try {
+      const promises = productsToUpdate.map(ep =>
+        fetch(`/api/celebrity-vibes-events/${eventId}/products/${ep.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isActive: activate }),
+        })
+      );
+
+      const results = await Promise.all(promises);
+      const allSuccessful = results.every(r => r.ok);
+
+      if (allSuccessful) {
+        toast({
+          title: 'Success',
+          description: `${productsToUpdate.length} product(s) ${activate ? 'activated' : 'deactivated'}`,
+        });
+        await fetchEventProducts(eventId);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Some products could not be updated',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update products',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkRemoveProducts = async (eventId: number) => {
+    const productsCount = eventProducts[eventId]?.length || 0;
+    
+    if (productsCount === 0) {
+      toast({
+        title: 'Info',
+        description: 'No products to remove',
+      });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to remove all ${productsCount} product(s) from this event? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const promises = eventProducts[eventId].map(ep =>
+        fetch(`/api/celebrity-vibes-events/${eventId}/products/${ep.id}`, {
+          method: 'DELETE',
+        })
+      );
+
+      const results = await Promise.all(promises);
+      const allSuccessful = results.every(r => r.ok);
+
+      if (allSuccessful) {
+        toast({
+          title: 'Success',
+          description: `All products removed from event`,
+        });
+        await fetchEventProducts(eventId);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Some products could not be removed',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove products',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center">
+          <Sparkles className="h-8 w-8 animate-spin mx-auto mb-2 text-amber-600" />
+          <p className="text-muted-foreground">Loading events...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center p-12 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+        <Sparkles className="h-16 w-16 mx-auto mb-4 text-amber-600" />
+        <h3 className="text-2xl font-semibold mb-2">No Special Events</h3>
+        <p className="text-muted-foreground">
+          Check back later for exciting celebrity vibes events!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between mb-8">
+        <div className="text-center flex-1">
+          <h2 className="text-3xl font-playfair font-bold mb-2 bg-gradient-to-r from-amber-700 via-yellow-500 to-amber-700 bg-clip-text text-transparent">
+            Celebrity Vibes Events
+          </h2>
+          <p className="text-muted-foreground">
+            Special occasions and themed collections
+          </p>
+        </div>
+        {isOwnProfile && (
+          <Dialog open={showCreateEventDialog} onOpenChange={setShowCreateEventDialog}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white shadow-lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl bg-gradient-to-br from-amber-50 to-yellow-50">
+              <DialogHeader>
+                <DialogTitle>Create New Event</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-lg p-4 border border-amber-200 text-gray-800">
+                <div>
+                  <Label htmlFor="eventName">Event Name *</Label>
+                  <Input
+                    id="eventName"
+                    placeholder="e.g., Diwali 2025, Oscars Red Carpet"
+                    value={newEvent.name}
+                    onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="eventType">Event Type *</Label>
+                  <Input
+                    id="eventType"
+                    placeholder="e.g., Festival, Award Show, Holiday"
+                    value={newEvent.eventType}
+                    onChange={(e) => setNewEvent({ ...newEvent, eventType: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="eventDescription">Description</Label>
+                  <Textarea
+                    id="eventDescription"
+                    placeholder="Describe this special occasion..."
+                    rows={3}
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Start Date *</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={newEvent.startDate}
+                      onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endDate">End Date *</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={newEvent.endDate}
+                      onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+                      setShowCreateEventDialog(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateEvent}
+                    disabled={creatingEvent || !newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate}
+                  >
+                    {creatingEvent ? 'Creating...' : 'Create Event'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {/* Edit Event Dialog */}
+      {isOwnProfile && (
+        <Dialog open={showEditEventDialog} onOpenChange={(open) => {
+          setShowEditEventDialog(open);
+          if (!open) {
+            setEditingEvent(null);
+            setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+          }
+        }}>
+          <DialogContent className="max-w-2xl bg-gradient-to-br from-amber-50 to-orange-50">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg p-4 border border-amber-200 text-gray-800">
+              <div>
+                <Label htmlFor="editEventName">Event Name *</Label>
+                <Input
+                  id="editEventName"
+                  placeholder="e.g., Diwali 2025, Oscars Red Carpet"
+                  value={newEvent.name}
+                  onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="editEventType">Event Type *</Label>
+                <Input
+                  id="editEventType"
+                  placeholder="e.g., Festival, Award Show, Holiday"
+                  value={newEvent.eventType}
+                  onChange={(e) => setNewEvent({ ...newEvent, eventType: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="editEventDescription">Description</Label>
+                <Textarea
+                  id="editEventDescription"
+                  placeholder="Describe this special occasion..."
+                  rows={3}
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editStartDate">Start Date *</Label>
+                  <Input
+                    id="editStartDate"
+                    type="date"
+                    value={newEvent.startDate}
+                    onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editEndDate">End Date *</Label>
+                  <Input
+                    id="editEndDate"
+                    type="date"
+                    value={newEvent.endDate}
+                    onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowEditEventDialog(false);
+                    setEditingEvent(null);
+                    setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateEvent}
+                  disabled={updatingEvent || !newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate}
+                >
+                  {updatingEvent ? 'Updating...' : 'Update Event'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((event) => (
+          <Card 
+            key={event.id} 
+            className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => {
+              console.log('[Profile Event Card] Clicked event:', event.name);
+              setViewingEvent(event);
+            }}
+          >
+            {isOwnProfile ? (
+              // Full profile view with all details
+              <>
+                <div className="relative">
+                  <img
+                    src={event.imageUrl}
+                    alt={event.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  {event.isFeatured && (
+                    <Badge className="absolute top-2 right-2" variant="default">
+                      Featured
+                    </Badge>
+                  )}
+                  {event.metadata?.color && (
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-1"
+                      style={{ backgroundColor: event.metadata.color }}
+                    />
+                  )}
+                </div>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-xl mb-2">{event.name}</CardTitle>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">{event.eventType}</Badge>
+                        <Badge variant={event.isActive ? 'default' : 'secondary'}>
+                          {event.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditEvent(event);
+                        }}
+                        title="Edit Event"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleEventStatus(event);
+                        }}
+                        title={event.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {event.isActive ? (
+                          <PowerOff className="h-4 w-4 text-orange-600" />
+                        ) : (
+                          <Power className="h-4 w-4 text-green-600" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event);
+                        }}
+                        title="Delete Event"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </>
+            ) : (
+              // Concise celebrity page view
+              <div className="relative">
+                <img
+                  src={event.imageUrl}
+                  alt={event.name}
+                  className="w-full h-32 object-cover"
+                />
+                {event.isFeatured && (
+                  <Badge className="absolute top-2 right-2 text-xs" variant="default">
+                    Featured
+                  </Badge>
+                )}
+              </div>
+            )}
+            <CardContent className={isOwnProfile ? "p-6" : "p-4"}>
+              {isOwnProfile ? (
+                // Full profile content
+                <>
+                  <p className="text-sm text-gray-700 mb-4 line-clamp-2">
+                    {event.description}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                    <Calendar className="h-4 w-4" />
+                    <span>{formatDate(event.startDate)} - {formatDate(event.endDate)}</span>
+                  </div>
+                  
+                  {/* View Details Button */}
+                  <div className="mb-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setViewingEvent(event)}
+                      className="text-xs px-3 py-1 h-7"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View Details
+                    </Button>
+                  </div>
+                  
+                  {/* Display products for this event */}
+                  {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                    <div className="space-y-2 mb-4 p-4 bg-gradient-to-br from-stone-300 to-amber-300 rounded-lg border-2 border-amber-500 shadow-lg">
+                      <h4 className="text-base font-bold flex items-center gap-2 text-white mb-3 bg-gray-800 p-2 rounded">
+                        <Package className="h-4 w-4" />
+                        My Products ({eventProducts[event.id].length})
+                      </h4>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {eventProducts[event.id].slice(0, 3).map((ep) => (
+                          <div key={ep.id} className={`flex items-center justify-between p-3 rounded-lg border-2 shadow-md ${ep.isActive ? 'bg-white border-green-400 shadow-green-100' : 'bg-gray-200 border-orange-400 shadow-orange-100 opacity-90'}`}>
+                            <div className="flex-1">
+                              <span className="text-sm font-bold text-gray-800">{ep.product?.itemType || 'Product'}</span>
+                              {ep.product?.brand?.name && (
+                                <span className="text-xs font-semibold text-gray-600 ml-2">by {ep.product.brand.name}</span>
+                              )}
+                              {!ep.isActive && (
+                                <Badge className="ml-2 text-xs bg-red-600 text-white font-semibold">Inactive</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditProduct(event.id, ep);
+                                }}
+                                title="Edit Product"
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 h-7"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleProductStatus(event.id, ep.id, ep.isActive);
+                                }}
+                                title={ep.isActive ? 'Deactivate' : 'Activate'}
+                                className={ep.isActive 
+                                  ? "bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 h-7" 
+                                  : "bg-green-500 hover:bg-green-600 text-white px-2 py-1 h-7"
+                                }
+                              >
+                                {ep.isActive ? (
+                                  <PowerOff className="h-3 w-3" />
+                                ) : (
+                                  <Power className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveProduct(event.id, ep.id);
+                                }}
+                                title="Remove"
+                                className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 h-7"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        {eventProducts[event.id].length > 3 && (
+                          <p className="text-sm text-white text-center font-bold bg-gray-800 py-1 rounded">
+                            +{eventProducts[event.id].length - 3} more products
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bulk Actions for Products */}
+                  {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                    <div className="mt-3 pt-3 border-t-2 border-amber-400 bg-gray-900 rounded-lg p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-white font-bold">Bulk Actions:</span>
+                        <Button
+                          size="sm"
+                          className="h-6 text-xs bg-green-600 hover:bg-green-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBulkToggleProducts(event.id, true);
+                          }}
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Activate All
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-6 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBulkToggleProducts(event.id, false);
+                          }}
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Deactivate All
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-6 text-xs bg-red-600 hover:bg-red-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBulkRemoveProducts(event.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Remove All
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Product Button */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEventForProduct(event.id);
+                        setShowAddDialog(true);
+                      }}
+                      className="w-full text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Product
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                // Concise celebrity page view
+                <>
+                  <div className="mb-3">
+                    <h3 className="font-bold text-lg mb-1">{event.name}</h3>
+                    <Badge variant="outline" className="text-xs">{event.eventType}</Badge>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {event.description}
+                  </p>
+                  
+                  {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Package className="h-4 w-4" />
+                      <span>{eventProducts[event.id].length} Products Available</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+              
+              {/* Display products for this event */}
+              {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                <div className="space-y-2 mb-4 p-4 bg-gradient-to-br from-stone-300 to-amber-300 rounded-lg border-2 border-amber-500 shadow-lg">
+                  <h4 className="text-base font-bold flex items-center gap-2 text-white mb-3 bg-gray-800 p-2 rounded">
+                    <Package className="h-4 w-4" />
+                    {isOwnProfile ? 'My Products' : 'Featured Products'} ({eventProducts[event.id].length})
+                  </h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {eventProducts[event.id].slice(0, 3).map((ep) => (
+                      <div key={ep.id} className={`flex items-center justify-between p-3 rounded-lg border-2 shadow-md ${ep.isActive ? 'bg-white border-green-400 shadow-green-100' : 'bg-gray-200 border-orange-400 shadow-orange-100 opacity-90'}`}>
+                        <div className="flex-1">
+                          <span className="text-sm font-bold text-gray-800">{ep.product?.itemType || 'Product'}</span>
+                          {ep.product?.brand?.name && (
+                            <span className="text-xs font-semibold text-gray-600 ml-2">by {ep.product.brand.name}</span>
+                          )}
+                          {!ep.isActive && (
+                            <Badge className="ml-2 text-xs bg-red-600 text-white font-semibold">Inactive</Badge>
+                          )}
+                        </div>
+                        {isOwnProfile && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditProduct(event.id, ep);
+                              }}
+                              title="Edit Product"
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 h-7"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleProductStatus(event.id, ep.id, ep.isActive);
+                              }}
+                              title={ep.isActive ? 'Deactivate' : 'Activate'}
+                              className={ep.isActive 
+                                ? "bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 h-7" 
+                                : "bg-green-500 hover:bg-green-600 text-white px-2 py-1 h-7"
+                              }
+                            >
+                              {ep.isActive ? (
+                                <PowerOff className="h-3 w-3" />
+                              ) : (
+                                <Power className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveProduct(event.id, ep.id);
+                              }}
+                              title="Remove"
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 h-7"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {eventProducts[event.id].length > 3 && (
+                      <p className="text-sm text-white text-center font-bold bg-gray-800 py-1 rounded">
+                        +{eventProducts[event.id].length - 3} more products
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Bulk Actions for Products */}
+              {isOwnProfile && eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                <div className="mt-3 pt-3 border-t-2 border-amber-400 bg-gray-900 rounded-lg p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-white font-bold">Bulk Actions:</span>
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs bg-green-600 hover:bg-green-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkToggleProducts(event.id, true);
+                      }}
+                    >
+                      <Power className="h-3 w-3 mr-1" />
+                      Activate All
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs bg-orange-600 hover:bg-orange-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkToggleProducts(event.id, false);
+                      }}
+                    >
+                      <PowerOff className="h-3 w-3 mr-1" />
+                      Deactivate All
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-6 text-xs bg-red-600 hover:bg-red-700 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBulkRemoveProducts(event.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Remove All
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Click to view hint */}
+              <div className="mt-3 pt-3 border-t border-amber-100">
+                <p className="text-xs text-center text-gray-600 flex items-center justify-center gap-1">
+                  <ShoppingBag className="h-3 w-3" />
+                  Click to view {eventProducts[event.id]?.length > 0 ? 'all products' : 'details'}
+                </p>
+              </div>
+
+              {isOwnProfile && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Dialog open={showAddDialog} onOpenChange={(open) => {
+                    setShowAddDialog(open);
+                    if (!open) {
+                      setSelectedEvent(null);
+                      setSelectedProducts([]);
+                      setNewProduct({ brandName: '', itemType: '', description: '', imageUrl: '' });
+                      setAddProductTab('existing');
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setSelectedEvent(event);
+                          setShowAddDialog(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Products
+                      </Button>
+                    </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
+                    <DialogHeader>
+                      <DialogTitle>Add Products to {event.name}</DialogTitle>
+                    </DialogHeader>
+                    
+                    <Tabs value={addProductTab} onValueChange={(v) => setAddProductTab(v as 'existing' | 'new')}>
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="existing" className="flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Existing Products
+                        </TabsTrigger>
+                        <TabsTrigger value="new" className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Create New
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="existing" className="space-y-4 py-4 bg-gradient-to-br from-stone-200 to-amber-200 rounded-lg p-4 border border-amber-400 text-gray-800">
+                        {/* Show products already in this event with CRUD options */}
+                        {selectedEvent && eventProducts[selectedEvent.id] && eventProducts[selectedEvent.id].length > 0 && (
+                          <div className="mb-6 p-4 bg-gradient-to-r from-stone-200 to-amber-200 rounded-lg border-2 border-amber-400 shadow-md text-gray-800">
+                            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-gray-800">
+                              <Package className="h-4 w-4" />
+                              Products in this Event ({eventProducts[selectedEvent.id].length})
+                            </h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {eventProducts[selectedEvent.id].map((ep) => (
+                                <div
+                                  key={ep.id}
+                                  className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md text-gray-800 ${
+                                    !ep.isActive 
+                                      ? 'bg-orange-200 border-orange-400 opacity-85 hover:bg-orange-250' 
+                                      : 'bg-amber-200 border-amber-400 hover:bg-amber-250 shadow-sm'
+                                  }`}
+                                  onClick={() => {
+                                    // Navigate to celebrity page - you can customize this URL
+                                    window.open(`/celebrity/${ep.product?.celebrityId || 'profile'}`, '_blank');
+                                  }}
+                                  title="Click to view celebrity page"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-sm text-gray-800">{ep.product?.itemType || 'Product'}</h4>
+                                      <p className="text-xs text-gray-600">{ep.product?.brand?.name || 'Brand'}</p>
+                                      {ep.product?.description && (
+                                        <p className="text-xs text-gray-600 mt-1 line-clamp-1">
+                                          {ep.product.description}
+                                        </p>
+                                      )}
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <Badge className={ep.isActive ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-500 text-white hover:bg-gray-600'} variant="secondary">
+                                          {ep.isActive ? 'Active' : 'Inactive'}
+                                        </Badge>
+                                        <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200">
+                                          Order: {ep.displayOrder}
+                                        </Badge>
+                                      </div>
+                                      {ep.notes && (
+                                        <p className="text-xs text-amber-700 mt-1 bg-amber-50 p-1 rounded">
+                                          Note: {ep.notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditProduct(selectedEvent.id, ep);
+                                        }}
+                                        title="Edit"
+                                        className="bg-blue-500 hover:bg-blue-600 text-white border-0 px-2 py-1 rounded shadow"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleProductStatus(selectedEvent.id, ep.id, ep.isActive);
+                                        }}
+                                        title={ep.isActive ? 'Deactivate' : 'Activate'}
+                                        className={ep.isActive 
+                                          ? "bg-orange-500 hover:bg-orange-600 text-white border-0 px-2 py-1 rounded shadow" 
+                                          : "bg-green-500 hover:bg-green-600 text-white border-0 px-2 py-1 rounded shadow"
+                                        }
+                                      >
+                                        {ep.isActive ? (
+                                          <PowerOff className="h-3 w-3" />
+                                        ) : (
+                                          <Power className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRemoveProduct(selectedEvent.id, ep.id);
+                                        }}
+                                        title="Remove"
+                                        className="bg-red-500 hover:bg-red-600 text-white border-0 px-2 py-1 rounded shadow"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="pt-3 border-t mt-3">
+                              <p className="text-xs text-gray-600 mb-3">Select additional products to add:</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Available products to add */}
+                        {availableProducts.length === 0 ? (
+                        <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-slate-100 rounded-lg border border-gray-200">
+                          <Package className="h-12 w-12 mx-auto mb-4 text-gray-500" />
+                          <p className="text-gray-700 mb-2">No brands available yet</p>
+                          <p className="text-sm text-gray-600">
+                            Add brands and items you wear in the admin panel to feature them in events
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3">
+                          {availableProducts.map((product) => {
+                            const isSelected = selectedProducts.includes(product.id);
+                            const isAlreadyAdded = eventProducts[event.id]?.some(
+                              ep => ep.productId === product.id
+                            );
+                            
+                            return (
+                              <div
+                                key={product.id}
+                                className={`p-4 border-2 rounded-lg transition-all text-gray-800 ${
+                                  isSelected
+                                    ? 'border-amber-600 bg-amber-200 shadow-lg cursor-pointer'
+                                    : isAlreadyAdded
+                                    ? 'border-gray-500 bg-gray-200 cursor-not-allowed opacity-70'
+                                    : 'border-stone-400 bg-stone-150 hover:border-amber-500 hover:bg-amber-100 cursor-pointer shadow-sm'
+                                }`}
+                                onClick={() => !isAlreadyAdded && toggleProductSelection(product.id)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-800">{product.itemType}</h4>
+                                    <p className="text-sm text-gray-600">{product.brand?.name || 'Brand'}</p>
+                                    <p className="text-xs text-gray-600 mt-1 line-clamp-1">
+                                      {product.description}
+                                    </p>
+                                  </div>
+                                  {isAlreadyAdded ? (
+                                    <Badge className="bg-slate-600 text-white hover:bg-slate-700">Already Added</Badge>
+                                  ) : isSelected ? (
+                                    <Check className="h-5 w-5 text-green-600" />
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                        {selectedProducts.length > 0 && (
+                          <div className="flex justify-end gap-2 pt-4 border-t">
+                            <Button 
+                              onClick={() => setSelectedProducts([])}
+                              className="bg-gray-500 hover:bg-gray-600 text-white border-0 shadow-md"
+                            >
+                              Clear
+                            </Button>
+                            <Button 
+                              onClick={handleAddProducts}
+                              className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-md"
+                            >
+                              Add {selectedProducts.length} Product(s)
+                            </Button>
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="new" className="space-y-4 py-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg p-4 border border-purple-200 text-gray-800">
+                        <div className="space-y-4">
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm text-amber-900">
+                              Create a new product/item and add it directly to this event.
+                            </p>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="brandName" className="text-gray-800">Brand Name *</Label>
+                              <Input
+                                id="brandName"
+                                placeholder="e.g., Nike, Gucci, Rolex"
+                                value={newProduct.brandName}
+                                onChange={(e) => setNewProduct({ ...newProduct, brandName: e.target.value })}
+                                className="text-gray-800"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="itemType" className="text-gray-800">Item Type *</Label>
+                              <Input
+                                id="itemType"
+                                placeholder="e.g., Sneakers, Handbag, Watch, Sunglasses"
+                                value={newProduct.itemType}
+                                onChange={(e) => setNewProduct({ ...newProduct, itemType: e.target.value })}
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="description" className="text-gray-800">Description (Optional)</Label>
+                              <Textarea
+                                id="description"
+                                placeholder="Describe the item, color, style, or why you love it..."
+                                rows={3}
+                                value={newProduct.description}
+                                onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="productImage" className="text-gray-800">Product Image (Optional)</Label>
+                              <div className="space-y-3">
+                                {newProduct.imageUrl && (
+                                  <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden">
+                                    <img
+                                      src={newProduct.imageUrl}
+                                      alt="Product preview"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="absolute top-2 right-2"
+                                      onClick={() => setNewProduct({ ...newProduct, imageUrl: '' })}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <Input
+                                  id="productImage"
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  disabled={uploadingImage}
+                                />
+                                {uploadingImage && (
+                                  <p className="text-sm text-muted-foreground">Uploading image...</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-2 pt-4 border-t">
+                            <Button 
+                              onClick={() => setNewProduct({ brandName: '', itemType: '', description: '', imageUrl: '' })}
+                              className="bg-gray-500 hover:bg-gray-600 text-white border-0 shadow-md"
+                            >
+                              Clear
+                            </Button>
+                            <Button 
+                              onClick={handleCreateAndAddProduct}
+                              disabled={creatingProduct || !newProduct.brandName || !newProduct.itemType}
+                              className="bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md disabled:bg-purple-300"
+                            >
+                              {creatingProduct ? 'Creating...' : 'Create & Add to Event'}
+                            </Button>
+                          </div>
+                        </div>
+                  </>
+                ) : (
+                  // Concise celebrity page view
+                  <>
+                    <div className="mb-3">
+                      <h3 className="font-bold text-lg mb-1">{event.name}</h3>
+                      <Badge variant="outline" className="text-xs">{event.eventType}</Badge>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {event.description}
+                    </p>
+                    
+                    {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Package className="h-4 w-4" />
+                        <span>{eventProducts[event.id].length} Products Available</span>
+                      </div>
+                    )}
+                  </>
+                )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Edit Product Dialog */}
+      {isOwnProfile && (
+        <Dialog open={showEditProductDialog} onOpenChange={(open) => {
+          setShowEditProductDialog(open);
+          if (!open) {
+            setEditingProduct(null);
+            setProductNotes('');
+            setProductDisplayOrder(0);
+            setSelectedEvent(null);
+          }
+        }}>
+          <DialogContent className="max-w-md bg-gradient-to-br from-stone-150 to-amber-150">
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4 bg-gradient-to-br from-stone-200 to-amber-200 rounded-lg p-4 border border-amber-400 text-gray-800">
+              <div>
+                <Label className="text-sm font-semibold mb-2 block text-gray-800">Product</Label>
+                <p className="text-sm text-gray-800">{editingProduct?.product?.itemType || 'Product'}</p>
+                {editingProduct?.product?.brand?.name && (
+                  <p className="text-xs text-gray-600">by {editingProduct.product.brand.name}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="productDisplayOrder">Display Order</Label>
+                <Input
+                  id="productDisplayOrder"
+                  type="number"
+                  min="0"
+                  value={productDisplayOrder}
+                  onChange={(e) => setProductDisplayOrder(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-600 mt-1">Lower numbers appear first</p>
+              </div>
+
+              <div>
+                <Label htmlFor="productNotes">Notes (Optional)</Label>
+                <Textarea
+                  id="productNotes"
+                  rows={3}
+                  value={productNotes}
+                  onChange={(e) => setProductNotes(e.target.value)}
+                  placeholder="Add special notes about this product in this event..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowEditProductDialog(false);
+                    setEditingProduct(null);
+                    setProductNotes('');
+                    setProductDisplayOrder(0);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateProduct}
+                  disabled={updatingProduct}
+                >
+                  {updatingProduct ? 'Updating...' : 'Update Product'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* View Products Dialog */}
+      <Dialog open={!!viewingEvent} onOpenChange={(open) => {
+        if (!open) setViewingEvent(null);
+      }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-orange-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-600" />
+                {viewingEvent?.name} - Products
+                {viewingEvent && eventProducts[viewingEvent.id] && (
+                  <Badge variant="secondary" className="ml-2">
+                    {eventProducts[viewingEvent.id].length} Total
+                  </Badge>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {/* Bulk Actions Bar for Owner */}
+            {isOwnProfile && viewingEvent && eventProducts[viewingEvent.id]?.length > 0 && (
+              <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700 shadow-lg">
+                <span className="text-sm font-medium text-white">Bulk Actions:</span>
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    onClick={() => handleBulkToggleProducts(viewingEvent.id, true)}
+                    className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-sm"
+                  >
+                    <Power className="h-4 w-4 mr-2" />
+                    Activate All
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleBulkToggleProducts(viewingEvent.id, false)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-sm"
+                  >
+                    <PowerOff className="h-4 w-4 mr-2" />
+                    Deactivate All
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleBulkRemoveProducts(viewingEvent.id)}
+                    className="bg-red-600 hover:bg-red-700 text-white border-0 shadow-sm"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove All
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4 py-4 bg-gradient-to-br from-stone-200 to-orange-200 rounded-lg p-4 m-4 border border-stone-400 text-gray-800">
+              {loadingProducts ? (
+                <div className="flex items-center justify-center py-12 bg-stone-100/80 rounded-lg border border-stone-300 shadow-inner">
+                  <div className="text-center">
+                    <Package className="h-12 w-12 animate-pulse mx-auto mb-4 text-amber-600" />
+                    <p className="text-gray-700">Loading products...</p>
+                  </div>
+                </div>
+              ) : viewingEvent && eventProducts[viewingEvent.id] && eventProducts[viewingEvent.id].length > 0 ? (
+                <div className="space-y-3">
+                  {(() => {
+                    const products = eventProducts[viewingEvent.id];
+                    console.log('[ViewingDialog] Products data:', products);
+                    console.log('[ViewingDialog] isOwnProfile:', isOwnProfile);
+                    console.log('[ViewingDialog] viewingEvent:', viewingEvent);
+                    return null;
+                  })()}
+                  {eventProducts[viewingEvent.id].map((ep) => {
+                    console.log('[ViewingDialog] Rendering product:', ep);
+                    return (
+                    <Card key={ep.id} className={`overflow-hidden transition-all ${!ep.isActive ? 'opacity-60' : ''}`}>
+                      <CardContent className="p-4">
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          {ep.product?.imageUrl && (
+                            <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={ep.product.imageUrl}
+                                alt={ep.product.itemType}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Product Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-lg mb-1">{ep.product?.itemType || 'Product'}</h4>
+                                {ep.product?.brand?.name && (
+                                  <p className="text-sm text-gray-600 mb-2">by {ep.product.brand.name}</p>
+                                )}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant={ep.isActive ? 'default' : 'secondary'}>
+                                    {ep.isActive ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Order: {ep.displayOrder}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              {/* Action Buttons for Owner */}
+                              {isOwnProfile && (
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleEditProduct(viewingEvent.id, ep)}
+                                    title="Edit Product"
+                                    className="bg-blue-500 hover:bg-blue-600 text-white border-0 px-3 py-2 rounded-md shadow-md"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleToggleProductStatus(viewingEvent.id, ep.id, ep.isActive)}
+                                    title={ep.isActive ? 'Deactivate' : 'Activate'}
+                                    className={ep.isActive 
+                                      ? "bg-orange-500 hover:bg-orange-600 text-white border-0 px-3 py-2 rounded-md shadow-md" 
+                                      : "bg-green-500 hover:bg-green-600 text-white border-0 px-3 py-2 rounded-md shadow-md"
+                                    }
+                                  >
+                                    {ep.isActive ? (
+                                      <PowerOff className="h-4 w-4" />
+                                    ) : (
+                                      <Power className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRemoveProduct(viewingEvent.id, ep.id)}
+                                    title="Remove"
+                                    className="bg-red-500 hover:bg-red-600 text-white border-0 px-3 py-2 rounded-md shadow-md"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Product Description */}
+                            {ep.product?.description && (
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{ep.product.description}</p>
+                            )}
+                            
+                            {/* Product Notes */}
+                            {ep.notes && (
+                              <div className="mt-2 p-2 bg-amber-50 rounded text-sm border border-amber-200">
+                                <strong className="text-amber-900">Note:</strong> 
+                                <span className="text-amber-800 ml-1">{ep.notes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No Products Yet</h3>
+                  <p className="text-gray-700 mb-4">
+                    {isOwnProfile 
+                      ? "Add products to this event to showcase featured items"
+                      : "No products featured in this event yet"}
+                  </p>
+                  {isOwnProfile && (
+                    <Button
+                      onClick={() => {
+                        setSelectedEvent(viewingEvent);
+                        setViewingEvent(null);
+                        setShowAddDialog(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Products
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import CelebrityVibesEvents from "@/components/CelebrityVibesEvents";
 import React, { useEffect, useState, useRef } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
-import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube } from "lucide-react";
+import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -1406,7 +1407,14 @@ export default function Profile() {
                         </TabsContent>
 
                         <TabsContent value="celeVibe" className="mt-4">
-                          <div className="text-white/80">Cele vibe — curated vibes and highlights will appear here.</div>
+                          {celebrityId ? (
+                            <CelebrityVibesEvents 
+                              celebrityId={celebrityId} 
+                              isOwnProfile={true}
+                            />
+                          ) : (
+                            <div className="text-white/80">Complete your celebrity profile to access events.</div>
+                          )}
                         </TabsContent>
 
                         <TabsContent value="shoppingPlaylist" className="mt-4">

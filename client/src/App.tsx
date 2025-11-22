@@ -33,6 +33,7 @@ import AdminBrandMarketingApi from "@/pages/AdminBrandMarketingApi";
 import Brands from "@/pages/Brands";
 import AdminSettings from "@/pages/AdminSettings";
 import BrandProducts from "@/pages/BrandProducts";
+import AdminCelebrityVibesEvents from "@/pages/AdminCelebrityVibesEvents";
 
 function Router() {
   return (
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/admin/brands" component={AdminBrands} />
       <Route path="/admin/brands/:id/products" component={AdminBrandProducts} />
       <Route path="/admin/brands/:id/marketing-api" component={AdminBrandMarketingApi} />
+      <Route path="/admin/celebrity-vibes-events" component={AdminCelebrityVibesEvents} />
     <Route path="/brands/:id/products" component={BrandProducts} />
       <Route path="/admin/brand-products" component={AdminBrandProducts} />
       <Route path="/admin/settings" component={AdminSettings} />

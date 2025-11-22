@@ -21,6 +21,7 @@ interface MultiImageUploadProps {
   minFiles?: number;
   sizeLimitMB?: number;
   disabled?: boolean;
+  uploadUrl?: string;
 }
 
 export default function MultiImageUpload({ 
@@ -29,7 +30,8 @@ export default function MultiImageUpload({
   maxFiles = 10,
   minFiles = 1,
   sizeLimitMB = 10,
-  disabled = false 
+  disabled = false,
+  uploadUrl = '/api/upload/product-images'
 }: MultiImageUploadProps) {
   const [imageFiles, setImageFiles] = useState<ImageFile[]>(() => {
     // Initialize with existing images if provided
@@ -135,7 +137,7 @@ export default function MultiImageUpload({
         formData.append('images', imageFile.file);
       });
 
-      const response = await fetch('/api/upload/product-images', {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
@@ -217,7 +219,7 @@ export default function MultiImageUpload({
         formData.append('images', imageFile.file);
       });
 
-      const response = await fetch('/api/upload/product-images', {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
@@ -269,7 +271,7 @@ export default function MultiImageUpload({
 
       toast({
         title: "Upload failed",
-        description: "Ensure you select 2–3 images and each ≤ 10MB.",
+        description: `Ensure you select at least ${minFiles} image(s), each ≤ ${sizeLimitMB}MB (max ${maxFiles}).`,
         variant: "destructive"
       });
     }
