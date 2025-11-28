@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, CheckCircle, XCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -458,27 +457,9 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="celebrity-vibes" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-stone-200 to-amber-200 border-amber-300">
-          <TabsTrigger 
-            value="celebrity-vibes" 
-            className="data-[state=active]:bg-amber-500 data-[state=active]:text-white font-bold"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Celebrity Vibes
-          </TabsTrigger>
-          <TabsTrigger 
-            value="vibe-events" 
-            className="data-[state=active]:bg-amber-500 data-[state=active]:text-white font-bold"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Vibe Events
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="celebrity-vibes" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Celebrity Vibes Events</h2>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Celebrity Vibes Events</h2>
             {isOwnProfile && (
               <Button
                 onClick={() => setShowCreateEventDialog(true)}
@@ -694,16 +675,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
               </Card>
             ))}
           </div>
-        </TabsContent>
-
-        <TabsContent value="vibe-events" className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800">Upcoming Vibe Events</h2>
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="h-12 w-12 mx-auto mb-4" />
-            <p>Vibe Events coming soon!</p>
-          </div>
-        </TabsContent>
-      </Tabs>
+        </div>
 
       {/* View Event Products Dialog */}
       <Dialog open={viewingEvent !== null} onOpenChange={(open) => {
