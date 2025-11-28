@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, CheckCircle, XCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CelebrityVibesEvent {
@@ -523,7 +523,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                           src={event.imageUrl}
                           alt={event.name}
                           className={`object-cover rounded-md border-2 border-amber-200 ${
-                            isOwnProfile ? 'w-16 h-48' : 'w-12 h-32'
+                            isOwnProfile ? 'w-20 h-24' : 'w-12 h-32'
                           }`}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
@@ -619,7 +619,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                       {/* Bulk Actions for Products */}
                       {eventProducts[event.id] && eventProducts[event.id].length > 0 && (
                         <div className="mt-3 pt-3 border-t-2 border-amber-400 bg-gray-900 rounded-lg p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2 text-xs">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-white font-bold">Bulk Actions:</span>
                             <Button
                               size="sm"
@@ -712,10 +712,14 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
         }
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
-          <DialogHeader>
-            <DialogTitle className="text-xl text-gray-800">
+          <DialogHeader className="relative">
+            <DialogTitle className="text-xl text-gray-800 pr-8">
               {viewingEvent?.name} - Products
             </DialogTitle>
+            <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+              <X className="h-6 w-6 text-gray-900" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </DialogHeader>
           
           {viewingEvent && eventProducts[viewingEvent.id] && (
@@ -728,19 +732,23 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                 {eventProducts[viewingEvent.id].map((ep) => (
                   <Card key={ep.id} className="bg-white border-amber-200 hover:border-amber-400 transition-colors">
                     <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        {ep.product?.imageUrl && (
+                      <div className="flex items-start gap-4">
+                        {ep.product?.imageUrl ? (
                           <img
                             src={ep.product.imageUrl}
-                            alt={ep.product.itemType}
-                            className="w-16 h-16 object-cover rounded-md border border-amber-200"
+                            alt={ep.product.itemType || 'Product Image'}
+                            className="w-20 h-20 object-cover rounded-lg border-2 border-amber-200 shadow-md"
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.src = 'https://via.placeholder.com/80'; // Fallback placeholder
                             }}
                           />
+                        ) : (
+                          <div className="w-20 h-20 bg-stone-200 rounded-lg flex items-center justify-center border-2 border-stone-300">
+                            <ShoppingBag className="h-10 w-10 text-stone-500" />
+                          </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-800">{ep.product?.itemType}</h4>
+                          <h4 className="font-semibold text-gray-800 truncate">{ep.product?.itemType}</h4>
                           <p className="text-sm text-gray-600">{ep.product?.brand?.name}</p>
                           {ep.product?.description && (
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">{ep.product.description}</p>
@@ -776,8 +784,12 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
           }
         }}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
-            <DialogHeader>
-              <DialogTitle>Add Products to {selectedEvent.name}</DialogTitle>
+            <DialogHeader className="relative">
+              <DialogTitle className="pr-8">Add Products to {selectedEvent.name}</DialogTitle>
+              <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                <X className="h-6 w-6 text-gray-900" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </DialogHeader>
             
             <Tabs value={addProductTab} onValueChange={(v) => setAddProductTab(v as 'existing' | 'new')}>
@@ -962,8 +974,12 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
           }
         }}>
           <DialogContent className="max-w-md bg-gradient-to-br from-stone-150 to-amber-150">
-            <DialogHeader>
-              <DialogTitle>Edit Product</DialogTitle>
+            <DialogHeader className="relative">
+              <DialogTitle className="pr-8">Edit Product</DialogTitle>
+              <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                <X className="h-6 w-6 text-gray-900" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </DialogHeader>
             <div className="space-y-4 py-4 bg-gradient-to-br from-stone-200 to-amber-200 rounded-lg p-4 border border-amber-400 text-gray-800">
               <div>
