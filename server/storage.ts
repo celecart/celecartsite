@@ -72,7 +72,7 @@ import {
 
 } from "@shared/data";
 
-import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole, celebrityProducts, type CelebrityProduct, type InsertCelebrityProduct, brandProducts, type BrandProduct, type InsertBrandProduct } from "@shared/schema";
+import { roles, permissions, rolePermissions, userRoles, type Role, type InsertRole, type Permission, type InsertPermission, type RolePermission, type InsertRolePermission, type UserRole, type InsertUserRole, celebrityProducts, type CelebrityProduct, type InsertCelebrityProduct, brandProducts, type BrandProduct, type InsertBrandProduct, celebrityVibesEvents, type CelebrityVibesEvent, type InsertCelebrityVibesEvent, celebrityEventProducts, type CelebrityEventProduct, type InsertCelebrityEventProduct } from "@shared/schema";
 
 import { db } from "./db";
 
@@ -3077,6 +3077,246 @@ export class PgStorage implements IStorage {
       return false;
     }
   }
+
+  // ==================== Celebrity Vibes Events Methods ====================
+
+  async getCelebrityVibesEvents(filters?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<CelebrityVibesEvent[]> {
+    if (this._db) {
+      try {
+        let query = this._db.select().from(celebrityVibesEvents);
+        
+        const conditions = [];
+        if (filters?.activeOnly) {
+          conditions.push(eq(celebrityVibesEvents.isActive, true));
+        }
+        if (filters?.featuredOnly) {
+          conditions.push(eq(celebrityVibesEvents.isFeatured, true));
+        }
+        
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions)) as any;
+        }
+        
+        const result = await query.orderBy(desc(celebrityVibesEvents.createdAt));
+        return result as CelebrityVibesEvent[];
+      } catch (error) {
+        console.error("Error fetching celebrity vibes events:", error);
+        throw error;
+      }
+    } else {
+      return [];
+    }
+  }
+
+  async getCelebrityVibesEventById(id: number): Promise<CelebrityVibesEvent | null> {
+    if (this._db) {
+      const rows = await this._db.select().from(celebrityVibesEvents).where(eq(celebrityVibesEvents.id, id));
+      return rows.length > 0 ? rows[0] as CelebrityVibesEvent : null;
+    } else {
+      return null;
+    }
+  }
+
+  async createCelebrityVibesEvent(eventData: InsertCelebrityVibesEvent): Promise<CelebrityVibesEvent> {
+    if (this._db) {
+      const rows = await this._db.insert(celebrityVibesEvents).values(eventData).returning();
+      return rows[0] as CelebrityVibesEvent;
+    } else {
+      throw new Error('In-memory celebrity vibes events not supported');
+    }
+  }
+
+  async updateCelebrityVibesEvent(id: number, updateData: Partial<InsertCelebrityVibesEvent>): Promise<CelebrityVibesEvent | null> {
+    if (this._db) {
+      const processedData = { ...updateData, updatedAt: new Date().toISOString() };
+      const rows = await this._db.update(celebrityVibesEvents).set(processedData).where(eq(celebrityVibesEvents.id, id)).returning();
+      return rows.length > 0 ? rows[0] as CelebrityVibesEvent : null;
+    } else {
+      return null;
+    }
+  }
+
+  async deleteCelebrityVibesEvent(id: number): Promise<boolean> {
+    if (this._db) {
+      // First delete all associated event products
+      await this._db.delete(celebrityEventProducts).where(eq(celebrityEventProducts.eventId, id));
+      // Then delete the event
+      const rows = await this._db.delete(celebrityVibesEvents).where(eq(celebrityVibesEvents.id, id)).returning({ id: celebrityVibesEvents.id });
+      return rows.length > 0;
+    } else {
+      return false;
+    }
+  }
+
+  // Celebrity Event Products Methods
+
+  async getCelebrityEventProducts(eventId: number, celebrityId?: number): Promise<any[]> {
+    console.log(`[getCelebrityEventProducts] Called with eventId=${eventId}, celebrityId=${celebrityId}`);
+    
+    if (this._db) {
+      try {
+        // Step 1: Get event products directly without joins first
+        let conditions = [eq(celebrityEventProducts.eventId, eventId)];
+        if (celebrityId) {
+          conditions.push(eq(celebrityEventProducts.celebrityId, celebrityId));
+        }
+        
+        const eventProductsResult = await this._db
+          .select()
+          .from(celebrityEventProducts)
+          .where(and(...conditions))
+          .orderBy(celebrityEventProducts.displayOrder);
+        
+        console.log(`[getCelebrityEventProducts] Found ${eventProductsResult.length} event products`);
+        
+        // Step 2: For each event product, get the celebrity brand and brand details
+        const enrichedProducts = [];
+        
+        for (const ep of eventProductsResult) {
+          try {
+            // Get celebrity brand
+            const celebrityBrand = await this._db
+              .select()
+              .from(celebrityBrands)
+              .where(eq(celebrityBrands.id, ep.productId))
+              .limit(1);
+            
+            if (celebrityBrand.length === 0) {
+              console.log(`[getCelebrityEventProducts] No celebrity brand found for product ID ${ep.productId}`);
+              continue;
+            }
+            
+            // Get brand info
+            let brand = null;
+            if (celebrityBrand[0].brandId) {
+              const brandResult = await this._db
+                .select()
+                .from(brands)
+                .where(eq(brands.id, celebrityBrand[0].brandId))
+                .limit(1);
+              
+              if (brandResult.length > 0) {
+                brand = {
+                  id: brandResult[0].id,
+                  name: brandResult[0].name,
+                };
+              }
+            }
+            
+            // Build the enriched product
+            enrichedProducts.push({
+              id: ep.id,
+              eventId: ep.eventId,
+              celebrityId: ep.celebrityId,
+              productId: ep.productId,
+              displayOrder: ep.displayOrder,
+              isActive: ep.isActive,
+              createdAt: ep.createdAt,
+              notes: ep.notes,
+              product: {
+                id: celebrityBrand[0].id,
+                celebrityId: celebrityBrand[0].celebrityId,
+                brandId: celebrityBrand[0].brandId,
+                itemType: celebrityBrand[0].itemType,
+                description: celebrityBrand[0].description,
+                imageUrl: '/assets/product-placeholder.svg',
+                brand: brand,
+              },
+            });
+          } catch (innerError) {
+            console.error(`[getCelebrityEventProducts] Error processing product ${ep.productId}:`, innerError);
+          }
+        }
+        
+        console.log(`[getCelebrityEventProducts] Returning ${enrichedProducts.length} enriched products`);
+        return enrichedProducts;
+      } catch (error) {
+        console.error("Error fetching celebrity event products:", error);
+        throw error;
+      }
+    } else {
+      console.log(`[getCelebrityEventProducts] No database connection`);
+      return [];
+    }
+  }
+
+  async getCelebrityEventProductById(id: number): Promise<CelebrityEventProduct | null> {
+    if (this._db) {
+      const rows = await this._db.select().from(celebrityEventProducts).where(eq(celebrityEventProducts.id, id));
+      return rows.length > 0 ? rows[0] as CelebrityEventProduct : null;
+    } else {
+      return null;
+    }
+  }
+
+  async getCelebrityVibesEventsByCelebrity(celebrityId: number): Promise<any[]> {
+    if (this._db) {
+      try {
+        // Get all events that this celebrity has products in
+        const result = await this._db
+          .select({
+            event: celebrityVibesEvents,
+            productCount: sql<number>`count(${celebrityEventProducts.id})`,
+          })
+          .from(celebrityVibesEvents)
+          .innerJoin(celebrityEventProducts, eq(celebrityVibesEvents.id, celebrityEventProducts.eventId))
+          .where(
+            and(
+              eq(celebrityEventProducts.celebrityId, celebrityId),
+              eq(celebrityVibesEvents.isActive, true)
+            )
+          )
+          .groupBy(celebrityVibesEvents.id)
+          .orderBy(desc(celebrityVibesEvents.createdAt));
+        
+        return result.map(r => ({
+          ...r.event,
+          productCount: Number(r.productCount)
+        }));
+      } catch (error) {
+        console.error("Error fetching celebrity vibes events by celebrity:", error);
+        throw error;
+      }
+    } else {
+      return [];
+    }
+  }
+
+  async addProductToCelebrityEvent(eventProductData: InsertCelebrityEventProduct): Promise<CelebrityEventProduct> {
+    if (this._db) {
+      // Check if this product is already added to this event by this celebrity
+      const existing = await this._db
+        .select()
+        .from(celebrityEventProducts)
+        .where(
+          and(
+            eq(celebrityEventProducts.eventId, eventProductData.eventId),
+            eq(celebrityEventProducts.celebrityId, eventProductData.celebrityId),
+            eq(celebrityEventProducts.productId, eventProductData.productId)
+          )
+        );
+      
+      if (existing.length > 0) {
+        throw new Error('This product is already added to this event');
+      }
+      
+      const rows = await this._db.insert(celebrityEventProducts).values(eventProductData).returning();
+      return rows[0] as CelebrityEventProduct;
+    } else {
+      throw new Error('In-memory celebrity event products not supported');
+    }
+  }
+
+  async removeProductFromCelebrityEvent(id: number): Promise<boolean> {
+    if (this._db) {
+      const rows = await this._db.delete(celebrityEventProducts).where(eq(celebrityEventProducts.id, id)).returning({ id: celebrityEventProducts.id });
+      return rows.length > 0;
+    } else {
+      return false;
+    }
+  }
+
+  // ==================== End Celebrity Vibes Events Methods ====================
 }
 
 

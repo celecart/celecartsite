@@ -44,11 +44,13 @@ import {
   Check,
   X,
   Filter,
+  Sparkles,
+  Package,
   Grid,
-  List
- , Tag } from "lucide-react";
+  List,
+  Tag
+} from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Package } from "lucide-react";
 
 interface User {
   id: number;
@@ -484,6 +486,12 @@ export default function AdminRoles() {
                   <SidebarMenuButton onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
                     <Star />
                     <span>Celebrities</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => setLocation('/admin/celebrity-vibes-events')} tooltip="Cele Vibes Events">
+                    <Sparkles />
+                    <span>Cele Vibes Events</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

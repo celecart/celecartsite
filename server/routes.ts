@@ -14,7 +14,9 @@ import {
   insertUserSchema,
   insertPlanSchema,
   insertCelebrityProductSchema,
-  insertBrandProductSchema
+  insertBrandProductSchema,
+  insertCelebrityVibesEventSchema,
+  insertCelebrityEventProductSchema
 } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -1897,6 +1899,311 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete product" });
     }
   });
+
+  // ==================== Celebrity Vibes Events API ====================
+  
+  // Get all celebrity vibes events (public)
+  app.get("/api/celebrity-vibes-events", async (req: Request, res: Response) => {
+    try {
+      const activeOnly = req.query.active === 'true';
+      const featuredOnly = req.query.featured === 'true';
+      const events = await storage.getCelebrityVibesEvents({ activeOnly, featuredOnly });
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching celebrity vibes events:", error);
+      res.status(500).json({ message: "Failed to fetch events", error: (error as any).message });
+    }
+  });
+  
+  // Get celebrity vibes event by ID (public)
+  app.get("/api/celebrity-vibes-events/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid event ID" });
+      }
+      
+      const event = await storage.getCelebrityVibesEventById(id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching celebrity vibes event:", error);
+      res.status(500).json({ message: "Failed to fetch event" });
+    }
+  });
+  
+  // Get products for a specific event (public)
+  app.get("/api/celebrity-vibes-events/:id/products", async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: "Invalid event ID" });
+      }
+      
+      const celebrityId = req.query.celebrityId ? parseInt(req.query.celebrityId as string) : undefined;
+      const products = await storage.getCelebrityEventProducts(eventId, celebrityId);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching event products:", error);
+      res.status(500).json({ message: "Failed to fetch event products", error: (error as any).message });
+    }
+  });
+  
+  // Get events for a specific celebrity (public)
+  app.get("/api/celebrities/:celebrityId/vibes-events", async (req: Request, res: Response) => {
+    try {
+      const celebrityId = parseInt(req.params.celebrityId);
+      if (isNaN(celebrityId)) {
+        return res.status(400).json({ message: "Invalid celebrity ID" });
+      }
+      
+      const events = await storage.getCelebrityVibesEventsByCelebrity(celebrityId);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching celebrity events:", error);
+      res.status(500).json({ message: "Failed to fetch celebrity events", error: (error as any).message });
+    }
+  });
+  
+  // Create celebrity vibes event (admin only)
+  app.post("/api/celebrity-vibes-events", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      console.log("Creating celebrity vibes event with data:", req.body);
+      const validatedData = insertCelebrityVibesEventSchema.parse(req.body);
+      console.log("Validated event data:", validatedData);
+      const event = await storage.createCelebrityVibesEvent(validatedData);
+      console.log("Created event:", event);
+      
+      // Log admin activity
+      try {
+        const user = req.user as any;
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'create',
+          entityType: 'celebrity_vibes_event',
+          entityId: event.id,
+          entityName: event.name,
+          metadata: JSON.stringify({ eventType: event.eventType })
+        });
+      } catch (activityError) {
+        console.error('Failed to log event creation activity:', activityError);
+      }
+      
+      res.status(201).json(event);
+    } catch (error) {
+      console.error("Error creating celebrity vibes event:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid event data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create event", error: (error as any).message });
+    }
+  });
+  
+  // Update celebrity vibes event (admin only)
+  app.put("/api/celebrity-vibes-events/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid event ID" });
+      }
+      
+      console.log("Updating celebrity vibes event with data:", req.body);
+      const validatedData = insertCelebrityVibesEventSchema.partial().parse(req.body);
+      console.log("Validated data for event update:", validatedData);
+      const event = await storage.updateCelebrityVibesEvent(id, validatedData);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Log admin activity
+      try {
+        const user = req.user as any;
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'update',
+          entityType: 'celebrity_vibes_event',
+          entityId: event.id,
+          entityName: event.name,
+          metadata: JSON.stringify({ updatedFields: Object.keys(validatedData) })
+        });
+      } catch (activityError) {
+        console.error('Failed to log event update activity:', activityError);
+      }
+      
+      console.log("Updated event:", event);
+      res.json(event);
+    } catch (error) {
+      console.error("Error updating celebrity vibes event:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ message: "Invalid event data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update event" });
+    }
+  });
+  
+  // Delete celebrity vibes event (admin only)
+  app.delete("/api/celebrity-vibes-events/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid event ID" });
+      }
+      
+      const event = await storage.getCelebrityVibesEventById(id);
+      const success = await storage.deleteCelebrityVibesEvent(id);
+      if (!success) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Log admin activity
+      try {
+        const user = req.user as any;
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'delete',
+          entityType: 'celebrity_vibes_event',
+          entityId: id,
+          entityName: event?.name || `Event ${id}`,
+          metadata: JSON.stringify({})
+        });
+      } catch (activityError) {
+        console.error('Failed to log event deletion activity:', activityError);
+      }
+      
+      res.json({ message: "Event deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting celebrity vibes event:", error);
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+  
+  // Add product to celebrity vibes event (celebrities can add their own products)
+  app.post("/api/celebrity-vibes-events/:eventId/products", async (req: Request, res: Response) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ message: "Invalid event ID" });
+      }
+      
+      // Verify user is authenticated
+      if (!req.isAuthenticated?.()) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const user = req.user as any;
+      const { celebrityId, productId, displayOrder, notes } = req.body;
+      
+      // Verify the celebrity belongs to the user or user is admin
+      const celebrity = await storage.getCelebrityById(celebrityId);
+      if (!celebrity) {
+        return res.status(404).json({ message: "Celebrity not found" });
+      }
+      
+      const isOwner = celebrity.userId === user.id;
+      const isAdmin = isAdminUser(req);
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "You can only add products to your own celebrity profile" });
+      }
+      
+      // Validate the data
+      const validatedData = insertCelebrityEventProductSchema.parse({
+        eventId,
+        celebrityId,
+        productId,
+        displayOrder: displayOrder || 0,
+        notes,
+      });
+      
+      const eventProduct = await storage.addProductToCelebrityEvent(validatedData);
+      
+      // Log activity
+      try {
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'create',
+          entityType: 'celebrity_event_product',
+          entityId: eventProduct.id,
+          entityName: `Product added to event`,
+          metadata: JSON.stringify({ eventId, celebrityId, productId })
+        });
+      } catch (activityError) {
+        console.error('Failed to log event product activity:', activityError);
+      }
+      
+      res.status(201).json(eventProduct);
+    } catch (error) {
+      console.error("Error adding product to event:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to add product to event", error: (error as any).message });
+    }
+  });
+  
+  // Remove product from celebrity vibes event
+  app.delete("/api/celebrity-vibes-events/:eventId/products/:productLinkId", async (req: Request, res: Response) => {
+    try {
+      const productLinkId = parseInt(req.params.productLinkId);
+      if (isNaN(productLinkId)) {
+        return res.status(400).json({ message: "Invalid product link ID" });
+      }
+      
+      // Verify user is authenticated
+      if (!req.isAuthenticated?.()) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+      
+      const user = req.user as any;
+      
+      // Get the event product to verify ownership
+      const eventProduct = await storage.getCelebrityEventProductById(productLinkId);
+      if (!eventProduct) {
+        return res.status(404).json({ message: "Product link not found" });
+      }
+      
+      // Verify the celebrity belongs to the user or user is admin
+      const celebrity = await storage.getCelebrityById(eventProduct.celebrityId);
+      const isOwner = celebrity?.userId === user.id;
+      const isAdmin = isAdminUser(req);
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "You can only remove products from your own celebrity profile" });
+      }
+      
+      const success = await storage.removeProductFromCelebrityEvent(productLinkId);
+      if (!success) {
+        return res.status(404).json({ message: "Product link not found" });
+      }
+      
+      // Log activity
+      try {
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'delete',
+          entityType: 'celebrity_event_product',
+          entityId: productLinkId,
+          entityName: `Product removed from event`,
+          metadata: JSON.stringify({ eventProduct })
+        });
+      } catch (activityError) {
+        console.error('Failed to log event product removal activity:', activityError);
+      }
+      
+      res.json({ message: "Product removed from event successfully" });
+    } catch (error) {
+      console.error("Error removing product from event:", error);
+      res.status(500).json({ message: "Failed to remove product from event" });
+    }
+  });
+  
+  // ==================== End Celebrity Vibes Events API ====================
   
   // Get celebrity brands by celebrity ID
   app.get("/api/celebritybrands/:celebrityId", async (req: Request, res: Response) => {
@@ -2522,6 +2829,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Celebrity image upload error:', error);
       res.status(500).json({ message: "Failed to upload celebrity image" });
+    }
+  });
+
+  // File upload endpoint for event images
+  const eventImageUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadsDir = path.join(__dirname, '../uploads/events/');
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        cb(null, uploadsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = file.originalname.split('.').pop();
+        cb(null, `event-${uniqueSuffix}.${extension}`);
+      }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  });
+
+  app.post("/api/upload/event-image", requireAdmin, eventImageUpload.single('image'), (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      const url = `/uploads/events/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Event image upload error:', error);
+      res.status(500).json({ message: "Failed to upload event image" });
     }
   });
 

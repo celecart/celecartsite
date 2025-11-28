@@ -20,7 +20,7 @@ import {
   SidebarSeparator,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, FileText, Settings, Moon, Sun, Tags, CreditCard, Star, Package, Tag, Sparkles } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface User {
@@ -183,6 +183,12 @@ export default function AdminDashboard() {
                 <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrities')} tooltip="Celebrities">
                   <Star />
                   <span>Celebrities</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={false} onClick={() => setLocation('/admin/celebrity-vibes-events')} tooltip="Cele Vibes Events">
+                  <Sparkles />
+                  <span>Cele Vibes Events</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
