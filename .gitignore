@@ -9,6 +9,11 @@ vite.config.ts.*
 *.tar.gz
 attached_assets
 
+# Uploads folder
+uploads/
+public/uploads/
+server/uploads/
+
 # Replit and agent state files
 .local/
 .config/
@@ -18,6 +23,7 @@ attached_assets
 # Large image files (optional - uncomment if you want to exclude them)
 # *.jpg
 # *.png
-# *.jpeg.env
+# *.jpeg
+.env
 .env
 .env
