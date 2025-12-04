@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -684,12 +685,12 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
         }
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
-          <DialogHeader className="relative">
-            <DialogTitle className="text-xl text-gray-800 pr-8">
+          <DialogHeader className="relative pb-4">
+            <DialogTitle className="text-xl text-gray-900 pr-14">
               {viewingEvent?.name} - Products
             </DialogTitle>
-            <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-              <X className="h-6 w-6 text-gray-900" />
+            <DialogClose className="absolute right-2 top-0 rounded-full opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none h-8 w-8 flex items-center justify-center hover:bg-gray-300 transition-colors">
+              <X className="h-5 w-5 text-gray-900" />
               <span className="sr-only">Close</span>
             </DialogClose>
           </DialogHeader>
@@ -756,10 +757,10 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
           }
         }}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
-            <DialogHeader className="relative">
-              <DialogTitle className="pr-8">Add Products to {selectedEvent.name}</DialogTitle>
-              <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                <X className="h-6 w-6 text-gray-900" />
+            <DialogHeader className="relative pb-4">
+              <DialogTitle className="text-gray-900 pr-14">Add Products to {selectedEvent.name}</DialogTitle>
+              <DialogClose className="absolute right-2 top-0 rounded-full opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none h-8 w-8 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                <X className="h-5 w-5 text-gray-900" />
                 <span className="sr-only">Close</span>
               </DialogClose>
             </DialogHeader>
@@ -946,10 +947,10 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
           }
         }}>
           <DialogContent className="max-w-md bg-gradient-to-br from-stone-150 to-amber-150">
-            <DialogHeader className="relative">
-              <DialogTitle className="pr-8">Edit Product</DialogTitle>
-              <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                <X className="h-6 w-6 text-gray-900" />
+            <DialogHeader className="relative pb-4">
+              <DialogTitle className="text-gray-900 pr-14">Edit Product</DialogTitle>
+              <DialogClose className="absolute right-2 top-0 rounded-full opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none h-8 w-8 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                <X className="h-5 w-5 text-gray-900" />
                 <span className="sr-only">Close</span>
               </DialogClose>
             </DialogHeader>

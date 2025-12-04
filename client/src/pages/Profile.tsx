@@ -137,6 +137,7 @@ export default function Profile() {
   };
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isCelebrity, setIsCelebrity] = useState(false);
@@ -156,6 +157,7 @@ export default function Profile() {
   const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([
     'Apparel','Accessories','Footwear','Technology','Vehicles','Fragrance','Beauty'
   ]);
+  
   useEffect(() => {
     // Fetch canonical categories from backend, fall back to defaults on error
     fetch('/api/categories')
@@ -235,7 +237,8 @@ export default function Profile() {
       const formattedData = {
         ...productData,
         celebrityId: celebrityId ?? undefined
-      };products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0
+      };
+      
       if (!formattedData.celebrityId) {
         toast({ title: "Error", description: "Missing celebrity profile. Unable to save product.", variant: "destructive" });
         return;
@@ -328,6 +331,7 @@ export default function Profile() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        setError(null);
         const res = await fetch('/auth/user', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
@@ -350,7 +354,8 @@ export default function Profile() {
                 setProfileData(prev => ({ ...prev, styleNotes: celeb.styleNotes || '' }));
               }
             } catch (err) {
-              // Ignore celeb fetch errors
+              console.error('Error loading celebrity profile:', err);
+              // Ignore celeb fetch errors - user might not be a celebrity yet
             }
           }
           
@@ -374,8 +379,11 @@ export default function Profile() {
           });
         } else {
           setUser(null);
+          console.log('User not authenticated');
         }
       } catch (e) {
+        console.error('Error fetching user:', e);
+        setError('Failed to load profile. Please refresh the page.');
         setUser(null);
       } finally {
         setLoading(false);
@@ -511,7 +519,23 @@ export default function Profile() {
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {loading ? (
-          <div className="text-white/70 text-center">Loading...</div>
+          <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+            <CardContent className="p-8 text-center">
+              <div className="text-white/70">Loading your profile...</div>
+            </CardContent>
+          </Card>
+        ) : error ? (
+          <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+            <CardContent className="p-8 text-center">
+              <div className="text-red-400 mb-4">{error}</div>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="bg-amber-500 hover:bg-amber-600 text-black rounded-full"
+              >
+                Reload Page
+              </Button>
+            </CardContent>
+          </Card>
         ) : !user ? (
           <Card className="bg-white/5 backdrop-blur-xl border-white/10">
             <CardContent className="p-8 text-center">
@@ -921,7 +945,12 @@ export default function Profile() {
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="flex justify-end mb-3">
-                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('zulqadarExperiences'); setShowAddProduct(true); }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
+                                  <Button onClick={() => { 
+                                    console.log('🔥 ADD PRODUCT CLICKED - zulqadarExperiences');
+                                    setEditingProduct(null); 
+                                    setAddProductContext('zulqadarExperiences'); 
+                                    setShowAddProduct(true); 
+                                  }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Product
                                   </Button>
@@ -1036,7 +1065,12 @@ export default function Profile() {
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="flex justify-end mb-3">
-                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('luxuryBrandPreferences'); setShowAddProduct(true); }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
+                                  <Button onClick={() => { 
+                                    console.log('🔥 ADD PRODUCT CLICKED - luxuryBrandPreferences');
+                                    setEditingProduct(null); 
+                                    setAddProductContext('luxuryBrandPreferences'); 
+                                    setShowAddProduct(true); 
+                                  }} className="bg-amber-500 hover:bg-amber-600 text-black rounded-full">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Product
                                   </Button>
@@ -1250,7 +1284,7 @@ export default function Profile() {
                                                         <Button
                                                           size="sm"
                                                           variant="outline"
-                                                          onClick={() => { setEditingProduct(product); setShowAddProduct(true); }}
+                                                          onClick={() => { setEditingProduct(product); setAddProductContext('luxuryBrandPreferences'); setShowAddProduct(true); }}
                                                           className="border-white/20 text-white bg-black/30 hover:bg-black/40"
                                                         >
                                                           <Edit className="w-3 h-3" />
@@ -1294,7 +1328,12 @@ export default function Profile() {
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="flex justify-end mb-3">
-                                  <Button onClick={() => { setEditingProduct(null); setAddProductContext('personalBrandProducts'); setShowAddProduct(true); }} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black rounded-full px-4 py-2 shadow">
+                                  <Button onClick={() => { 
+                                    console.log('🔥 ADD PRODUCT CLICKED - personalBrandProducts');
+                                    setEditingProduct(null); 
+                                    setAddProductContext('personalBrandProducts'); 
+                                    setShowAddProduct(true); 
+                                  }} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black rounded-full px-4 py-2 shadow">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Product
                                   </Button>
@@ -1511,10 +1550,11 @@ function ProductModal({
 }) {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
-    category: product?.category || initialCategory || '',
+    category: product?.category || initialCategory || 'Personal Brand Products',
     productCategory: (product as any)?.productCategory || '',
     imageUrls: Array.isArray(product?.imageUrl) ? product.imageUrl : (product?.imageUrl ? [product.imageUrl] : []),
     price: product?.price || '',
@@ -1531,23 +1571,40 @@ function ProductModal({
   useEffect(() => {
     (async () => {
       try {
+        setLoadingCategories(true);
         const res = await fetch('/api/categories', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           setCategories(data || []);
+        } else {
+          console.error('Failed to fetch categories');
+          // Set default categories if API fails
+          setCategories([
+            { id: 1, name: 'Apparel', description: null, isActive: true },
+            { id: 2, name: 'Accessories', description: null, isActive: true },
+            { id: 3, name: 'Footwear', description: null, isActive: true }
+          ] as Category[]);
         }
       } catch (err) {
         console.error('Failed to load product categories', err);
+        // Set default categories if fetch fails
+        setCategories([
+          { id: 1, name: 'Apparel', description: null, isActive: true },
+          { id: 2, name: 'Accessories', description: null, isActive: true },
+          { id: 3, name: 'Footwear', description: null, isActive: true }
+        ] as Category[]);
+      } finally {
+        setLoadingCategories(false);
       }
     })();
   }, []);
 
   // Default productCategory once categories load or when section changes
   useEffect(() => {
-    if (!formData.productCategory && categories.length > 0) {
-      setFormData(prev => ({ ...prev, productCategory: prev.productCategory || categories[0].name }));
+    if (!formData.productCategory && categories.length > 0 && !loadingCategories) {
+      setFormData(prev => ({ ...prev, productCategory: categories[0]?.name || 'Apparel' }));
     }
-  }, [categories]);
+  }, [categories, loadingCategories]);
 
   const handleImagesChange = async (imageUrls: string[]) => {
     setFormData(prev => ({ ...prev, imageUrls }));
@@ -1592,20 +1649,29 @@ function ProductModal({
     onSave(submitData);
   };
 
+  console.log('ProductModal render - loadingCategories:', loadingCategories, 'categories:', categories.length);
+  
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="bg-gray-900 border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100]" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <Card className="bg-gray-900 border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+        <CardHeader className="sticky top-0 bg-gray-900 z-10 border-b border-white/10 pr-12">
+          <CardTitle className="text-white">
             {product ? 'Edit Product' : 'Add New Product'}
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
           </CardTitle>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose} 
+            className="absolute right-4 top-4 text-white hover:bg-white/10 rounded-full h-8 w-8 p-0"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-white/70">Product Name</Label>
                 <Input
@@ -1752,7 +1818,7 @@ function ProductModal({
                 Cancel
               </Button>
             </div>
-          </form>
+            </form>
         </CardContent>
       </Card>
     </div>
@@ -1848,17 +1914,24 @@ function FavoriteExperienceModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="bg-gray-900 border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100]" onClick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}>
+      <Card className="bg-gray-900 border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+        <CardHeader className="sticky top-0 bg-gray-900 z-10 border-b border-white/10 pr-12">
+          <CardTitle className="text-white">
             {product ? 'Edit Favorite Experience' : 'Add Favorite Experience'}
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
           </CardTitle>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose} 
+            className="absolute right-4 top-4 text-white hover:bg-white/10 rounded-full h-8 w-8 p-0"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
