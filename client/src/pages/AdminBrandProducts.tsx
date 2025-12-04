@@ -204,7 +204,7 @@ export default function AdminBrandProducts() {
   }, [pageItems]);
 
   return (
-    <SidebarProvider className="bg-background text-white">
+    <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader>
@@ -258,9 +258,9 @@ export default function AdminBrandProducts() {
           </header>
           <main className="p-4">
             <div className="grid gap-4">
-              <Card className="bg-white/5 border border-white/10 hover:border-amber-400/40 transition-colors">
+              <Card className="bg-muted border border-border hover:border-amber-400/40 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Marketing API</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Marketing API</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -278,22 +278,22 @@ export default function AdminBrandProducts() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Button onClick={saveMarketingApi} disabled={typeof brandFilter !== 'number'} className="bg-amber-500 hover:bg-amber-600 text-black">Save Settings</Button>
-                  </div>
+                    <Button onClick={saveMarketingApi} disabled={typeof brandFilter !== 'number'}>Save Settings</Button>
+                </div>
                 </CardContent>
               </Card>
               
 
-              <Card className="bg-white/5 border border-white/10 hover:border-amber-400/40 transition-colors">
+              <Card className="bg-muted border border-border hover:border-amber-400/40 transition-colors">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">Brand Products</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Brand Products</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between mb-3">
                     <div />
                     <Dialog open={openProduct} onOpenChange={setOpenProduct}>
                       <DialogTrigger asChild>
-                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black">Add Product</Button>
+                        <Button size="sm">Add Product</Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
