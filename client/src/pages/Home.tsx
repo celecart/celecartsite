@@ -4,14 +4,11 @@ import FeaturedCelebrity from "@/components/FeaturedCelebrity";
 import CelebrityGallery from "@/components/CelebrityGallery";
 import BrandsSection from "@/components/BrandsSection";
 import ExploreSection from "@/components/ExploreSection";
-import TournamentSection from "@/components/TournamentSection";
 import Newsletter from "@/components/Newsletter";
 import Footer from "@/components/Footer";
-import TrendingProducts from "@/components/TrendingProducts";
 import TrendingSpotlight from "@/components/TrendingSpotlight";
 import AnimatedBrandAds from "@/components/AnimatedBrandAds";
 import CelebrityTestimonials from "@/components/CelebrityTestimonials";
-
 import { Brand } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -35,7 +32,6 @@ export default function Home() {
       
       <div id="trending">
         <TrendingSpotlight />
-        <TrendingProducts />
       </div>
       
       {/* Enhanced Fashion Trends with Animated Brand Ads */}
@@ -51,8 +47,6 @@ export default function Home() {
         <BrandsSection onBrandClick={handleOpenBrandModal} />
       </div>
       
-      
-      <TournamentSection />
       <div id="explore">
         <ExploreSection />
       </div>
