@@ -128,6 +128,57 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
     }
   };
 
+  const handleCreateEvent = async () => {
+    if (!newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCreatingEvent(true);
+    try {
+      const response = await fetch('/api/celebrity-vibes-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newEvent.name,
+          description: newEvent.description,
+          eventType: newEvent.eventType,
+          startDate: newEvent.startDate,
+          endDate: newEvent.endDate,
+          isActive: true,
+          isFeatured: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.message || 'Failed to create event');
+      }
+
+      toast({
+        title: 'Success',
+        description: `Event "${newEvent.name}" created successfully`,
+      });
+
+      await fetchEvents();
+      setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+      setShowCreateEventDialog(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'Failed to create event. You may not have permission.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
   const fetchEventProducts = async (eventId: number) => {
     try {
       setLoadingProducts(true);
@@ -471,6 +522,87 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
               </Button>
             )}
           </div>
+
+          {isOwnProfile && (
+            <Dialog open={showCreateEventDialog} onOpenChange={setShowCreateEventDialog}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-stone-100 to-amber-100">
+                <DialogHeader className="relative pb-2">
+                  <DialogTitle className="text-xl text-gray-900">Create New Event</DialogTitle>
+                  <DialogClose className="absolute right-2 top-2 rounded-full opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none h-8 w-8 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                    <X className="h-5 w-5 text-gray-900" />
+                    <span className="sr-only">Close</span>
+                  </DialogClose>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div>
+                    <Label htmlFor="eventName">Event Name *</Label>
+                    <Input
+                      id="eventName"
+                      placeholder="e.g., Diwali 2025, Oscars Red Carpet"
+                      value={newEvent.name}
+                      onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="eventType">Event Type *</Label>
+                    <Input
+                      id="eventType"
+                      placeholder="e.g., Festival, Award Show, Holiday"
+                      value={newEvent.eventType}
+                      onChange={(e) => setNewEvent({ ...newEvent, eventType: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="eventDescription">Description</Label>
+                    <Textarea
+                      id="eventDescription"
+                      placeholder="Describe this special occasion..."
+                      rows={3}
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="startDate">Start Date *</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={newEvent.startDate}
+                        onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="endDate">End Date *</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={newEvent.endDate}
+                        onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setNewEvent({ name: '', description: '', eventType: '', startDate: '', endDate: '' });
+                        setShowCreateEventDialog(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateEvent}
+                      disabled={creatingEvent || !newEvent.name || !newEvent.eventType || !newEvent.startDate || !newEvent.endDate}
+                    >
+                      {creatingEvent ? 'Creating...' : 'Create Event'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {events.map((event) => (

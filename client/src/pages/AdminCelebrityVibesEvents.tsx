@@ -189,6 +189,7 @@ export default function AdminCelebrityVibesEvents() {
     const response = await fetch('/api/upload/event-image', {
       method: 'POST',
       body: formData,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -221,7 +222,7 @@ export default function AdminCelebrityVibesEvents() {
       newErrors.endDate = "End date is required";
     }
     if (!formData.imageFile && !formData.imageUrl) {
-      newErrors.image = "Event banner image is required";
+      newErrors.imageUrl = "Event banner image is required";
     }
 
     // Validate date logic
@@ -253,7 +254,7 @@ export default function AdminCelebrityVibesEvents() {
         try {
           imageUrl = await uploadImage(formData.imageFile);
         } catch (uploadError) {
-          setErrors({ image: "Failed to upload image" });
+          setErrors({ imageUrl: "Failed to upload image" });
           toast({
             title: "Upload Error",
             description: "Failed to upload image. Please try again.",
@@ -284,6 +285,7 @@ export default function AdminCelebrityVibesEvents() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventData),
+        credentials: 'include',
       });
 
       if (response.ok) {
