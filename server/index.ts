@@ -35,13 +35,18 @@ app.use(session({
 
 // Initialize Passport
 app.use(passport.initialize());
-app.use(passport.session());
+  app.use(passport.session());
 
 // Serve static assets from public directory
 app.use('/assets', express.static('public/assets'));
 
 // Serve uploaded files from uploads directory
-app.use('/uploads', express.static('uploads'));
+  app.use('/uploads', express.static('uploads'));
+
+  // Redirect root to login page
+  app.get('/', (_req: Request, res: Response) => {
+    res.redirect('/login');
+  });
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -73,7 +78,7 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+  (async () => {
   // Verify DB connection (if DATABASE_URL is set)
   const dbOk = await verifyDbConnection();
   if (dbOk) {
