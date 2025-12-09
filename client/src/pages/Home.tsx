@@ -11,9 +11,22 @@ import AnimatedBrandAds from "@/components/AnimatedBrandAds";
 import CelebrityTestimonials from "@/components/CelebrityTestimonials";
 import { Brand } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/auth/user', { credentials: 'include' });
+        if (!res.ok) {
+          setLocation('/login');
+        }
+      } catch {
+        setLocation('/login');
+      }
+    })();
+  }, []);
 
   const handleOpenBrandModal = (brand: Brand) => {
     if (brand?.id) setLocation(`/brands/${brand.id}/products`);
