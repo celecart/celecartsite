@@ -1,6 +1,24 @@
 {
   "variant": "professional",
-  "primary": "hsl(36, 85%, 55%)",
   "appearance": "dark",
-  "radius": 0.6
+  "radius": 0.6,
+  "primary": "hsl(35, 96%, 54%)",
+  "primary_hex": "#F36805",
+  "primary_rgb": "243, 104, 5",
+  "primary_10d_hex": "#DB5E05",
+  "primary_10d_rgb": "219, 94, 5",
+  "primary_20d_hex": "#C25304",
+  "primary_20d_rgb": "194, 83, 4",
+  "secondary": "hsl(200, 90%, 45%)",
+  "secondary_hex": "#0B9CDA",
+  "secondary_rgb": "11, 156, 218",
+  "secondary_10d_hex": "#0A8CC4",
+  "secondary_10d_rgb": "10, 140, 196",
+  "secondary_20d_hex": "#097DAE",
+  "secondary_20d_rgb": "9, 125, 174",
+  "accent": "hsl(320, 85%, 60%)",
+  "success": "hsl(142, 72%, 40%)",
+  "warning": "hsl(40, 100%, 45%)",
+  "danger": "hsl(0, 90%, 50%)",
+  "info": "hsl(198, 90%, 50%)"
 }
