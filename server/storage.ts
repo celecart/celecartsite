@@ -3117,7 +3117,11 @@ export class PgStorage implements IStorage {
 
   async createCelebrityVibesEvent(eventData: InsertCelebrityVibesEvent): Promise<CelebrityVibesEvent> {
     if (this._db) {
-      const rows = await this._db.insert(celebrityVibesEvents).values(eventData).returning();
+      const toInsert = { 
+        ...eventData,
+        imageUrl: (eventData as any).imageUrl ?? ''
+      } as any;
+      const rows = await this._db.insert(celebrityVibesEvents).values(toInsert).returning();
       return rows[0] as CelebrityVibesEvent;
     } else {
       throw new Error('In-memory celebrity vibes events not supported');

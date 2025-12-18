@@ -147,6 +147,28 @@ export default function Product() {
                       <ShoppingBag className="mr-1 h-4 w-4" /> Shop Now
                     </Button>
                   )}
+                  {parsePrice(product.price) && (
+                    <Button
+                      variant="outline"
+                      aria-label="Checkout with Stripe"
+                      className="border-gold text-gold hover:bg-gold/10"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/payments/checkout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ productId: id, productType: type }),
+                          });
+                          if (!res.ok) throw new Error('Checkout init failed');
+                          const data = await res.json();
+                          if (data?.url) window.location.href = String(data.url);
+                        } catch (e) {}
+                      }}
+                    >
+                      Checkout
+                    </Button>
+                  )}
                   {product.website && (
                     <Button
                       variant="outline"

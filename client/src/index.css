@@ -35,20 +35,48 @@
 
 @layer base {
   :root {
-    --color-primary: 36 80% 55%;
-    --color-secondary: 24 90% 58%;
-    --color-accent: 15 90% 60%;
-    --color-gold: 36 95% 55%;
-    --color-dark: 220 35% 6%;
-    --color-darkgray: 220 30% 10%;
-    --color-midgray: 220 25% 15%;
-    --color-lightgray: 220 15% 70%;
-    --color-light: 0 0% 98%;
-    --color-success: 142 75% 58%;
-    --color-warning: 38 95% 50%;
-    --color-danger: 0 95% 71%;
-    --color-info: 203 92% 75%;
+    --color-primary: 35 96% 54%;
+    --color-secondary: 200 90% 45%;
+    --color-accent: 320 85% 60%;
+    --color-gold: 36 96% 52%;
+    --color-dark: 220 25% 7%;
+    --color-darkgray: 220 20% 12%;
+    --color-midgray: 220 16% 18%;
+    --color-lightgray: 220 12% 72%;
+    --color-light: 0 0% 99%;
+    --color-success: 142 72% 40%;
+    --color-warning: 40 100% 45%;
+    --color-danger: 0 90% 50%;
+    --color-info: 198 90% 50%;
     
+    /* Base palette in HEX/RGB and darker variants */
+    --primary-hex: #F36805;
+    --primary-rgb: 243, 104, 5;
+    --primary-10d-hex: #DB5E05;
+    --primary-10d-rgb: 219, 94, 5;
+    --primary-20d-hex: #C25304;
+    --primary-20d-rgb: 194, 83, 4;
+
+    --secondary-hex: #0B9CDA;
+    --secondary-rgb: 11, 156, 218;
+    --secondary-10d-hex: #0A8CC4;
+    --secondary-10d-rgb: 10, 140, 196;
+    --secondary-20d-hex: #097DAE;
+    --secondary-20d-rgb: 9, 125, 174;
+
+    /* Cele vibe gradient definitions */
+    --cele-vibe-gradient: 
+      radial-gradient(circle at 30% 10%, rgba(var(--primary-10d-rgb), 0.225) 0%, rgba(var(--primary-10d-rgb), 0.00) 35%),
+      radial-gradient(circle at 80% 80%, rgba(var(--secondary-10d-rgb), 0.162) 0%, rgba(var(--secondary-10d-rgb), 0.00) 40%);
+
+    --cele-vibe-gradient-base: 
+      radial-gradient(circle at 30% 10%, rgba(var(--primary-rgb), 0.25) 0%, rgba(var(--primary-rgb), 0.00) 35%),
+      radial-gradient(circle at 80% 80%, rgba(var(--secondary-rgb), 0.18) 0%, rgba(var(--secondary-rgb), 0.00) 40%);
+
+    --cele-vibe-gradient-20d: 
+      radial-gradient(circle at 30% 10%, rgba(var(--primary-20d-rgb), 0.20) 0%, rgba(var(--primary-20d-rgb), 0.00) 35%),
+      radial-gradient(circle at 80% 80%, rgba(var(--secondary-20d-rgb), 0.144) 0%, rgba(var(--secondary-20d-rgb), 0.00) 40%);
+
     --border-radius-sm: 0.125rem;
     --border-radius: 0.6rem;
     --border-radius-lg: 0.8rem;
@@ -61,8 +89,7 @@
   body {
     @apply font-sans antialiased bg-dark text-light;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image: radial-gradient(circle at 30% 10%, hsl(36, 30%, 20%, 0.2) 0%, transparent 30%),
-                      radial-gradient(circle at 80% 80%, hsl(15, 30%, 20%, 0.1) 0%, transparent 40%);
+    background-image: var(--cele-vibe-gradient);
     background-attachment: fixed;
   }
   

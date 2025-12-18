@@ -34,6 +34,8 @@ import Brands from "@/pages/Brands";
 import AdminSettings from "@/pages/AdminSettings";
 import BrandProducts from "@/pages/BrandProducts";
 import AdminCelebrityVibesEvents from "@/pages/AdminCelebrityVibesEvents";
+import EventProducts from "@/pages/EventProducts";
+import StripeTest from "@/pages/StripeTest";
 
 function Router() {
   return (
@@ -50,6 +52,8 @@ function Router() {
       <Route path="/celebrities" component={Celebrities} />
       <Route path="/celebrity/:id" component={CelebrityProfile} />
       <Route path="/product/:id" component={Product} />
+      <Route path="/event/:eventId/products" component={EventProducts} />
+      <Route path="/stripe-test" component={StripeTest} />
       <Route path="/ai-stylist" component={AIStylist} />
       <Route path="/content-creator" component={ContentCreator} />
       <Route path="/admin" component={AdminDashboard} />

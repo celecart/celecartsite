@@ -42,8 +42,11 @@ import { emailService } from "./services/email";
 import { db, pool } from "./db";
 import { roles, permissions, rolePermissions, userRoles } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import Stripe from "stripe";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
+  const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
   // DB health check endpoint
   app.get('/api/health/db', async (_req: Request, res: Response) => {
     if (!pool) {
@@ -1963,8 +1966,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create celebrity vibes event (admin only)
-  app.post("/api/celebrity-vibes-events", requireAdmin, async (req: Request, res: Response) => {
+  // Create celebrity vibes event (authenticated users)
+  app.post("/api/celebrity-vibes-events", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated?.()) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
     try {
       console.log("Creating celebrity vibes event with data:", req.body);
       const validatedData = insertCelebrityVibesEventSchema.parse(req.body);
@@ -2199,7 +2205,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // ==================== End Celebrity Vibes Events API ====================
-  
+
+  // ==================== Payments (Stripe) ====================
+  app.post("/api/payments/checkout", async (req: Request, res: Response) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe is not configured" });
+      }
+
+      const { productId, productType } = req.body as { productId?: number; productType?: "celebrity" | "brand" };
+      if (!productId || !productType) {
+        return res.status(400).json({ message: "productId and productType are required" });
+      }
+
+      let name = "Item";
+      let priceString: string | null | undefined = null;
+      let image: string | undefined;
+
+      if (productType === "celebrity") {
+        const product = await storage.getCelebrityProductById(productId);
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        name = product.name;
+        priceString = (product as any).price;
+        const img = (product as any).imageUrl;
+        if (Array.isArray(img)) image = img[0];
+        else if (typeof img === "string") image = img;
+      } else if (productType === "brand") {
+        const product = await storage.getBrandProductById(productId);
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        name = (product as any).name || "Item";
+        priceString = (product as any).price;
+        const img = (product as any).imageUrl;
+        if (Array.isArray(img)) image = img[0];
+        else if (typeof img === "string") image = img;
+      }
+
+      const amountCents = (() => {
+        if (!priceString) return null;
+        const n = Number(String(priceString).replace(/[^0-9.]/g, ""));
+        if (!Number.isFinite(n)) return null;
+        return Math.round(n * 100);
+      })();
+
+      if (!amountCents || amountCents <= 0) {
+        return res.status(400).json({ message: "Invalid or missing price for Stripe checkout" });
+      }
+
+      const origin = (req.headers.origin as string) || `${req.protocol}://${req.get("host")}`;
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "usd",
+              unit_amount: amountCents,
+              product_data: {
+                name,
+                images: image ? [image] : undefined,
+              },
+            },
+          },
+        ],
+        success_url: `${origin}/product/${productId}?type=${productType}&checkout=success`,
+        cancel_url: `${origin}/product/${productId}?type=${productType}&checkout=cancel`,
+      });
+
+      return res.json({ url: session.url });
+    } catch (error) {
+      console.error("Stripe checkout error:", error);
+      return res.status(500).json({ message: "Failed to create Stripe checkout session" });
+    }
+  });
+
+  app.post("/api/payments/checkout-test", async (req: Request, res: Response) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe is not configured. Set STRIPE_SECRET_KEY in .env and restart the server." });
+      }
+
+      const { name, amountCents, currency, image, quantity } = req.body as { name?: string; amountCents?: number; currency?: string; image?: string; quantity?: number };
+      const unitAmount = Math.round(Number(amountCents || 0));
+      if (!name || !unitAmount || unitAmount <= 0) {
+        return res.status(400).json({ message: "Valid name and positive integer amountCents are required" });
+      }
+      const origin = (req.headers.origin as string) || `${req.protocol}://${req.get("host")}`;
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [
+          {
+            quantity: quantity && quantity > 0 ? quantity : 1,
+            price_data: {
+              currency: currency || "usd",
+              unit_amount: unitAmount,
+              product_data: {
+                name,
+                images: image ? [image] : undefined,
+              },
+            },
+          },
+        ],
+        success_url: `${origin}/stripe-test?status=success`,
+        cancel_url: `${origin}/stripe-test?status=cancel`,
+      });
+      return res.json({ url: session.url });
+    } catch (error) {
+      console.error("Stripe test checkout error:", error);
+      return res.status(500).json({ message: "Failed to create Stripe test session" });
+    }
+  });
+
+  app.post("/api/payments/webhook-test", async (req: Request, res: Response) => {
+    try {
+      console.log("Received webhook-test payload:", req.body);
+      return res.json({ received: true });
+    } catch {
+      return res.status(400).json({ received: false });
+    }
+  });
+
+  // ==================== End Payments (Stripe) ====================
+
   // Get celebrity brands by celebrity ID
   app.get("/api/celebritybrands/:celebrityId", async (req: Request, res: Response) => {
     try {
@@ -2854,7 +2980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/event-image", requireAdmin, eventImageUpload.single('image'), (req: Request, res: Response) => {
+  app.post("/api/upload/event-image", eventImageUpload.single('image'), (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
