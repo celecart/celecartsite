@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import MultiImageUpload from '@/components/MultiImageUpload';
 import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, EyeOff, CheckCircle, XCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
