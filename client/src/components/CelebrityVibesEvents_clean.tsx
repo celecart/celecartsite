@@ -552,19 +552,19 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                   })}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-amber-300">
+                <div className="flex justify-end gap-3">
                   <Button
                     variant="outline"
                     onClick={() => setSelectedProducts([])}
                     disabled={selectedProducts.length === 0}
-                    className="border-amber-500 text-amber-700 hover:bg-amber-100 font-bold"
+                    className="border-amber-600 text-amber-800 hover:bg-amber-200 hover:text-amber-900 font-bold disabled:bg-amber-50 disabled:text-amber-400 disabled:border-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Clear Selection
                   </Button>
                   <Button
                     onClick={handleAddExistingProducts}
                     disabled={selectedProducts.length === 0 || addingProducts}
-                    className="bg-amber-600 hover:bg-amber-700 text-white border-0 font-bold shadow-md"
+                    className="bg-amber-600 hover:bg-amber-700 text-black hover:text-black border-0 font-bold shadow-md disabled:bg-amber-300 disabled:text-black/70 disabled:opacity-80"
                   >
                     {addingProducts ? (
                       <>

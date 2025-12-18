@@ -159,6 +159,10 @@ export interface IStorage {
 
   createCelebrityBrand(celebrityBrand: InsertCelebrityBrand): Promise<CelebrityBrand>;
 
+  updateCelebrityBrand(id: number, celebrityBrand: Partial<InsertCelebrityBrand>): Promise<CelebrityBrand | undefined>;
+
+  deleteCelebrityBrand(id: number): Promise<boolean>;
+
   
 
   // Category operations
@@ -1231,6 +1235,21 @@ export class MemStorage implements IStorage {
 
   
 
+  async updateCelebrityBrand(id: number, update: Partial<InsertCelebrityBrand>): Promise<CelebrityBrand | undefined> {
+    const existing = this.celebrityBrands.get(id);
+    if (!existing) return undefined;
+
+    const merged = { ...existing, ...update };
+    this.celebrityBrands.set(id, merged);
+    return merged;
+  }
+
+  async deleteCelebrityBrand(id: number): Promise<boolean> {
+    if (!this.celebrityBrands.has(id)) return false;
+    this.celebrityBrands.delete(id);
+    return true;
+  }
+
   // Category operations
 
   async getCategories(): Promise<Category[]> {
@@ -2194,6 +2213,55 @@ export class PgStorage implements IStorage {
       relationshipStartYear: row.relationshipStartYear ?? null,
       grandSlamAppearances: row.grandSlamAppearances ?? [],
     } as CelebrityBrand;
+  }
+
+  async updateCelebrityBrand(id: number, update: Partial<InsertCelebrityBrand>): Promise<CelebrityBrand | undefined> {
+    const values: any = {};
+    if (update.celebrityId !== undefined) values.celebrityId = update.celebrityId;
+    if (update.brandId !== undefined) values.brandId = update.brandId;
+    if (update.description !== undefined) values.description = update.description ?? null;
+    if (update.itemType !== undefined) values.itemType = update.itemType ?? null;
+    if (update.categoryId !== undefined) values.categoryId = update.categoryId ?? null;
+    if (update.imagePosition !== undefined) values.imagePosition = update.imagePosition;
+    if (update.equipmentSpecs !== undefined) values.equipmentSpecs = update.equipmentSpecs ?? null;
+    if (update.occasionPricing !== undefined) values.occasionPricing = update.occasionPricing ?? null;
+    if (update.relationshipStartYear !== undefined) values.relationshipStartYear = update.relationshipStartYear ?? null;
+    if (update.grandSlamAppearances !== undefined) values.grandSlamAppearances = update.grandSlamAppearances ?? [];
+
+    if (Object.keys(values).length === 0) {
+      const rows = await this._db.select().from(celebrityBrands).where(eq(celebrityBrands.id, id)).limit(1);
+      const row = rows[0];
+      if (!row) return undefined;
+      return {
+        ...row,
+        description: row.description ?? null,
+        itemType: row.itemType ?? null,
+        categoryId: row.categoryId ?? null,
+        equipmentSpecs: row.equipmentSpecs ?? null,
+        occasionPricing: row.occasionPricing ?? null,
+        relationshipStartYear: row.relationshipStartYear ?? null,
+        grandSlamAppearances: row.grandSlamAppearances ?? [],
+      } as CelebrityBrand;
+    }
+
+    const rows = await this._db.update(celebrityBrands).set(values).where(eq(celebrityBrands.id, id)).returning();
+    const row = rows[0];
+    if (!row) return undefined;
+    return {
+      ...row,
+      description: row.description ?? null,
+      itemType: row.itemType ?? null,
+      categoryId: row.categoryId ?? null,
+      equipmentSpecs: row.equipmentSpecs ?? null,
+      occasionPricing: row.occasionPricing ?? null,
+      relationshipStartYear: row.relationshipStartYear ?? null,
+      grandSlamAppearances: row.grandSlamAppearances ?? [],
+    } as CelebrityBrand;
+  }
+
+  async deleteCelebrityBrand(id: number): Promise<boolean> {
+    const rows = await this._db.delete(celebrityBrands).where(eq(celebrityBrands.id, id)).returning();
+    return rows.length > 0;
   }
 
   async updateBrand(id: number, update: Partial<InsertBrand>): Promise<Brand | undefined> {

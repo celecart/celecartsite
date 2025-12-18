@@ -889,24 +889,25 @@ export default function AdminCelebrityVibesEvents() {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => openEditModal(event)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardFooter>
+                <CardFooter className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-100 hover:text-amber-700"
+                    onClick={() => openEditModal(event)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="text-white hover:text-white"
+                    onClick={() => handleDelete(event.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
                 </Card>
               ))}
             </div>

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, CheckCircle, XCircle, X } from 'lucide-react';
+import { Sparkles, Calendar, Plus, Package, Trash2, Check, ShoppingBag, Edit2, Power, PowerOff, Eye, EyeOff, CheckCircle, XCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CelebrityVibesEvent {
@@ -97,6 +97,17 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
   const [updatingProduct, setUpdatingProduct] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [addingProducts, setAddingProducts] = useState(false);
+  const [editingCelebrityBrand, setEditingCelebrityBrand] = useState<CelebrityBrand | null>(null);
+  const [showEditBrandDialog, setShowEditBrandDialog] = useState(false);
+  const [editBrandForm, setEditBrandForm] = useState({
+    itemType: '',
+    description: '',
+  });
+  const [editBrandErrors, setEditBrandErrors] = useState({
+    itemType: '',
+    description: '',
+  });
+  const [updatingBrand, setUpdatingBrand] = useState(false);
   const { toast } = useToast();
   
 
@@ -547,6 +558,134 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
     }
   };
 
+  const handleEditCelebrityBrand = (product: CelebrityBrand) => {
+    setEditingCelebrityBrand(product);
+    setEditBrandForm({
+      itemType: product.itemType || '',
+      description: product.description || '',
+    });
+    setEditBrandErrors({
+      itemType: '',
+      description: '',
+    });
+    setShowEditBrandDialog(true);
+  };
+
+  const validateBrandForm = (): boolean => {
+    const errors = {
+      itemType: '',
+      description: '',
+    };
+    let isValid = true;
+
+    if (!editBrandForm.itemType.trim()) {
+      errors.itemType = 'Item type is required';
+      isValid = false;
+    } else if (editBrandForm.itemType.trim().length < 2) {
+      errors.itemType = 'Item type must be at least 2 characters';
+      isValid = false;
+    } else if (editBrandForm.itemType.trim().length > 100) {
+      errors.itemType = 'Item type must be less than 100 characters';
+      isValid = false;
+    }
+
+    if (!editBrandForm.description.trim()) {
+      errors.description = 'Description is required';
+      isValid = false;
+    } else if (editBrandForm.description.trim().length < 10) {
+      errors.description = 'Description must be at least 10 characters';
+      isValid = false;
+    } else if (editBrandForm.description.trim().length > 500) {
+      errors.description = 'Description must be less than 500 characters';
+      isValid = false;
+    }
+
+    setEditBrandErrors(errors);
+    return isValid;
+  };
+
+  const handleSaveBrandEdit = async () => {
+    if (!editingCelebrityBrand || !validateBrandForm()) return;
+
+    setUpdatingBrand(true);
+    try {
+      const response = await fetch(`/api/celebritybrands/${editingCelebrityBrand.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemType: editBrandForm.itemType.trim(),
+          description: editBrandForm.description.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Product updated",
+          description: "Product has been updated successfully",
+        });
+        await fetchAvailableProducts();
+        setShowEditBrandDialog(false);
+        setEditingCelebrityBrand(null);
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update product');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({
+        title: "Error updating product",
+        description: error instanceof Error ? error.message : "Failed to update product",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingBrand(false);
+    }
+  };
+
+  const handleCancelBrandEdit = () => {
+    setShowEditBrandDialog(false);
+    setEditingCelebrityBrand(null);
+    setEditBrandForm({
+      itemType: '',
+      description: '',
+    });
+    setEditBrandErrors({
+      itemType: '',
+      description: '',
+    });
+  };
+
+  const handleDeleteCelebrityBrand = async (product: CelebrityBrand) => {
+    if (!confirm(`Are you sure you want to delete "${product.itemType}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/celebritybrands/${product.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Product deleted",
+          description: "Product deleted successfully",
+        });
+        await fetchAvailableProducts();
+      } else {
+        throw new Error('Failed to delete product');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({
+        title: "Error deleting product",
+        description: "Failed to delete product",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCreateAndAddProduct = async () => {
     if (!selectedEvent || !newProduct.brandName || !newProduct.itemType) return;
 
@@ -558,8 +697,17 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          name: newProduct.brandName
+          name: newProduct.brandName,
+          description: newProduct.description || `Brand for ${newProduct.itemType}`,
+          imageUrl: newProduct.imageUrl || '/assets/product-placeholder.svg',
+          websiteUrl: undefined,
+          isActive: true,
+          origins: [],
+          categoryIds: [],
+          sourceType: undefined,
+          celebWearers: [],
         }),
       });
 
@@ -567,21 +715,27 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
       if (brandResponse.ok) {
         brandData = await brandResponse.json();
       } else {
-        throw new Error('Failed to create brand');
+        const err = await brandResponse.json().catch(() => ({}));
+        throw new Error(String(err?.message || 'Failed to create brand'));
       }
 
       // Then create the celebrity brand product
-      const productResponse = await fetch('/api/celebrity-brands', {
+      const productResponse = await fetch('/api/celebritybrands', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           celebrityId: celebrityId,
           brandId: brandData.id,
           itemType: newProduct.itemType,
           description: newProduct.description,
-          imageUrl: newProduct.imageUrl
+          imagePosition: { top: '50%', left: '50%' },
+          equipmentSpecs: null,
+          occasionPricing: null,
+          relationshipStartYear: undefined,
+          grandSlamAppearances: [],
         }),
       });
 
@@ -589,13 +743,13 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
         const productData = await productResponse.json();
 
         // Add to event
-        const eventProductResponse = await fetch('/api/celebrity-event-products', {
+        const eventProductResponse = await fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
-            eventId: selectedEvent.id,
             celebrityId: celebrityId,
             productId: productData.id,
             displayOrder: 0,
@@ -815,7 +969,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                           handleEditEvent(event);
                         }}
                         variant="outline"
-                        className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-100"
+                        className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-100 hover:text-amber-700"
                       >
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
@@ -837,7 +991,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                           handleDeleteEvent(event.id, event.name);
                         }}
                         variant="outline"
-                        className="border-red-600 text-red-700 hover:bg-red-50"
+                        className="border-red-600 text-red-700 hover:bg-red-50 hover:text-red-700"
                         title="Delete Event"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -875,7 +1029,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {eventProducts[viewingEvent.id].map((ep) => (
-                  <Card key={ep.id} className="bg-white border-amber-200 hover:border-amber-400 transition-colors">
+                  <Card key={ep.id} className="relative group bg-white border-amber-200 hover:border-amber-400 transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
                         {ep.product?.imageUrl ? (
@@ -905,6 +1059,48 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                           </div>
                         </div>
                       </div>
+
+                      {/* CRUD Controls - Only visible on Profile */}
+                      {isOwnProfile && (
+                        <div className="absolute top-2 right-2 flex gap-1 bg-white/95 backdrop-blur-sm p-1.5 rounded-lg shadow-sm border border-gray-200 z-20">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleProductStatus(viewingEvent.id, ep.id, ep.isActive);
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-amber-100 text-gray-600 hover:text-amber-700 focus-visible:ring-2 focus-visible:ring-amber-500"
+                            title={ep.isActive ? "Deactivate" : "Activate"}
+                          >
+                            {ep.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditProduct(viewingEvent.id, ep);
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-blue-100 text-gray-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500"
+                            title="Edit"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveProduct(viewingEvent.id, ep.id);
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-red-100 text-gray-600 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-500"
+                            title="Remove"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -957,7 +1153,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                     return (
                       <div
                         key={product.id}
-                        className={`p-4 border-2 rounded-lg transition-all text-gray-800 ${
+                        className={`relative p-4 border-2 rounded-lg transition-all text-gray-800 ${
                           isSelected
                             ? 'border-amber-600 bg-amber-200 shadow-lg cursor-pointer'
                             : isAlreadyAdded
@@ -999,6 +1195,36 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                             </div>
                           </div>
                         </div>
+
+                        {/* CRUD Controls - Only visible on Profile */}
+                        {isOwnProfile && (
+                          <div className="absolute top-2 right-2 flex gap-1 bg-white/95 backdrop-blur-sm p-1.5 rounded-lg shadow-sm border border-gray-200 z-20">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditCelebrityBrand(product);
+                              }}
+                              className="h-7 w-7 p-0 hover:bg-blue-100 text-gray-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500"
+                              title="Edit Product"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCelebrityBrand(product);
+                              }}
+                              className="h-7 w-7 p-0 hover:bg-red-100 text-gray-600 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-500"
+                              title="Delete Product"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1009,14 +1235,14 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                     variant="outline"
                     onClick={() => setSelectedProducts([])}
                     disabled={selectedProducts.length === 0}
-                    className="border-amber-500 text-amber-700 hover:bg-amber-100 font-bold"
+                    className="border-amber-600 text-amber-800 hover:bg-amber-200 hover:text-amber-900 font-bold disabled:bg-amber-50 disabled:text-amber-400 disabled:border-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Clear Selection
                   </Button>
                   <Button
                     onClick={handleAddExistingProducts}
                     disabled={selectedProducts.length === 0 || addingProducts}
-                    className="bg-amber-600 hover:bg-amber-700 text-white border-0 font-bold shadow-md"
+                    className="bg-amber-600 hover:bg-amber-700 text-black hover:text-black border-0 font-bold shadow-md disabled:bg-amber-300 disabled:text-black/70 disabled:opacity-80"
                   >
                     {addingProducts ? (
                       <>
@@ -1297,6 +1523,159 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
                     </>
                   ) : (
                     <>Update Product</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Celebrity Brand Product Dialog */}
+      {isOwnProfile && (
+        <Dialog open={showEditBrandDialog} onOpenChange={(open) => {
+          if (!open && !updatingBrand) {
+            handleCancelBrandEdit();
+          }
+        }}>
+          <DialogContent 
+            className="max-w-lg bg-gradient-to-br from-white to-amber-50 border-2 border-amber-200 shadow-2xl"
+            aria-labelledby="edit-brand-title"
+            aria-describedby="edit-brand-description"
+          >
+            <DialogHeader className="relative pb-4 border-b border-amber-200">
+              <DialogTitle id="edit-brand-title" className="text-xl font-bold text-gray-900 pr-14">
+                Edit Product
+              </DialogTitle>
+              <p id="edit-brand-description" className="text-sm text-gray-600 mt-1">
+                Update the details for this CeleVibe product
+              </p>
+              <DialogClose 
+                className="absolute right-2 top-0 rounded-full opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:pointer-events-none h-8 w-8 flex items-center justify-center hover:bg-amber-100 transition-colors"
+                disabled={updatingBrand}
+                aria-label="Close dialog"
+              >
+                <X className="h-5 w-5 text-gray-900" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+            </DialogHeader>
+
+            <div className="space-y-5 py-6">
+              {/* Brand Name (Read-only) */}
+              <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1 block">
+                  Brand
+                </Label>
+                <p className="text-base font-semibold text-gray-900">
+                  {editingCelebrityBrand?.brand?.name || 'Unknown Brand'}
+                </p>
+              </div>
+
+              {/* Item Type Field */}
+              <div>
+                <Label 
+                  htmlFor="edit-item-type" 
+                  className="text-sm font-semibold text-gray-800 mb-2 block"
+                >
+                  Item Type <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-item-type"
+                  value={editBrandForm.itemType}
+                  onChange={(e) => {
+                    setEditBrandForm({ ...editBrandForm, itemType: e.target.value });
+                    if (editBrandErrors.itemType) {
+                      setEditBrandErrors({ ...editBrandErrors, itemType: '' });
+                    }
+                  }}
+                  placeholder="e.g., Sunglasses, Watch, Jacket"
+                  className={`border-2 focus:ring-2 focus:ring-amber-300 bg-white text-gray-900 ${
+                    editBrandErrors.itemType 
+                      ? 'border-red-400 focus:border-red-500' 
+                      : 'border-amber-200 focus:border-amber-400'
+                  }`}
+                  maxLength={100}
+                  disabled={updatingBrand}
+                  aria-invalid={!!editBrandErrors.itemType}
+                  aria-describedby={editBrandErrors.itemType ? "item-type-error" : undefined}
+                  autoFocus
+                />
+                {editBrandErrors.itemType && (
+                  <p id="item-type-error" className="text-sm text-red-600 mt-1 flex items-center gap-1" role="alert">
+                    <span className="font-semibold">⚠</span> {editBrandErrors.itemType}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {editBrandForm.itemType.length}/100 characters
+                </p>
+              </div>
+
+              {/* Description Field */}
+              <div>
+                <Label 
+                  htmlFor="edit-description" 
+                  className="text-sm font-semibold text-gray-800 mb-2 block"
+                >
+                  Description <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  value={editBrandForm.description}
+                  onChange={(e) => {
+                    setEditBrandForm({ ...editBrandForm, description: e.target.value });
+                    if (editBrandErrors.description) {
+                      setEditBrandErrors({ ...editBrandErrors, description: '' });
+                    }
+                  }}
+                  placeholder="Describe this product in detail..."
+                  rows={4}
+                  className={`border-2 focus:ring-2 focus:ring-amber-300 bg-white text-gray-900 resize-none ${
+                    editBrandErrors.description 
+                      ? 'border-red-400 focus:border-red-500' 
+                      : 'border-amber-200 focus:border-amber-400'
+                  }`}
+                  maxLength={500}
+                  disabled={updatingBrand}
+                  aria-invalid={!!editBrandErrors.description}
+                  aria-describedby={editBrandErrors.description ? "description-error" : undefined}
+                />
+                {editBrandErrors.description && (
+                  <p id="description-error" className="text-sm text-red-600 mt-1 flex items-center gap-1" role="alert">
+                    <span className="font-semibold">⚠</span> {editBrandErrors.description}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {editBrandForm.description.length}/500 characters
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-amber-200">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelBrandEdit}
+                  disabled={updatingBrand}
+                  className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-semibold px-6"
+                  aria-label="Cancel editing"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveBrandEdit}
+                  disabled={updatingBrand || !editBrandForm.itemType.trim() || !editBrandForm.description.trim()}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all px-6"
+                  aria-label="Save changes"
+                >
+                  {updatingBrand ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
                   )}
                 </Button>
               </div>

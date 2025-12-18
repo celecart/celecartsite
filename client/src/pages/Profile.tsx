@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
-import { User, Edit, Save, X, Star, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube, Package } from "lucide-react";
+import { User, Edit, Save, X, Star, Eye, EyeOff, Sparkles, ShoppingBag, Link2, Wand2, Video, Camera, Upload, BookOpen, Plus, Trash2, ExternalLink, Mail, Phone, MapPin, Calendar, Instagram, Twitter, Youtube, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MultiImageUpload from '@/components/MultiImageUpload';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -287,6 +287,25 @@ export default function Profile() {
     } catch (error) {
       console.error('Error deleting product:', error);
       toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
+    }
+  };
+
+  const updateProductFlags = async (productId: number, changes: Partial<CelebrityProduct>) => {
+    try {
+      const res = await fetch(`/api/celebrity-products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(changes),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setProducts(products.map(p => p.id === productId ? updated : p));
+        toast({ title: "Success", description: "Product updated" });
+      }
+    } catch (error) {
+      console.error('Error updating product flags:', error);
+      toast({ title: "Error", description: "Failed to update product", variant: "destructive" });
     }
   };
 
@@ -949,16 +968,22 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'favorite experiences').length === 0 ? (
+                                {products.filter(p => {
+                                  const c = (p.category || '').toLowerCase().trim();
+                                  return c === 'favorite experiences' || c === 'favourite experiences' || c.includes('favorite') || c.includes('favourite');
+                                }).length === 0 ? (
                                   <div className="text-white/70">No experiences added yet.</div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                                     {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'favorite experiences')
+                                      .filter(p => {
+                                        const c = (p.category || '').toLowerCase().trim();
+                                        return c === 'favorite experiences' || c === 'favourite experiences' || c.includes('favorite') || c.includes('favourite');
+                                      })
                                       .map((product) => (
                                         <Card
                                           key={product.id}
-                                          className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
+                                          className="relative group bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
                                           onClick={() => {
                                             const url = product.purchaseLink || product.website;
                                             if (url) window.open(url, '_blank');
@@ -1015,12 +1040,28 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10 bg-black/40 group-hover:bg-black/60 backdrop-blur-sm rounded-lg p-1.5 transition-colors">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isActive: !product.isActive }); }}
+                                                className="border-white/40 text-white bg-black/50 hover:bg-white hover:text-black hover:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                              >
+                                                {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isFeatured: !product.isFeatured }); }}
+                                                className="border-amber-400 text-amber-200 bg-black/60 hover:bg-amber-400 hover:text-black hover:border-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                              >
+                                                <Star className="w-3 h-3" />
+                                              </Button>
                                               <Button
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowAddProduct(true); }}
-                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                                className="border-sky-300 text-sky-200 bg-black/50 hover:bg-sky-300 hover:text-black hover:border-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                               >
                                                 <Edit className="w-3 h-3" />
                                               </Button>
@@ -1028,7 +1069,7 @@ export default function Profile() {
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }}
-                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                                className="border-red-500 text-red-300 bg-black/60 hover:bg-red-500 hover:text-black hover:border-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                               >
                                                 <Trash2 className="w-3 h-3" />
                                               </Button>
@@ -1272,14 +1313,30 @@ export default function Profile() {
                                                       ) : (
                                                         <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white/50">No Image</div>
                                                       )}
-                                                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                                                      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-t from-black/70 via-black/30 to-transparent group-hover:from-black/80 group-hover:via-black/50 transition-colors" />
                                                       <span className="absolute top-3 right-3 px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
-                                                      <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                                      <div className="absolute bottom-3 right-3 flex gap-2 z-20 bg-black/40 group-hover:bg-black/60 backdrop-blur-sm rounded-lg p-1.5 transition-colors">
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isActive: !product.isActive }); }}
+                                                          className="border-white/30 text-white bg-black/40 hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                                        >
+                                                          {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                                        </Button>
+                                                        <Button
+                                                          size="sm"
+                                                          variant="outline"
+                                                          onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isFeatured: !product.isFeatured }); }}
+                                                          className="border-amber-500/60 text-amber-200 bg-black/30 hover:bg-amber-500/30 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                                        >
+                                                          <Star className="w-3 h-3" />
+                                                        </Button>
                                                         <Button
                                                           size="sm"
                                                           variant="outline"
                                                           onClick={() => { setEditingProduct(product); setAddProductContext('luxuryBrandPreferences'); setShowAddProduct(true); }}
-                                                          className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                                          className="border-white/30 text-white bg-black/30 hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                                         >
                                                           <Edit className="w-3 h-3" />
                                                         </Button>
@@ -1287,7 +1344,7 @@ export default function Profile() {
                                                           size="sm"
                                                           variant="outline"
                                                           onClick={() => deleteProduct(product.id)}
-                                                          className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                                          className="border-red-500/40 text-red-300 bg-black/30 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                                         >
                                                           <Trash2 className="w-3 h-3" />
                                                         </Button>
@@ -1332,16 +1389,22 @@ export default function Profile() {
                                     Add Product
                                   </Button>
                                 </div>
-                                {products.filter(p => (p.category || '').toLowerCase() === 'personal brand products').length === 0 ? (
+                                {products.filter(p => {
+                                  const c = (p.category || '').toLowerCase().trim();
+                                  return c === 'personal brand products' || c === 'personal brand' || c === 'brand products' || (c.includes('personal') && c.includes('brand'));
+                                }).length === 0 ? (
                                   <div className="text-white/70">No personal brand products yet.</div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                                     {products
-                                      .filter(p => (p.category || '').toLowerCase() === 'personal brand products')
+                                      .filter(p => {
+                                        const c = (p.category || '').toLowerCase().trim();
+                                        return c === 'personal brand products' || c === 'personal brand' || c === 'brand products' || (c.includes('personal') && c.includes('brand'));
+                                      })
                                       .map((product) => (
                                         <Card
                                           key={product.id}
-                                          className="relative bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
+                                          className="relative group bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer"
                                           onClick={() => {
                                             const url = product.purchaseLink || product.website;
                                             if (url) {
@@ -1402,12 +1465,28 @@ export default function Profile() {
                                               <span className="px-2 py-1 bg-green-600 text-white rounded-full text-sm">${product.price}</span>
                                             </div>
                                             <p className="text-white/70 text-sm mb-4 line-clamp-2">{product.description}</p>
-                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                                            <div className="absolute bottom-3 right-3 flex gap-2 z-10 bg-black/40 group-hover:bg-black/60 backdrop-blur-sm rounded-lg p-1.5 transition-colors">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isActive: !product.isActive }); }}
+                                                className="border-white/30 text-white bg-black/40 hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                              >
+                                                {product.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={(e) => { e.stopPropagation(); updateProductFlags(product.id, { isFeatured: !product.isFeatured }); }}
+                                                className="border-amber-500/60 text-amber-200 bg-black/30 hover:bg-amber-500/30 hover:text-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                                              >
+                                                <Star className="w-3 h-3" />
+                                              </Button>
                                               <Button
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setShowAddProduct(true); }}
-                                                className="border-white/20 text-white bg-black/30 hover:bg-black/40"
+                                                className="border-white/30 text-white bg-black/30 hover:bg-black/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                               >
                                                 <Edit className="w-3 h-3" />
                                               </Button>
@@ -1415,7 +1494,7 @@ export default function Profile() {
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }}
-                                                className="border-red-500/20 text-red-400 bg-black/30 hover:bg-red-500/10"
+                                                className="border-red-500/40 text-red-300 bg-black/30 hover:bg-red-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                                               >
                                                 <Trash2 className="w-3 h-3" />
                                               </Button>

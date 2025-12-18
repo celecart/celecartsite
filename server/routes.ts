@@ -2376,6 +2376,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update celebrity brand relationship
+  app.put("/api/celebritybrands/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid celebrity brand ID" });
+      }
+      
+      const validatedData = insertCelebrityBrandSchema.partial().parse(req.body);
+      const celebrityBrand = await storage.updateCelebrityBrand(id, validatedData);
+      
+      if (!celebrityBrand) {
+        return res.status(404).json({ message: "Celebrity brand not found" });
+      }
+      
+      res.json(celebrityBrand);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid celebrity brand data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update celebrity brand relationship" });
+    }
+  });
+  
+  // Delete celebrity brand relationship
+  app.delete("/api/celebritybrands/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid celebrity brand ID" });
+      }
+      
+      const success = await storage.deleteCelebrityBrand(id);
+      if (!success) {
+        return res.status(404).json({ message: "Celebrity brand not found" });
+      }
+      
+      res.json({ message: "Celebrity brand deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete celebrity brand relationship" });
+    }
+  });
+  
   // Get all categories
   app.get("/api/categories", async (req: Request, res: Response) => {
     try {
