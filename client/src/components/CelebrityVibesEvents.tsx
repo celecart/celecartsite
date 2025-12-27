@@ -914,7 +914,13 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
               <Card 
                 key={event.id} 
                 className={isOwnProfile ? "bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all" : "bg-gradient-to-br from-stone-50 to-amber-50 border border-amber-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-all"}
-                onClick={() => navigate(`/event/${event.id}/products`)}
+                onClick={() => {
+                  if (isOwnProfile) {
+                    setViewingEvent(event);
+                  } else {
+                    navigate(`/event/${event.id}/products`);
+                  }
+                }}
               >
                 {event.isFeatured && (
                   <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md z-10">Featured Event</Badge>
