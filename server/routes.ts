@@ -2148,6 +2148,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update celebrity vibes event product
+  app.put("/api/celebrity-vibes-events/:eventId/products/:productLinkId", async (req: Request, res: Response) => {
+    try {
+      const productLinkId = parseInt(req.params.productLinkId);
+      if (isNaN(productLinkId)) {
+        return res.status(400).json({ message: "Invalid product link ID" });
+      }
+
+      // Verify user is authenticated
+      if (!req.isAuthenticated?.()) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const user = req.user as any;
+      const { displayOrder, notes, isFeatured } = req.body;
+
+      // Get the event product to verify ownership
+      const eventProduct = await storage.getCelebrityEventProductById(productLinkId);
+      if (!eventProduct) {
+        return res.status(404).json({ message: "Product link not found" });
+      }
+
+      // Verify the celebrity belongs to the user or user is admin
+      const celebrity = await storage.getCelebrityById(eventProduct.celebrityId);
+      const isOwner = celebrity?.userId === user.id;
+      const isAdmin = isAdminUser(req);
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "You can only update products for your own celebrity profile" });
+      }
+
+      const updatedProduct = await storage.updateCelebrityEventProduct(productLinkId, {
+        displayOrder,
+        notes,
+        isFeatured
+      });
+
+      if (!updatedProduct) {
+        return res.status(404).json({ message: "Product link not found" });
+      }
+
+      // Log activity
+      try {
+        await storage.logUserActivity({
+          userId: user.id,
+          activityType: 'update',
+          entityType: 'celebrity_event_product',
+          entityId: productLinkId,
+          entityName: `Product updated in event`,
+          metadata: JSON.stringify({ displayOrder, notes, isFeatured })
+        });
+      } catch (activityError) {
+        console.error('Failed to log event product update activity:', activityError);
+      }
+
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Error updating event product:", error);
+      res.status(500).json({ message: "Failed to update event product" });
+    }
+  });
+
   // Remove product from celebrity vibes event
   app.delete("/api/celebrity-vibes-events/:eventId/products/:productLinkId", async (req: Request, res: Response) => {
     try {
