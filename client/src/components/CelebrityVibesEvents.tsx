@@ -366,17 +366,15 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
     setAddingProducts(true);
     try {
       const promises = selectedProducts.map(productId =>
-        fetch('/api/celebrity-event-products', {
+        fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            eventId: selectedEvent.id,
             celebrityId: celebrityId,
             productId: productId,
             displayOrder: 0,
-            isActive: true,
             notes: ''
           }),
         })
@@ -393,6 +391,8 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
         await fetchEventProducts(selectedEvent.id);
         setSelectedProducts([]);
         setShowAddDialog(false);
+      } else {
+        throw new Error("Failed to add any products");
       }
     } catch (error) {
       console.error('Error adding products:', error);
@@ -419,7 +419,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
 
     setUpdatingProduct(true);
     try {
-      const response = await fetch(`/api/celebrity-event-products/${editingProduct.id}`, {
+      const response = await fetch(`/api/celebrity-vibes-events/${selectedEvent.id}/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -453,7 +453,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
 
   const handleToggleProductStatus = async (eventId: number, productId: number, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/celebrity-event-products/${productId}`, {
+      const response = await fetch(`/api/celebrity-vibes-events/${eventId}/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -482,7 +482,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
 
   const handleRemoveProduct = async (eventId: number, productId: number) => {
     try {
-      const response = await fetch(`/api/celebrity-event-products/${productId}`, {
+      const response = await fetch(`/api/celebrity-vibes-events/${eventId}/products/${productId}`, {
         method: 'DELETE',
       });
 
@@ -506,7 +506,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
   const handleBulkToggleProducts = async (eventId: number, activate: boolean) => {
     const products = eventProducts[eventId] || [];
     const promises = products.map(product =>
-      fetch(`/api/celebrity-event-products/${product.id}`, {
+      fetch(`/api/celebrity-vibes-events/${eventId}/products/${product.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -537,7 +537,7 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
   const handleBulkRemoveProducts = async (eventId: number) => {
     const products = eventProducts[eventId] || [];
     const promises = products.map(product =>
-      fetch(`/api/celebrity-event-products/${product.id}`, {
+      fetch(`/api/celebrity-vibes-events/${eventId}/products/${product.id}`, {
         method: 'DELETE',
       })
     );
@@ -914,7 +914,13 @@ export default function CelebrityVibesEvents({ celebrityId, isOwnProfile }: Prop
               <Card 
                 key={event.id} 
                 className={isOwnProfile ? "bg-gradient-to-br from-white/10 to-amber-50/10 border-white/10 rounded-2xl shadow-lg cursor-pointer hover:shadow-xl transition-all" : "bg-gradient-to-br from-stone-50 to-amber-50 border border-amber-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-all"}
-                onClick={() => navigate(`/event/${event.id}/products`)}
+                onClick={() => {
+                  if (isOwnProfile) {
+                    setViewingEvent(event);
+                  } else {
+                    navigate(`/event/${event.id}/products`);
+                  }
+                }}
               >
                 {event.isFeatured && (
                   <Badge className="absolute -top-3 left-4 bg-amber-500 text-black shadow-md z-10">Featured Event</Badge>

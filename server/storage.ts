@@ -297,6 +297,21 @@ declare module './storage' {
     createBrandProduct(product: InsertBrandProduct): Promise<BrandProduct>;
     updateBrandProduct(id: number, update: Partial<InsertBrandProduct>): Promise<BrandProduct | null>;
     deleteBrandProduct(id: number): Promise<boolean>;
+
+    // Celebrity Vibes Events
+    getCelebrityVibesEvents(filters?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<CelebrityVibesEvent[]>;
+    getCelebrityVibesEventById(id: number): Promise<CelebrityVibesEvent | undefined>;
+    createCelebrityVibesEvent(event: InsertCelebrityVibesEvent): Promise<CelebrityVibesEvent>;
+    updateCelebrityVibesEvent(id: number, event: Partial<InsertCelebrityVibesEvent>): Promise<CelebrityVibesEvent | undefined>;
+    deleteCelebrityVibesEvent(id: number): Promise<boolean>;
+    getCelebrityVibesEventsByCelebrity(celebrityId: number): Promise<any[]>;
+
+    // Celebrity Event Products
+    getCelebrityEventProducts(eventId: number, celebrityId?: number): Promise<any[]>;
+    getCelebrityEventProductById(id: number): Promise<CelebrityEventProduct | null>;
+    addProductToCelebrityEvent(eventProduct: InsertCelebrityEventProduct): Promise<CelebrityEventProduct>;
+    updateCelebrityEventProduct(id: number, update: Partial<InsertCelebrityEventProduct>): Promise<CelebrityEventProduct | undefined>;
+    removeProductFromCelebrityEvent(id: number): Promise<boolean>;
   }
 }
 
@@ -1828,6 +1843,40 @@ export class MemStorage implements IStorage {
 
   }
 
+  // Celebrity Vibes Events stubs
+  async getCelebrityVibesEvents(filters?: { activeOnly?: boolean; featuredOnly?: boolean }): Promise<CelebrityVibesEvent[]> {
+    throw new Error("Method not implemented.");
+  }
+  async getCelebrityVibesEventById(id: number): Promise<CelebrityVibesEvent | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  async createCelebrityVibesEvent(event: InsertCelebrityVibesEvent): Promise<CelebrityVibesEvent> {
+    throw new Error("Method not implemented.");
+  }
+  async updateCelebrityVibesEvent(id: number, event: Partial<InsertCelebrityVibesEvent>): Promise<CelebrityVibesEvent | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  async deleteCelebrityVibesEvent(id: number): Promise<boolean> {
+    throw new Error("Method not implemented.");
+  }
+  async getCelebrityVibesEventsByCelebrity(celebrityId: number): Promise<any[]> {
+    throw new Error("Method not implemented.");
+  }
+  async getCelebrityEventProducts(eventId: number, celebrityId?: number): Promise<any[]> {
+    throw new Error("Method not implemented.");
+  }
+  async getCelebrityEventProductById(id: number): Promise<CelebrityEventProduct | null> {
+    throw new Error("Method not implemented.");
+  }
+  async addProductToCelebrityEvent(eventProduct: InsertCelebrityEventProduct): Promise<CelebrityEventProduct> {
+    throw new Error("Method not implemented.");
+  }
+  async updateCelebrityEventProduct(id: number, update: Partial<InsertCelebrityEventProduct>): Promise<CelebrityEventProduct | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  async removeProductFromCelebrityEvent(id: number): Promise<boolean> {
+    throw new Error("Method not implemented.");
+  }
 }
 
 
@@ -3374,6 +3423,19 @@ export class PgStorage implements IStorage {
       
       const rows = await this._db.insert(celebrityEventProducts).values(eventProductData).returning();
       return rows[0] as CelebrityEventProduct;
+    } else {
+      throw new Error('In-memory celebrity event products not supported');
+    }
+  }
+
+  async updateCelebrityEventProduct(id: number, update: Partial<InsertCelebrityEventProduct>): Promise<CelebrityEventProduct | undefined> {
+    if (this._db) {
+      const rows = await this._db
+        .update(celebrityEventProducts)
+        .set(update)
+        .where(eq(celebrityEventProducts.id, id))
+        .returning();
+      return rows.length > 0 ? rows[0] as CelebrityEventProduct : undefined;
     } else {
       throw new Error('In-memory celebrity event products not supported');
     }
