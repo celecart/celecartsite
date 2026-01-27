@@ -60,6 +60,24 @@ export class EmailService {
       return false;
     }
   }
+  
+  async sendEmailDetailed(options: EmailOptions): Promise<{ ok: boolean; messageId?: string; error?: any }> {
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      };
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('Email sent successfully:', result.messageId);
+      return { ok: true, messageId: result.messageId };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      return { ok: false, error };
+    }
+  }
 
   async sendPasswordResetEmail(email: string, resetToken: string, resetUrl: string): Promise<boolean> {
     const subject = 'Password Reset Request';

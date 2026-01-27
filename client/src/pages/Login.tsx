@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useState, type FormEvent } from "react";
 import GoogleSignIn from "@/components/GoogleSignIn";
 
@@ -10,6 +13,17 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{email?: string; password?: string}>({});
+  const [contactTopic, setContactTopic] = useState<'support' | 'marketing'>('marketing');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingContact, setSendingContact] = useState(false);
+  const [contactStatus, setContactStatus] = useState<string>('');
+  const [contactError, setContactError] = useState<string>('');
+  // Prefill contact email from login email field
+  if (!contactEmail && email) {
+    setContactEmail(email);
+  }
 
   const [, setLocation] = useLocation();
 
@@ -224,6 +238,115 @@ export default function Login() {
             {/* Google Sign-In Component */}
             <div className="flex justify-center">
               <GoogleSignIn />
+            </div>
+
+            {/* Contact Admin (Marketing & Discussion) */}
+            <div className="mt-8 space-y-3 bg-white/5 border border-white/10 rounded-xl p-4">
+              <div className="text-white font-semibold">Contact Admin (Marketing & Discussion)</div>
+              {contactStatus && <div className="text-green-400 text-xs">{contactStatus}</div>}
+              {contactError && <div className="text-red-400 text-xs">{contactError}</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-white/60 mb-1">Topic</div>
+                  <Select value={contactTopic} onValueChange={(v) => setContactTopic(v as any)}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Select topic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="support">Support</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <div className="text-xs text-white/60 mb-1">Your Email</div>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-amber-400/50 focus:bg-white/10 transition-all duration-300"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2">
+                  <div className="text-xs text-white/60 mb-1">Subject</div>
+                  <input
+                    type="text"
+                    placeholder="e.g., Marketing collaboration discussion"
+                    value={contactSubject}
+                    onChange={(e) => setContactSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-amber-400/50 focus:bg-white/10 transition-all duration-300"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-white/60 mb-1">Message</div>
+                <Textarea
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  placeholder="Write your message..."
+                  rows={4}
+                  className="bg-white/5 border-white/10 text-white"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={async () => {
+                    setContactStatus('');
+                    setContactError('');
+                    if (!contactEmail || !/\S+@\S+\.\S+/.test(contactEmail)) {
+                      setContactError('Please provide a valid email to contact admin');
+                      return;
+                    }
+                    if (!contactSubject.trim() || contactMessage.trim().length < 10) {
+                      setContactError('Please provide a subject and a detailed message (min 10 chars)');
+                      return;
+                    }
+                    setSendingContact(true);
+                    try {
+                      const res = await fetch('/api/support/contact-admin', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                          topic: contactTopic,
+                          subject: contactSubject.trim(),
+                          message: contactMessage.trim(),
+                          email: contactEmail.trim(),
+                        }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        console.debug('[contact-admin] response', data);
+                        setContactError('');
+                        setContactSubject('');
+                        setContactMessage('');
+                        setContactEmail('');
+                        const details = [];
+                        if (typeof data.emailed !== 'undefined') details.push(`emailed=${data.emailed}`);
+                        if (data.messageId) details.push(`messageId=${data.messageId}`);
+                        if (typeof data.emailConfigured !== 'undefined') details.push(`emailConfigured=${data.emailConfigured}`);
+                        if (typeof data.connectionOk !== 'undefined') details.push(`connectionOk=${data.connectionOk}`);
+                        setContactStatus(`Message sent. ${details.join(' | ')}`);
+                      } else {
+                        const err = await res.json().catch(() => ({}));
+                        console.debug('[contact-admin] error response', err);
+                        setContactError(err?.message || 'Failed to send message.');
+                      }
+                    } catch {
+                      setContactError('Network error while sending message.');
+                    } finally {
+                      setSendingContact(false);
+                    }
+                  }}
+                  disabled={sendingContact}
+                  className="bg-amber-500 hover:bg-amber-600 text-black"
+                >
+                  {sendingContact ? 'Sending...' : 'Send to Admin'}
+                </Button>
+              </div>
             </div>
 
             {/* Additional Info */}

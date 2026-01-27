@@ -47,6 +47,14 @@ import Stripe from "stripe";
 export async function registerRoutes(app: Express): Promise<Server> {
   const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
   const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
+  
+  const contactSchema = z.object({
+    topic: z.enum(['marketing', 'support']),
+    subject: z.string().min(3),
+    message: z.string().min(10),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+  });
   // DB health check endpoint
   app.get('/api/health/db', async (_req: Request, res: Response) => {
     if (!pool) {
@@ -57,6 +65,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ connected: true, version: result.rows?.[0]?.version ?? null });
     } catch (err) {
       return res.status(500).json({ connected: false, error: 'DB connection failed' });
+    }
+  });
+  
+  app.post('/api/support/contact-admin', async (req: Request, res: Response) => {
+    try {
+      console.log('[contact-admin] incoming body:', req.body);
+      const parsed = contactSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid contact data', errors: parsed.error.flatten() });
+      }
+      const user = req.isAuthenticated?.() ? (req.user as any) : null;
+      if (!user && !parsed.data.email) {
+        return res.status(400).json({ message: 'Email is required when not authenticated' });
+      }
+      const to = process.env.SUPPORT_EMAIL || 'admin@cele.com';
+      const subject = `[${parsed.data.topic}] ${parsed.data.subject}`;
+      const html = `
+        <div>
+          <p><strong>From:</strong> ${parsed.data.email || user?.email || ''}</p>
+          <p><strong>Phone:</strong> ${parsed.data.phone || user?.phone || ''}</p>
+          <p><strong>User:</strong> ${user ? (user.displayName || user.username || user.email) : 'Guest'}</p>
+          <p><strong>Topic:</strong> ${parsed.data.topic}</p>
+          <p><strong>Message:</strong></p>
+          <div>${parsed.data.message}</div>
+        </div>
+      `;
+      const text = `From: ${parsed.data.email || user?.email || ''}
+Phone: ${parsed.data.phone || user?.phone || ''}
+User: ${user ? (user.displayName || user.username || user.email) : 'Guest'}
+Topic: ${parsed.data.topic}
+Message:
+${parsed.data.message}`;
+      const emailConfigured = Boolean(process.env.SMTP_HOST || process.env.EMAIL_USER);
+      const connectionOk = emailConfigured ? await emailService.testConnection() : false;
+      let emailed = false;
+      let messageId: string | undefined = undefined;
+      let emailError: any = undefined;
+      try {
+        const result = await emailService.sendEmailDetailed({ to, subject, html, text });
+        emailed = result.ok;
+        messageId = result.messageId;
+        emailError = result.error;
+        console.log('[contact-admin] send result:', { emailed, messageId, emailError });
+      } catch (e) {
+        emailError = e;
+        console.error('[contact-admin] send error:', e);
+      }
+      try {
+        await storage.logUserActivity({
+          userId: user?.id ?? null,
+          activityType: 'create',
+          entityType: 'support_contact',
+          entityId: null,
+          entityName: subject,
+          metadata: JSON.stringify({ topic: parsed.data.topic, emailed, messageId, connectionOk, emailConfigured })
+        });
+      } catch (logErr) {
+        console.error('[contact-admin] activity log error:', logErr);
+      }
+      return res.json({ success: true, emailed, messageId, emailConfigured, connectionOk, emailError: emailError ? String(emailError) : undefined });
+    } catch (error) {
+      return res.status(500).json({ message: 'Failed to send contact message' });
     }
   });
   
