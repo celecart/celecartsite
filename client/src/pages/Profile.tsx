@@ -157,6 +157,12 @@ export default function Profile() {
   const [availableProductCategories, setAvailableProductCategories] = useState<string[]>([
     'Apparel','Accessories','Footwear','Technology','Vehicles','Fragrance','Beauty'
   ]);
+  const [supportTopic, setSupportTopic] = useState<'support' | 'marketing'>('support');
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
+  const [sendingSupport, setSendingSupport] = useState(false);
   
   useEffect(() => {
     // Fetch canonical categories from backend, fall back to defaults on error
@@ -168,6 +174,10 @@ export default function Profile() {
       })
       .catch(() => {/* ignore errors, keep defaults */});
   }, []);
+  useEffect(() => {
+    setSupportEmail(user?.email || '');
+    setSupportPhone(user?.phone || '');
+  }, [user]);
   const [profileData, setProfileData] = useState<ProfileData>({
     displayName: '',
     email: '',
@@ -614,7 +624,7 @@ export default function Profile() {
 
             {/* Profile Content */}
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className={`grid w-full ${canAccessCelebrityDetails() ? 'grid-cols-4' : 'grid-cols-1'} bg-white/5 border-white/10`}>
+              <TabsList className={`grid w-full ${canAccessCelebrityDetails() ? 'grid-cols-5' : 'grid-cols-2'} bg-white/5 border-white/10`}>
                 <TabsTrigger value="basic" className="text-white data-[state=active]:bg-white/10">Basic Info</TabsTrigger>
                 {canAccessCelebrityDetails() && (
                   <>
@@ -623,6 +633,7 @@ export default function Profile() {
                     <TabsTrigger value="social" className="text-white data-[state=active]:bg-white/10">Social Media</TabsTrigger>
                   </>
                 )}
+                <TabsTrigger value="support" className="text-white data-[state=active]:bg-white/10">Contact Admin</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-6">
@@ -745,6 +756,108 @@ export default function Profile() {
                           {!isAdmin && !isCelebrity && <span className="text-gray-400">User</span>}
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="support" className="space-y-6">
+                <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Contact Admin (Marketing & Support)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-white/70">Topic</Label>
+                        <Select value={supportTopic} onValueChange={(v) => setSupportTopic(v as any)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select topic" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="support">Support</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-white/70">Subject</Label>
+                        <Input
+                          value={supportSubject}
+                          onChange={(e) => setSupportSubject(e.target.value)}
+                          placeholder="Brief subject"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-white/70">Your Email</Label>
+                        <Input
+                          value={supportEmail}
+                          onChange={(e) => setSupportEmail(e.target.value)}
+                          placeholder="Your contact email"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-white/70">Phone</Label>
+                        <Input
+                          value={supportPhone}
+                          onChange={(e) => setSupportPhone(e.target.value)}
+                          placeholder="Optional phone number"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-white/70">Message</Label>
+                      <Textarea
+                        value={supportMessage}
+                        onChange={(e) => setSupportMessage(e.target.value)}
+                        placeholder="Write your message..."
+                        rows={5}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={async () => {
+                          if (!supportSubject.trim() || supportMessage.trim().length < 10) {
+                            toast({ title: "Error", description: "Please provide a subject and a detailed message.", variant: "destructive" });
+                            return;
+                          }
+                          setSendingSupport(true);
+                          try {
+                            const res = await fetch('/api/support/contact-admin', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({
+                                topic: supportTopic,
+                                subject: supportSubject.trim(),
+                                message: supportMessage.trim(),
+                                email: supportEmail.trim(),
+                                phone: supportPhone.trim(),
+                              }),
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              toast({ title: "Message sent", description: data.emailed ? "Admin notified via email." : "Message logged. Email not sent." });
+                              setSupportSubject('');
+                              setSupportMessage('');
+                            } else {
+                              const err = await res.json().catch(() => ({}));
+                              toast({ title: "Error", description: err?.message || "Failed to send message.", variant: "destructive" });
+                            }
+                          } catch {
+                            toast({ title: "Network error", description: "Could not send message.", variant: "destructive" });
+                          } finally {
+                            setSendingSupport(false);
+                          }
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-black rounded-full"
+                        disabled={sendingSupport}
+                      >
+                        {sendingSupport ? 'Sending...' : 'Send Message'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
